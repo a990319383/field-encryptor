@@ -22,7 +22,7 @@ public class TableCache {
     private static final Logger log = LoggerFactory.getLogger(TableCache.class);
 
     /**
-     * key: 表名小写  value: (key:字段名小写  value: 实体类上标注的@FieldEncrypt注解)
+     * key: 表名小写  value: (key:字段名小写  value: 实体类上标注的@FieldEncryptor注解)
      */
     private static final Map<String, Map<String, FieldEncryptor>> TABLE_ENTITY_CACHE = new HashMap<>();
 

@@ -1,5 +1,6 @@
 package com.sangsang.visitor.encrtptor.select;
 
+import com.baomidou.mybatisplus.core.toolkit.CollectionUtils;
 import com.sangsang.cache.TableCache;
 import com.sangsang.domain.constants.SymbolConstant;
 import com.sangsang.domain.dto.BaseFieldParseTable;
@@ -15,6 +16,7 @@ import net.sf.jsqlparser.schema.Column;
 import net.sf.jsqlparser.statement.select.SubSelect;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * 将select的每一项字段  如果需要加密的，则进行加密
@@ -30,23 +32,25 @@ public class DecryptExpressionVisitor extends BaseFieldParseTable implements Exp
     private Alias alias;
 
     /**
-     * 当前字段是否加密后需要增加别名处理,默认是true
-     * 一般每个字段处理后，要求结果集别名和之前一致，所以需要as
-     * 但是case这种处理的时候不需要加
+     * 加解密处理好后的表达式
+     * 如果不需要处理，则这个值就是构造函数传入的旧表达式
      */
-    private boolean aliasAs = true;
+    private Expression expression;
 
-    public DecryptExpressionVisitor(Alias alias, int layer, Map<String, Map<String, Set<FieldInfoDto>>> layerSelectTableFieldMap, Map<String, Map<String, Set<FieldInfoDto>>> layerFieldTableMap) {
+    public DecryptExpressionVisitor(Alias alias, Expression expression, int layer, Map<String, Map<String, Set<FieldInfoDto>>> layerSelectTableFieldMap, Map<String, Map<String, Set<FieldInfoDto>>> layerFieldTableMap) {
         super(layer, layerSelectTableFieldMap, layerFieldTableMap);
         this.alias = alias;
+        this.expression = expression;
     }
 
-    public DecryptExpressionVisitor(boolean aliasAs, Alias alias, int layer, Map<String, Map<String, Set<FieldInfoDto>>> layerSelectTableFieldMap, Map<String, Map<String, Set<FieldInfoDto>>> layerFieldTableMap) {
-        super(layer, layerSelectTableFieldMap, layerFieldTableMap);
-        this.alias = alias;
-        this.aliasAs = aliasAs;
+    //处理之后的别名，如果别名不需要额外处理，则这里是原有的别名
+    public Alias getAlias() {
+        return alias;
     }
 
+    public Expression getExpression() {
+        return expression;
+    }
 
     @Override
     public void visit(BitwiseRightShift aThis) {
@@ -72,14 +76,18 @@ public class DecryptExpressionVisitor extends BaseFieldParseTable implements Exp
      **/
     @Override
     public void visit(Function function) {
-        //解析function ，function 里面的不需要处理别名
-        DecryptExpressionVisitor decryptExpressionVisitor = new DecryptExpressionVisitor(false, null, this.getLayer(), this.getLayerSelectTableFieldMap(), this.getLayerFieldTableMap());
-
         List<Expression> expressions = Optional.ofNullable(function.getParameters())
                 .map(ExpressionList::getExpressions)
-                .orElse(new ArrayList<>());
-        for (Expression expression : expressions) {
-            expression.accept(decryptExpressionVisitor);
+                .orElse(new ArrayList<>())
+                .stream()
+                .map(m -> {
+                    DecryptExpressionVisitor decryptExpressionVisitor = new DecryptExpressionVisitor(this.alias, m, this.getLayer(), this.getLayerSelectTableFieldMap(), this.getLayerFieldTableMap());
+                    m.accept(decryptExpressionVisitor);
+                    return decryptExpressionVisitor.getExpression();
+                }).collect(Collectors.toList());
+
+        if (function.getParameters() != null) {
+            function.getParameters().setExpressions(expressions);
         }
     }
 
@@ -246,7 +254,7 @@ public class DecryptExpressionVisitor extends BaseFieldParseTable implements Exp
         ColumnTableDto columnTableDto = JsqlparserUtil.parseColumn(column, this.getLayer(), this.getLayerFieldTableMap());
 
 
-        //2.当前字段不需要解密直接返回 (实体类上面没有标注@FieldEncrypt注解 或者字段不是来源自真实表)
+        //2.当前字段不需要解密直接返回 (实体类上面没有标注@FieldEncryptor注解 或者字段不是来源自真实表)
         // 注意：select只有最直接和真实表获取字段的那层才需要加解密
         if (!columnTableDto.isFromSourceTable() || Optional.ofNullable(TableCache.getTableFieldEncryptInfo())
                 .map(m -> m.get(columnTableDto.getSourceTableName()))
@@ -255,13 +263,17 @@ public class DecryptExpressionVisitor extends BaseFieldParseTable implements Exp
             return;
         }
 
-        //3.将字段进行解密(注意：这里需要特殊处理别名，不然sql最后会变成函数处理后的字段，导致结果集映射失败)
-        //别名:当旧别名不存在，并且需要设置别名时设置别名，旧别名存在时不需要单独设置别名，toString()的时候会设置别名的
-        String columnAlias = alias == null && aliasAs ? SymbolConstant.AS + column.getColumnName() : "";
-        String EncryptColumn = SymbolConstant.DECODE + columnTableDto.getTableAliasName() + SymbolConstant.FULL_STOP + column.getColumnName() + "), 'encryptionKey秘钥') " + columnAlias;
-        column.setTable(null);
-        column.setColumnName(EncryptColumn);
+        //3.将该字段进行解密处理
+        Function base64Function = new Function();
+        base64Function.setName(SymbolConstant.FROM_BASE64);
+        base64Function.setParameters(new ExpressionList(column));
+        Function decryptFunction = new Function();
+        decryptFunction.setName(SymbolConstant.AES_DECRYPT);
+        decryptFunction.setParameters(new ExpressionList(base64Function, new StringValue("encryptionKey秘钥")));
+        this.expression = decryptFunction;
 
+        //4.别名处理（字段经过加密函数后，如果之前没有别名的话，需要用之前的字段名作为别名，不然ORM映射的时候会无法匹配）
+        this.alias = Optional.ofNullable(alias).orElse(new Alias(column.getColumnName()));
     }
 
     /**
@@ -283,39 +295,49 @@ public class DecryptExpressionVisitor extends BaseFieldParseTable implements Exp
 
     @Override
     public void visit(CaseExpression caseExpression) {
-        //case处理的时候，不加别名处理
-        DecryptExpressionVisitor expressionVisitor = new DecryptExpressionVisitor(false, null, this.getLayer(), this.getLayerSelectTableFieldMap(), this.getLayerFieldTableMap());
-
         //处理case的条件
         Expression switchExpression = caseExpression.getSwitchExpression();
         if (switchExpression != null) {
+            DecryptExpressionVisitor expressionVisitor = new DecryptExpressionVisitor(this.alias, switchExpression, this.getLayer(), this.getLayerSelectTableFieldMap(), this.getLayerFieldTableMap());
             switchExpression.accept(expressionVisitor);
+            caseExpression.setSwitchExpression(expressionVisitor.getExpression());
         }
 
         //处理when的条件
-        List<WhenClause> whenClauses = Optional.ofNullable(caseExpression.getWhenClauses()).orElse(new ArrayList<>());
-        for (WhenClause whenClause : whenClauses) {
-            whenClause.accept(expressionVisitor);
+        if (CollectionUtils.isNotEmpty(caseExpression.getWhenClauses())) {
+            List<WhenClause> whenClauses = caseExpression.getWhenClauses().stream()
+                    .map(m -> {
+                        DecryptExpressionVisitor expressionVisitor = new DecryptExpressionVisitor(this.alias, m, this.getLayer(), this.getLayerSelectTableFieldMap(), this.getLayerFieldTableMap());
+                        m.accept(expressionVisitor);
+                        // 这里返回的类型肯定是通过构造函数传输过去的，所以可以直接强转
+                        return (WhenClause) expressionVisitor.getExpression();
+                    }).collect(Collectors.toList());
+            caseExpression.setWhenClauses(whenClauses);
         }
 
         //处理else
         Expression elseExpression = caseExpression.getElseExpression();
         if (elseExpression != null) {
+            DecryptExpressionVisitor expressionVisitor = new DecryptExpressionVisitor(this.alias, elseExpression, this.getLayer(), this.getLayerSelectTableFieldMap(), this.getLayerFieldTableMap());
             elseExpression.accept(expressionVisitor);
+            caseExpression.setElseExpression(expressionVisitor.getExpression());
         }
     }
 
     @Override
     public void visit(WhenClause whenClause) {
-        //case处理的时候，不加别名处理
-        DecryptExpressionVisitor expressionVisitor = new DecryptExpressionVisitor(false, null, this.getLayer(), this.getLayerSelectTableFieldMap(), this.getLayerFieldTableMap());
         Expression thenExpression = whenClause.getThenExpression();
         if (thenExpression != null) {
+            DecryptExpressionVisitor expressionVisitor = new DecryptExpressionVisitor(this.alias, thenExpression, this.getLayer(), this.getLayerSelectTableFieldMap(), this.getLayerFieldTableMap());
             thenExpression.accept(expressionVisitor);
+            whenClause.setThenExpression(expressionVisitor.getExpression());
         }
 
         Expression whenExpression = whenClause.getWhenExpression();
         if (whenExpression != null) {
+            DecryptExpressionVisitor expressionVisitor = new DecryptExpressionVisitor(this.alias, whenExpression, this.getLayer(), this.getLayerSelectTableFieldMap(), this.getLayerFieldTableMap());
+            whenExpression.accept(expressionVisitor);
+            whenClause.setWhenExpression(expressionVisitor.getExpression());
             whenExpression.accept(expressionVisitor);
         }
     }
@@ -324,7 +346,6 @@ public class DecryptExpressionVisitor extends BaseFieldParseTable implements Exp
     public void visit(ExistsExpression existsExpression) {
         //select查询中exist 解密暂未考虑到场景，不做处理，目前只兼容了where条件后面的exist
         System.out.println(existsExpression);
-//        Expression rightExpression = existsExpression.getRightExpression();
 
     }
 

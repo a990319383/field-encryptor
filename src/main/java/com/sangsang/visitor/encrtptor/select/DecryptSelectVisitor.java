@@ -56,9 +56,13 @@ public class DecryptSelectVisitor extends BaseFieldParseTable implements SelectV
         List<SelectItem> DencryptSelectItems = selectItems.stream()
                 .peek(p -> {
                     if (p instanceof SelectExpressionItem) {
-                        Alias alias = ((SelectExpressionItem) p).getAlias();
-                        Expression expression = ((SelectExpressionItem) p).getExpression();
-                        expression.accept(new DecryptExpressionVisitor(alias, this.getLayer(), this.getLayerSelectTableFieldMap(), this.getLayerFieldTableMap()));
+                        SelectExpressionItem se = (SelectExpressionItem) p;
+                        Alias alias = se.getAlias();
+                        Expression expression = se.getExpression();
+                        DecryptExpressionVisitor decryptExpressionVisitor = new DecryptExpressionVisitor(alias, expression, this.getLayer(), this.getLayerSelectTableFieldMap(), this.getLayerFieldTableMap());
+                        expression.accept(decryptExpressionVisitor);
+                        se.setAlias(decryptExpressionVisitor.getAlias());
+                        se.setExpression(decryptExpressionVisitor.getExpression());
                     }
                 }).collect(Collectors.toList());
 
@@ -67,7 +71,11 @@ public class DecryptSelectVisitor extends BaseFieldParseTable implements SelectV
 
         //5.对where条件后的进行解密
         if (plainSelect.getWhere() != null) {
-            plainSelect.getWhere().accept(new DencryptWhereFieldParseVisitor(this.getLayer(), this.getLayerSelectTableFieldMap(), this.getLayerFieldTableMap()));
+            Expression where = plainSelect.getWhere();
+            DencryptWhereFieldParseVisitor dencryptWhereFieldParseVisitor = new DencryptWhereFieldParseVisitor(where, this.getLayer(), this.getLayerSelectTableFieldMap(), this.getLayerFieldTableMap());
+            where.accept(dencryptWhereFieldParseVisitor);
+            //处理后的条件赋值
+            plainSelect.setWhere(dencryptWhereFieldParseVisitor.getExpression());
         }
 
         //6.维护解析后的sql

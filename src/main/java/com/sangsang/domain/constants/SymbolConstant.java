@@ -21,27 +21,27 @@ public interface SymbolConstant {
     String DOUBLE_QUOTES = "\"";
 
     /**
-     * sql as 取别名
+     * test as 取别名
      */
     String AS = " as ";
 
     /**
-     * mysql解密函数前缀
-     */
-    String DECODE = "AES_DECRYPT(FROM_BASE64(";
-
-    /**
-     * mysql 加密函数前缀
-     */
-    String ENCODE = "TO_BASE64(AES_ENCRYPT(";
-
-    /**
-     * mysql aes 加密函数
+     * mysql AES 加密函数
      */
     String AES_ENCRYPT = "AES_ENCRYPT";
+
+    /**
+     * mysql AES 解密函数
+     */
+    String AES_DECRYPT = "AES_DECRYPT";
 
     /**
      * mysql 转base64
      */
     String TO_BASE64 = "TO_BASE64";
+
+    /**
+     * 从base64转码
+     */
+    String FROM_BASE64 = "FROM_BASE64";
 }

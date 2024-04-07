@@ -15,6 +15,7 @@ import net.sf.jsqlparser.expression.operators.conditional.OrExpression;
 import net.sf.jsqlparser.expression.operators.relational.*;
 import net.sf.jsqlparser.schema.Column;
 import net.sf.jsqlparser.statement.select.*;
+import org.springframework.util.CollectionUtils;
 
 import java.util.*;
 
@@ -28,8 +29,19 @@ import java.util.*;
  */
 public class DencryptWhereFieldParseVisitor extends BaseFieldParseTable implements ExpressionVisitor {
 
-    public DencryptWhereFieldParseVisitor(int layer, Map<String, Map<String, Set<FieldInfoDto>>> layerSelectTableFieldMap, Map<String, Map<String, Set<FieldInfoDto>>> layerFieldTableMap) {
+    /**
+     * 加解密处理好后的表达式
+     * 如果不需要处理，则这个值就是构造函数传入的旧表达式
+     */
+    private Expression expression;
+
+    public DencryptWhereFieldParseVisitor(Expression expression, int layer, Map<String, Map<String, Set<FieldInfoDto>>> layerSelectTableFieldMap, Map<String, Map<String, Set<FieldInfoDto>>> layerFieldTableMap) {
         super(layer, layerSelectTableFieldMap, layerFieldTableMap);
+        this.expression = expression;
+    }
+
+    public Expression getExpression() {
+        return expression;
     }
 
     @Override
@@ -44,7 +56,6 @@ public class DencryptWhereFieldParseVisitor extends BaseFieldParseTable implemen
 
     @Override
     public void visit(NullValue nullValue) {
-        System.out.println(nullValue);
     }
 
     /**
@@ -56,12 +67,22 @@ public class DencryptWhereFieldParseVisitor extends BaseFieldParseTable implemen
      **/
     @Override
     public void visit(Function function) {
-        List<Expression> expressions = Optional.ofNullable(function.getParameters())
-                .map(ExpressionList::getExpressions)
-                .orElse(new ArrayList<>());
-        for (Expression expression : expressions) {
-            expression.accept(this);
+        ExpressionList parameters = function.getParameters();
+        //没有表达式不处理
+        if (parameters == null || CollectionUtils.isEmpty(parameters.getExpressions())) {
+            return;
         }
+
+        //表达式
+        List<Expression> expressions = new ArrayList<>();
+        for (Expression exp : parameters.getExpressions()) {
+            DencryptWhereFieldParseVisitor dencryptWhereFieldParseVisitor = new DencryptWhereFieldParseVisitor(exp, this.getLayer(), this.getLayerSelectTableFieldMap(), this.getLayerFieldTableMap());
+            exp.accept(dencryptWhereFieldParseVisitor);
+            expressions.add(dencryptWhereFieldParseVisitor.getExpression());
+        }
+
+        //替换原有表达式
+        parameters.setExpressions(expressions);
     }
 
     @Override
@@ -119,7 +140,10 @@ public class DencryptWhereFieldParseVisitor extends BaseFieldParseTable implemen
     @Override
     public void visit(Parenthesis parenthesis) {
         //解析括号括起来的表达式
-        parenthesis.getExpression().accept(this);
+        Expression exp = parenthesis.getExpression();
+        DencryptWhereFieldParseVisitor dencryptWhereFieldParseVisitor = new DencryptWhereFieldParseVisitor(exp, this.getLayer(), this.getLayerSelectTableFieldMap(), this.getLayerFieldTableMap());
+        exp.accept(dencryptWhereFieldParseVisitor);
+        parenthesis.setExpression(dencryptWhereFieldParseVisitor.getExpression());
     }
 
     @Override
@@ -154,15 +178,29 @@ public class DencryptWhereFieldParseVisitor extends BaseFieldParseTable implemen
 
     @Override
     public void visit(AndExpression andExpression) {
-        andExpression.getLeftExpression().accept(this);
-        andExpression.getRightExpression().accept(this);
+        Expression leftExpression = andExpression.getLeftExpression();
+        DencryptWhereFieldParseVisitor leftDencryptWhereFieldParseVisitor = new DencryptWhereFieldParseVisitor(leftExpression, this.getLayer(), this.getLayerSelectTableFieldMap(), this.getLayerFieldTableMap());
+        leftExpression.accept(leftDencryptWhereFieldParseVisitor);
+        andExpression.setLeftExpression(leftDencryptWhereFieldParseVisitor.getExpression());
+
+        Expression rightExpression = andExpression.getRightExpression();
+        DencryptWhereFieldParseVisitor rightDencryptWhereFieldParseVisitor = new DencryptWhereFieldParseVisitor(rightExpression, this.getLayer(), this.getLayerSelectTableFieldMap(), this.getLayerFieldTableMap());
+        rightExpression.accept(rightDencryptWhereFieldParseVisitor);
+        andExpression.setRightExpression(rightDencryptWhereFieldParseVisitor.getExpression());
     }
 
     @Override
     public void visit(OrExpression orExpression) {
         //解析左右表达式
-        orExpression.getLeftExpression().accept(this);
-        orExpression.getRightExpression().accept(this);
+        Expression leftExpression = orExpression.getLeftExpression();
+        DencryptWhereFieldParseVisitor leftDencryptWhereFieldParseVisitor = new DencryptWhereFieldParseVisitor(leftExpression, this.getLayer(), this.getLayerSelectTableFieldMap(), this.getLayerFieldTableMap());
+        leftExpression.accept(leftDencryptWhereFieldParseVisitor);
+        orExpression.setLeftExpression(leftDencryptWhereFieldParseVisitor.getExpression());
+
+        Expression rightExpression = orExpression.getRightExpression();
+        DencryptWhereFieldParseVisitor rightDencryptWhereFieldParseVisitor = new DencryptWhereFieldParseVisitor(rightExpression, this.getLayer(), this.getLayerSelectTableFieldMap(), this.getLayerFieldTableMap());
+        rightExpression.accept(rightDencryptWhereFieldParseVisitor);
+        orExpression.setRightExpression(rightDencryptWhereFieldParseVisitor.getExpression());
     }
 
 
@@ -179,8 +217,15 @@ public class DencryptWhereFieldParseVisitor extends BaseFieldParseTable implemen
         }
 
         //解析左右两边的表达式
-        equalsTo.getLeftExpression().accept(this);
-        equalsTo.getRightExpression().accept(this);
+        Expression leftExpression = equalsTo.getLeftExpression();
+        DencryptWhereFieldParseVisitor leftDencryptWhereFieldParseVisitor = new DencryptWhereFieldParseVisitor(leftExpression, this.getLayer(), this.getLayerSelectTableFieldMap(), this.getLayerFieldTableMap());
+        leftExpression.accept(leftDencryptWhereFieldParseVisitor);
+        equalsTo.setLeftExpression(leftDencryptWhereFieldParseVisitor.getExpression());
+
+        Expression rightExpression = equalsTo.getRightExpression();
+        DencryptWhereFieldParseVisitor rightDencryptWhereFieldParseVisitor = new DencryptWhereFieldParseVisitor(rightExpression, this.getLayer(), this.getLayerSelectTableFieldMap(), this.getLayerFieldTableMap());
+        rightExpression.accept(rightDencryptWhereFieldParseVisitor);
+        equalsTo.setRightExpression(rightDencryptWhereFieldParseVisitor.getExpression());
     }
 
     /**
@@ -193,8 +238,15 @@ public class DencryptWhereFieldParseVisitor extends BaseFieldParseTable implemen
     @Override
     public void visit(GreaterThan greaterThan) {
         //解析左右表达式
-        greaterThan.getLeftExpression().accept(this);
-        greaterThan.getRightExpression().accept(this);
+        Expression leftExpression = greaterThan.getLeftExpression();
+        DencryptWhereFieldParseVisitor leftDencryptWhereFieldParseVisitor = new DencryptWhereFieldParseVisitor(leftExpression, this.getLayer(), this.getLayerSelectTableFieldMap(), this.getLayerFieldTableMap());
+        leftExpression.accept(leftDencryptWhereFieldParseVisitor);
+        greaterThan.setLeftExpression(leftDencryptWhereFieldParseVisitor.getExpression());
+
+        Expression rightExpression = greaterThan.getRightExpression();
+        DencryptWhereFieldParseVisitor rightDencryptWhereFieldParseVisitor = new DencryptWhereFieldParseVisitor(rightExpression, this.getLayer(), this.getLayerSelectTableFieldMap(), this.getLayerFieldTableMap());
+        rightExpression.accept(rightDencryptWhereFieldParseVisitor);
+        greaterThan.setRightExpression(rightDencryptWhereFieldParseVisitor.getExpression());
     }
 
     /**
@@ -207,14 +259,24 @@ public class DencryptWhereFieldParseVisitor extends BaseFieldParseTable implemen
     @Override
     public void visit(GreaterThanEquals greaterThanEquals) {
         //解析左右表达式
-        greaterThanEquals.getLeftExpression().accept(this);
-        greaterThanEquals.getRightExpression().accept(this);
+        Expression leftExpression = greaterThanEquals.getLeftExpression();
+        DencryptWhereFieldParseVisitor leftDencryptWhereFieldParseVisitor = new DencryptWhereFieldParseVisitor(leftExpression, this.getLayer(), this.getLayerSelectTableFieldMap(), this.getLayerFieldTableMap());
+        leftExpression.accept(leftDencryptWhereFieldParseVisitor);
+        greaterThanEquals.setLeftExpression(leftDencryptWhereFieldParseVisitor.getExpression());
+
+        Expression rightExpression = greaterThanEquals.getRightExpression();
+        DencryptWhereFieldParseVisitor rightDencryptWhereFieldParseVisitor = new DencryptWhereFieldParseVisitor(rightExpression, this.getLayer(), this.getLayerSelectTableFieldMap(), this.getLayerFieldTableMap());
+        rightExpression.accept(rightDencryptWhereFieldParseVisitor);
+        greaterThanEquals.setRightExpression(rightDencryptWhereFieldParseVisitor.getExpression());
     }
 
     @Override
     public void visit(InExpression inExpression) {
         //解析表达式
-        inExpression.getLeftExpression().accept(this);
+        Expression leftExpression = inExpression.getLeftExpression();
+        DencryptWhereFieldParseVisitor leftDencryptWhereFieldParseVisitor = new DencryptWhereFieldParseVisitor(leftExpression, this.getLayer(), this.getLayerSelectTableFieldMap(), this.getLayerFieldTableMap());
+        leftExpression.accept(leftDencryptWhereFieldParseVisitor);
+        inExpression.setLeftExpression(leftDencryptWhereFieldParseVisitor.getExpression());
     }
 
     @Override
@@ -224,41 +286,80 @@ public class DencryptWhereFieldParseVisitor extends BaseFieldParseTable implemen
 
     @Override
     public void visit(IsNullExpression isNullExpression) {
-        isNullExpression.getLeftExpression().accept(this);
+        Expression leftExpression = isNullExpression.getLeftExpression();
+        DencryptWhereFieldParseVisitor leftDencryptWhereFieldParseVisitor = new DencryptWhereFieldParseVisitor(leftExpression, this.getLayer(), this.getLayerSelectTableFieldMap(), this.getLayerFieldTableMap());
+        leftExpression.accept(leftDencryptWhereFieldParseVisitor);
+        isNullExpression.setLeftExpression(leftDencryptWhereFieldParseVisitor.getExpression());
     }
 
     @Override
     public void visit(IsBooleanExpression isBooleanExpression) {
         //解析表达式
-        isBooleanExpression.getLeftExpression().accept(this);
+        Expression leftExpression = isBooleanExpression.getLeftExpression();
+        DencryptWhereFieldParseVisitor leftDencryptWhereFieldParseVisitor = new DencryptWhereFieldParseVisitor(leftExpression, this.getLayer(), this.getLayerSelectTableFieldMap(), this.getLayerFieldTableMap());
+        leftExpression.accept(leftDencryptWhereFieldParseVisitor);
+        isBooleanExpression.setLeftExpression(leftDencryptWhereFieldParseVisitor.getExpression());
     }
 
     @Override
     public void visit(LikeExpression likeExpression) {
         //解析左右表达式
-        likeExpression.getLeftExpression().accept(this);
-        likeExpression.getRightExpression().accept(this);
+        Expression leftExpression = likeExpression.getLeftExpression();
+        DencryptWhereFieldParseVisitor leftDencryptWhereFieldParseVisitor = new DencryptWhereFieldParseVisitor(leftExpression, this.getLayer(), this.getLayerSelectTableFieldMap(), this.getLayerFieldTableMap());
+        leftExpression.accept(leftDencryptWhereFieldParseVisitor);
+        likeExpression.setLeftExpression(leftDencryptWhereFieldParseVisitor.getExpression());
+
+        Expression rightExpression = likeExpression.getRightExpression();
+        DencryptWhereFieldParseVisitor rightDencryptWhereFieldParseVisitor = new DencryptWhereFieldParseVisitor(rightExpression, this.getLayer(), this.getLayerSelectTableFieldMap(), this.getLayerFieldTableMap());
+        rightExpression.accept(rightDencryptWhereFieldParseVisitor);
+        likeExpression.setRightExpression(rightDencryptWhereFieldParseVisitor.getExpression());
     }
 
     @Override
     public void visit(MinorThan minorThan) {
         //解析左右表达式
-        minorThan.getLeftExpression().accept(this);
-        minorThan.getRightExpression().accept(this);
+        Expression leftExpression = minorThan.getLeftExpression();
+        DencryptWhereFieldParseVisitor leftDencryptWhereFieldParseVisitor = new DencryptWhereFieldParseVisitor(leftExpression, this.getLayer(), this.getLayerSelectTableFieldMap(), this.getLayerFieldTableMap());
+        leftExpression.accept(leftDencryptWhereFieldParseVisitor);
+        minorThan.setLeftExpression(leftDencryptWhereFieldParseVisitor.getExpression());
+
+        Expression rightExpression = minorThan.getRightExpression();
+        DencryptWhereFieldParseVisitor rightDencryptWhereFieldParseVisitor = new DencryptWhereFieldParseVisitor(rightExpression, this.getLayer(), this.getLayerSelectTableFieldMap(), this.getLayerFieldTableMap());
+        rightExpression.accept(rightDencryptWhereFieldParseVisitor);
+        minorThan.setRightExpression(rightDencryptWhereFieldParseVisitor.getExpression());
     }
 
     @Override
     public void visit(MinorThanEquals minorThanEquals) {
         //解析左右表达式
-        minorThanEquals.getLeftExpression().accept(this);
-        minorThanEquals.getRightExpression().accept(this);
+        Expression leftExpression = minorThanEquals.getLeftExpression();
+        DencryptWhereFieldParseVisitor leftDencryptWhereFieldParseVisitor = new DencryptWhereFieldParseVisitor(leftExpression, this.getLayer(), this.getLayerSelectTableFieldMap(), this.getLayerFieldTableMap());
+        leftExpression.accept(leftDencryptWhereFieldParseVisitor);
+        minorThanEquals.setLeftExpression(leftDencryptWhereFieldParseVisitor.getExpression());
+
+        Expression rightExpression = minorThanEquals.getRightExpression();
+        DencryptWhereFieldParseVisitor rightDencryptWhereFieldParseVisitor = new DencryptWhereFieldParseVisitor(rightExpression, this.getLayer(), this.getLayerSelectTableFieldMap(), this.getLayerFieldTableMap());
+        rightExpression.accept(rightDencryptWhereFieldParseVisitor);
+        minorThanEquals.setRightExpression(rightDencryptWhereFieldParseVisitor.getExpression());
     }
 
     @Override
     public void visit(NotEqualsTo notEqualsTo) {
+        //如果左右侧都是 Column 类型的话，不用处理加密，都是数据库的字段，都是加密的
+        if ((notEqualsTo.getLeftExpression() instanceof Column) && notEqualsTo.getRightExpression() instanceof Column) {
+            return;
+        }
+
         //解析左右表达式
-        notEqualsTo.getLeftExpression().accept(this);
-        notEqualsTo.getRightExpression().accept(this);
+        Expression leftExpression = notEqualsTo.getLeftExpression();
+        DencryptWhereFieldParseVisitor leftDencryptWhereFieldParseVisitor = new DencryptWhereFieldParseVisitor(leftExpression, this.getLayer(), this.getLayerSelectTableFieldMap(), this.getLayerFieldTableMap());
+        leftExpression.accept(leftDencryptWhereFieldParseVisitor);
+        notEqualsTo.setLeftExpression(leftDencryptWhereFieldParseVisitor.getExpression());
+
+        Expression rightExpression = notEqualsTo.getRightExpression();
+        DencryptWhereFieldParseVisitor rightDencryptWhereFieldParseVisitor = new DencryptWhereFieldParseVisitor(rightExpression, this.getLayer(), this.getLayerSelectTableFieldMap(), this.getLayerFieldTableMap());
+        rightExpression.accept(rightDencryptWhereFieldParseVisitor);
+        notEqualsTo.setRightExpression(rightDencryptWhereFieldParseVisitor.getExpression());
     }
 
     /**
@@ -281,7 +382,7 @@ public class DencryptWhereFieldParseVisitor extends BaseFieldParseTable implemen
         String tableTrueName = columnTableDto.getSourceTableName();
         String columTrueName = columnTableDto.getSourceColumn();
 
-        //3. 当前字段不需要解密(实体类上面没有标注@FieldEncrypt注解 或者字段不是来源自真实表)
+        //3. 当前字段不需要解密(实体类上面没有标注@FieldEncryptor注解 或者字段不是来源自真实表)
         if (!columnTableDto.isFromSourceTable() || Optional.ofNullable(TableCache.getTableFieldEncryptInfo())
                 .map(m -> m.get(tableTrueName))
                 .map(m -> m.get(columTrueName))
@@ -290,9 +391,14 @@ public class DencryptWhereFieldParseVisitor extends BaseFieldParseTable implemen
         }
 
         //4. 将字段进行解密(注意：这里没有办法将Column 对象转换为 Function 对象，所以这里只能进行字符串组装 ，必须将字段所属表设置为null，不然sql会在函数外面再包一层 表名.)
-        String EncryptColumn = SymbolConstant.DECODE + columnTableDto.getTableAliasName() + SymbolConstant.FULL_STOP + column.getColumnName() + "), 'encryptionKey秘钥')";
-        column.setTable(null);
-        column.setColumnName(EncryptColumn);
+        Function base64Function = new Function();
+        base64Function.setName(SymbolConstant.FROM_BASE64);
+        base64Function.setParameters(new ExpressionList(column));
+        Function decryptFunction = new Function();
+        decryptFunction.setName(SymbolConstant.AES_DECRYPT);
+        decryptFunction.setParameters(new ExpressionList(base64Function, new StringValue("encryptionKey秘钥")));
+        this.expression = decryptFunction;
+
     }
 
     /**
@@ -334,8 +440,10 @@ public class DencryptWhereFieldParseVisitor extends BaseFieldParseTable implemen
     @Override
     public void visit(ExistsExpression existsExpression) {
         //解析表达式
-        existsExpression.getRightExpression().accept(this);
-
+        Expression rightExpression = existsExpression.getRightExpression();
+        DencryptWhereFieldParseVisitor rightDencryptWhereFieldParseVisitor = new DencryptWhereFieldParseVisitor(rightExpression, this.getLayer(), this.getLayerSelectTableFieldMap(), this.getLayerFieldTableMap());
+        rightExpression.accept(rightDencryptWhereFieldParseVisitor);
+        existsExpression.setRightExpression(rightDencryptWhereFieldParseVisitor.getExpression());
     }
 
     @Override

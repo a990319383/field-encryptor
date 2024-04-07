@@ -30,6 +30,9 @@ public class UDecryptExpressionVisitor extends BaseFieldParseTable implements Ex
 
     /**
      * 当前Set表达式 = 后面的字段
+     * <p>
+     * 加解密处理好后的表达式
+     * 如果不需要处理，则这个值就是构造函数传入的旧表达式
      */
     private Expression expression;
 

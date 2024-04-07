@@ -92,6 +92,7 @@ public class JsqlparserUtil {
 
     /**
      * 解析当前字段所属表的信息
+     * 备注：当前没有对 `` 进行兼容， @TableField 中标注的字段有 ``的话，这里就会只对带``的进行匹配，没有对两种进行兼容
      *
      * @author liutangqi
      * @date 2024/3/6 14:52
@@ -167,7 +168,7 @@ public class JsqlparserUtil {
         //1.匹配所属表信息
         ColumnTableDto columnTableDto = parseColumn(column, layer, layerFieldTableMap);
 
-        //2.当前字段不需要解密直接返回 (实体类上面没有标注@FieldEncrypt注解 或者字段不是来源自真实表)
+        //2.当前字段不需要解密直接返回 (实体类上面没有标注@FieldEncryptor注解 或者字段不是来源自真实表)
         return columnTableDto.isFromSourceTable()
                 && Optional.ofNullable(TableCache.getTableFieldEncryptInfo())
                 .map(m -> m.get(columnTableDto.getSourceTableName()))

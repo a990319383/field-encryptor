@@ -35,8 +35,11 @@ public class IDecryptSelectVisitor extends BaseFieldParseTable implements Select
         }
 
         //where 条件的相应字段进行解密处理
-        DencryptWhereFieldParseVisitor dencryptWhereFieldVisitor = new DencryptWhereFieldParseVisitor(this.getLayer(), this.getLayerSelectTableFieldMap(), this.getLayerFieldTableMap());
+        DencryptWhereFieldParseVisitor dencryptWhereFieldVisitor = new DencryptWhereFieldParseVisitor(where, this.getLayer(), this.getLayerSelectTableFieldMap(), this.getLayerFieldTableMap());
         where.accept(dencryptWhereFieldVisitor);
+
+        //替换原表达式
+        plainSelect.setWhere(dencryptWhereFieldVisitor.getExpression());
     }
 
     @Override

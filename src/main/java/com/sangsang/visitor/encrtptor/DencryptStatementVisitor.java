@@ -92,11 +92,11 @@ public class DencryptStatementVisitor implements StatementVisitor {
         }
 
         //4.将where 条件进行加密
-        DencryptWhereFieldParseVisitor dencryptWhereFieldVisitor = new DencryptWhereFieldParseVisitor(fieldParseTableFromItemVisitor.getLayer(), fieldParseTableFromItemVisitor.getLayerSelectTableFieldMap(), fieldParseTableFromItemVisitor.getLayerFieldTableMap());
+        DencryptWhereFieldParseVisitor dencryptWhereFieldVisitor = new DencryptWhereFieldParseVisitor(where, fieldParseTableFromItemVisitor.getLayer(), fieldParseTableFromItemVisitor.getLayerSelectTableFieldMap(), fieldParseTableFromItemVisitor.getLayerFieldTableMap());
         where.accept(dencryptWhereFieldVisitor);
 
         //5.结果赋值
-        delete.setWhere(where);
+        delete.setWhere(dencryptWhereFieldVisitor.getExpression());
         this.resultSql = delete.toString();
     }
 
@@ -124,8 +124,10 @@ public class DencryptStatementVisitor implements StatementVisitor {
         //3.加密where 条件的数据
         Expression where = update.getWhere();
         if (where != null) {
-            DencryptWhereFieldParseVisitor dencryptWhereFieldVisitor = new DencryptWhereFieldParseVisitor(fieldParseTableFromItemVisitor.getLayer(), fieldParseTableFromItemVisitor.getLayerSelectTableFieldMap(), fieldParseTableFromItemVisitor.getLayerFieldTableMap());
+            DencryptWhereFieldParseVisitor dencryptWhereFieldVisitor = new DencryptWhereFieldParseVisitor(where, fieldParseTableFromItemVisitor.getLayer(), fieldParseTableFromItemVisitor.getLayerSelectTableFieldMap(), fieldParseTableFromItemVisitor.getLayerFieldTableMap());
             where.accept(dencryptWhereFieldVisitor);
+            //修改后的where赋值
+            update.setWhere(dencryptWhereFieldVisitor.getExpression());
         }
 
         //4.加密处理set的数据 （只加密 set 后面的表达式不是来自于其它表的，来自从其它表里面取的，默认是从密文到密文，不需要加密）
