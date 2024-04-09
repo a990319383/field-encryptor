@@ -1,5 +1,6 @@
 package com.sangsang.interceptor;
 
+import com.sangsang.util.StringUtils;
 import com.sangsang.visitor.encrtptor.DencryptStatementVisitor;
 import net.sf.jsqlparser.parser.CCJSqlParserUtil;
 import net.sf.jsqlparser.statement.Statement;
@@ -45,7 +46,9 @@ public class FieldEncryptorInterceptor implements Interceptor {
             Statement statement = CCJSqlParserUtil.parse(oldSql);
             DencryptStatementVisitor dencryptStatementVisitor = new DencryptStatementVisitor();
             statement.accept(dencryptStatementVisitor);
-            newSql = dencryptStatementVisitor.getResultSql();
+            if (StringUtils.isNotBlank(dencryptStatementVisitor.getResultSql())) {
+                newSql = dencryptStatementVisitor.getResultSql();
+            }
             log.debug("【FieldEncryptor】新sql：{}", newSql);
         } catch (Exception e) {
             log.error("【FieldEncryptor】加解密sql异常 原sql:{}", oldSql, e);
