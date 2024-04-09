@@ -1,8 +1,8 @@
 package com.sangsang.visitor.encrtptor.select;
 
 import com.baomidou.mybatisplus.core.toolkit.CollectionUtils;
+import com.sangsang.cache.FieldEncryptorPatternCache;
 import com.sangsang.cache.TableCache;
-import com.sangsang.domain.constants.SymbolConstant;
 import com.sangsang.domain.dto.BaseFieldParseTable;
 import com.sangsang.domain.dto.ColumnTableDto;
 import com.sangsang.domain.dto.FieldInfoDto;
@@ -11,8 +11,11 @@ import net.sf.jsqlparser.expression.*;
 import net.sf.jsqlparser.expression.operators.arithmetic.*;
 import net.sf.jsqlparser.expression.operators.conditional.AndExpression;
 import net.sf.jsqlparser.expression.operators.conditional.OrExpression;
+import net.sf.jsqlparser.expression.operators.conditional.XorExpression;
 import net.sf.jsqlparser.expression.operators.relational.*;
 import net.sf.jsqlparser.schema.Column;
+import net.sf.jsqlparser.statement.select.AllColumns;
+import net.sf.jsqlparser.statement.select.AllTableColumns;
 import net.sf.jsqlparser.statement.select.SubSelect;
 
 import java.util.*;
@@ -182,6 +185,11 @@ public class DecryptExpressionVisitor extends BaseFieldParseTable implements Exp
     }
 
     @Override
+    public void visit(XorExpression xorExpression) {
+
+    }
+
+    @Override
     public void visit(Between between) {
 
     }
@@ -264,12 +272,7 @@ public class DecryptExpressionVisitor extends BaseFieldParseTable implements Exp
         }
 
         //3.将该字段进行解密处理
-        Function base64Function = new Function();
-        base64Function.setName(SymbolConstant.FROM_BASE64);
-        base64Function.setParameters(new ExpressionList(column));
-        Function decryptFunction = new Function();
-        decryptFunction.setName(SymbolConstant.AES_DECRYPT);
-        decryptFunction.setParameters(new ExpressionList(base64Function, new StringValue("encryptionKey秘钥")));
+        Expression decryptFunction = FieldEncryptorPatternCache.getInstance().decryption(column);
         this.expression = decryptFunction;
 
         //4.别名处理（字段经过加密函数后，如果之前没有别名的话，需要用之前的字段名作为别名，不然ORM映射的时候会无法匹配）
@@ -309,7 +312,7 @@ public class DecryptExpressionVisitor extends BaseFieldParseTable implements Exp
                     .map(m -> {
                         DecryptExpressionVisitor expressionVisitor = new DecryptExpressionVisitor(this.alias, m, this.getLayer(), this.getLayerSelectTableFieldMap(), this.getLayerFieldTableMap());
                         m.accept(expressionVisitor);
-                        // 这里返回的类型肯定是通过构造函数传输过去的，所以可以直接强转
+                        // 这里返回的类型肯定是通过构造函数传输过去的，所以可以直接强转（这里过去是WhenClause WhenClause下一层才是Column才会转换类型）
                         return (WhenClause) expressionVisitor.getExpression();
                     }).collect(Collectors.toList());
             caseExpression.setWhenClauses(whenClauses);
@@ -350,11 +353,6 @@ public class DecryptExpressionVisitor extends BaseFieldParseTable implements Exp
     }
 
     @Override
-    public void visit(AllComparisonExpression allComparisonExpression) {
-
-    }
-
-    @Override
     public void visit(AnyComparisonExpression anyComparisonExpression) {
 
     }
@@ -386,6 +384,11 @@ public class DecryptExpressionVisitor extends BaseFieldParseTable implements Exp
 
     @Override
     public void visit(CastExpression cast) {
+
+    }
+
+    @Override
+    public void visit(TryCastExpression tryCastExpression) {
 
     }
 
@@ -465,6 +468,11 @@ public class DecryptExpressionVisitor extends BaseFieldParseTable implements Exp
     }
 
     @Override
+    public void visit(RowGetExpression rowGetExpression) {
+
+    }
+
+    @Override
     public void visit(OracleHint hint) {
 
     }
@@ -501,6 +509,71 @@ public class DecryptExpressionVisitor extends BaseFieldParseTable implements Exp
 
     @Override
     public void visit(ArrayExpression aThis) {
+
+    }
+
+    @Override
+    public void visit(ArrayConstructor arrayConstructor) {
+
+    }
+
+    @Override
+    public void visit(VariableAssignment variableAssignment) {
+
+    }
+
+    @Override
+    public void visit(XMLSerializeExpr xmlSerializeExpr) {
+
+    }
+
+    @Override
+    public void visit(TimezoneExpression timezoneExpression) {
+
+    }
+
+    @Override
+    public void visit(JsonAggregateFunction jsonAggregateFunction) {
+
+    }
+
+    @Override
+    public void visit(JsonFunction jsonFunction) {
+
+    }
+
+    @Override
+    public void visit(ConnectByRootOperator connectByRootOperator) {
+
+    }
+
+    @Override
+    public void visit(OracleNamedFunctionParameter oracleNamedFunctionParameter) {
+
+    }
+
+    @Override
+    public void visit(AllColumns allColumns) {
+
+    }
+
+    @Override
+    public void visit(AllTableColumns allTableColumns) {
+
+    }
+
+    @Override
+    public void visit(AllValue allValue) {
+
+    }
+
+    @Override
+    public void visit(IsDistinctExpression isDistinctExpression) {
+
+    }
+
+    @Override
+    public void visit(GeometryDistance geometryDistance) {
 
     }
 }

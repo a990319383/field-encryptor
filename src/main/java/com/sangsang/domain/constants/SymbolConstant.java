@@ -26,6 +26,11 @@ public interface SymbolConstant {
     String AS = " as ";
 
     /**
+     * 默认秘钥
+     */
+    String DEFAULT_SECRET_KEY = "7uq?q8g3@q";
+
+    /**
      * mysql AES 加密函数
      */
     String AES_ENCRYPT = "AES_ENCRYPT";

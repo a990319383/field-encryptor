@@ -1,7 +1,7 @@
 package com.sangsang.visitor.encrtptor.where;
 
+import com.sangsang.cache.FieldEncryptorPatternCache;
 import com.sangsang.cache.TableCache;
-import com.sangsang.domain.constants.SymbolConstant;
 import com.sangsang.domain.dto.BaseFieldParseTable;
 import com.sangsang.domain.dto.ColumnTableDto;
 import com.sangsang.domain.dto.FieldInfoDto;
@@ -12,12 +12,14 @@ import net.sf.jsqlparser.expression.*;
 import net.sf.jsqlparser.expression.operators.arithmetic.*;
 import net.sf.jsqlparser.expression.operators.conditional.AndExpression;
 import net.sf.jsqlparser.expression.operators.conditional.OrExpression;
+import net.sf.jsqlparser.expression.operators.conditional.XorExpression;
 import net.sf.jsqlparser.expression.operators.relational.*;
 import net.sf.jsqlparser.schema.Column;
 import net.sf.jsqlparser.statement.select.*;
 import org.springframework.util.CollectionUtils;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * 备注：这里使用的jsqlparser的sql解析的访问者
@@ -203,6 +205,11 @@ public class DencryptWhereFieldParseVisitor extends BaseFieldParseTable implemen
         orExpression.setRightExpression(rightDencryptWhereFieldParseVisitor.getExpression());
     }
 
+    @Override
+    public void visit(XorExpression xorExpression) {
+
+    }
+
 
     @Override
     public void visit(Between between) {
@@ -286,10 +293,11 @@ public class DencryptWhereFieldParseVisitor extends BaseFieldParseTable implemen
 
     @Override
     public void visit(IsNullExpression isNullExpression) {
-        Expression leftExpression = isNullExpression.getLeftExpression();
-        DencryptWhereFieldParseVisitor leftDencryptWhereFieldParseVisitor = new DencryptWhereFieldParseVisitor(leftExpression, this.getLayer(), this.getLayerSelectTableFieldMap(), this.getLayerFieldTableMap());
-        leftExpression.accept(leftDencryptWhereFieldParseVisitor);
-        isNullExpression.setLeftExpression(leftDencryptWhereFieldParseVisitor.getExpression());
+        //is null / is not null 不需要加解密
+//        Expression leftExpression = isNullExpression.getLeftExpression();
+//        DencryptWhereFieldParseVisitor leftDencryptWhereFieldParseVisitor = new DencryptWhereFieldParseVisitor(leftExpression, this.getLayer(), this.getLayerSelectTableFieldMap(), this.getLayerFieldTableMap());
+//        leftExpression.accept(leftDencryptWhereFieldParseVisitor);
+//        isNullExpression.setLeftExpression(leftDencryptWhereFieldParseVisitor.getExpression());
     }
 
     @Override
@@ -390,13 +398,8 @@ public class DencryptWhereFieldParseVisitor extends BaseFieldParseTable implemen
             return;
         }
 
-        //4. 将字段进行解密(注意：这里没有办法将Column 对象转换为 Function 对象，所以这里只能进行字符串组装 ，必须将字段所属表设置为null，不然sql会在函数外面再包一层 表名.)
-        Function base64Function = new Function();
-        base64Function.setName(SymbolConstant.FROM_BASE64);
-        base64Function.setParameters(new ExpressionList(column));
-        Function decryptFunction = new Function();
-        decryptFunction.setName(SymbolConstant.AES_DECRYPT);
-        decryptFunction.setParameters(new ExpressionList(base64Function, new StringValue("encryptionKey秘钥")));
+        //4. 将字段进行解密
+        Expression decryptFunction = FieldEncryptorPatternCache.getInstance().decryption(column);
         this.expression = decryptFunction;
 
     }
@@ -422,12 +425,51 @@ public class DencryptWhereFieldParseVisitor extends BaseFieldParseTable implemen
 
     @Override
     public void visit(CaseExpression caseExpression) {
-        System.out.println(caseExpression);
+        //处理case的条件
+        Expression switchExpression = caseExpression.getSwitchExpression();
+        if (switchExpression != null) {
+            DencryptWhereFieldParseVisitor expressionVisitor = new DencryptWhereFieldParseVisitor(switchExpression, this.getLayer(), this.getLayerSelectTableFieldMap(), this.getLayerFieldTableMap());
+            switchExpression.accept(expressionVisitor);
+            caseExpression.setSwitchExpression(expressionVisitor.getExpression());
+        }
+
+        //处理when的条件
+        if (!CollectionUtils.isEmpty(caseExpression.getWhenClauses())) {
+            List<WhenClause> whenClauses = caseExpression.getWhenClauses().stream()
+                    .map(m -> {
+                        DencryptWhereFieldParseVisitor expressionVisitor = new DencryptWhereFieldParseVisitor(m, this.getLayer(), this.getLayerSelectTableFieldMap(), this.getLayerFieldTableMap());
+                        m.accept(expressionVisitor);
+                        // 这里返回的类型肯定是通过构造函数传输过去的，所以可以直接强转（这里过去是WhenClause WhenClause下一层才是Column才会转换类型）
+                        return (WhenClause) expressionVisitor.getExpression();
+                    }).collect(Collectors.toList());
+            caseExpression.setWhenClauses(whenClauses);
+        }
+
+        //处理else
+        Expression elseExpression = caseExpression.getElseExpression();
+        if (elseExpression != null) {
+            DencryptWhereFieldParseVisitor expressionVisitor = new DencryptWhereFieldParseVisitor(elseExpression, this.getLayer(), this.getLayerSelectTableFieldMap(), this.getLayerFieldTableMap());
+            elseExpression.accept(expressionVisitor);
+            caseExpression.setElseExpression(expressionVisitor.getExpression());
+        }
     }
 
     @Override
     public void visit(WhenClause whenClause) {
-        System.out.println(whenClause);
+        Expression thenExpression = whenClause.getThenExpression();
+        if (thenExpression != null) {
+            DencryptWhereFieldParseVisitor expressionVisitor = new DencryptWhereFieldParseVisitor(thenExpression, this.getLayer(), this.getLayerSelectTableFieldMap(), this.getLayerFieldTableMap());
+            thenExpression.accept(expressionVisitor);
+            whenClause.setThenExpression(expressionVisitor.getExpression());
+        }
+
+        Expression whenExpression = whenClause.getWhenExpression();
+        if (whenExpression != null) {
+            DencryptWhereFieldParseVisitor expressionVisitor = new DencryptWhereFieldParseVisitor(whenExpression, this.getLayer(), this.getLayerSelectTableFieldMap(), this.getLayerFieldTableMap());
+            whenExpression.accept(expressionVisitor);
+            whenClause.setWhenExpression(expressionVisitor.getExpression());
+            whenExpression.accept(expressionVisitor);
+        }
     }
 
     /**
@@ -446,10 +488,6 @@ public class DencryptWhereFieldParseVisitor extends BaseFieldParseTable implemen
         existsExpression.setRightExpression(rightDencryptWhereFieldParseVisitor.getExpression());
     }
 
-    @Override
-    public void visit(AllComparisonExpression allComparisonExpression) {
-
-    }
 
     @Override
     public void visit(AnyComparisonExpression anyComparisonExpression) {
@@ -483,6 +521,11 @@ public class DencryptWhereFieldParseVisitor extends BaseFieldParseTable implemen
 
     @Override
     public void visit(CastExpression cast) {
+
+    }
+
+    @Override
+    public void visit(TryCastExpression tryCastExpression) {
 
     }
 
@@ -562,6 +605,11 @@ public class DencryptWhereFieldParseVisitor extends BaseFieldParseTable implemen
     }
 
     @Override
+    public void visit(RowGetExpression rowGetExpression) {
+
+    }
+
+    @Override
     public void visit(OracleHint hint) {
 
     }
@@ -598,6 +646,71 @@ public class DencryptWhereFieldParseVisitor extends BaseFieldParseTable implemen
 
     @Override
     public void visit(ArrayExpression aThis) {
+
+    }
+
+    @Override
+    public void visit(ArrayConstructor arrayConstructor) {
+
+    }
+
+    @Override
+    public void visit(VariableAssignment variableAssignment) {
+
+    }
+
+    @Override
+    public void visit(XMLSerializeExpr xmlSerializeExpr) {
+
+    }
+
+    @Override
+    public void visit(TimezoneExpression timezoneExpression) {
+
+    }
+
+    @Override
+    public void visit(JsonAggregateFunction jsonAggregateFunction) {
+
+    }
+
+    @Override
+    public void visit(JsonFunction jsonFunction) {
+
+    }
+
+    @Override
+    public void visit(ConnectByRootOperator connectByRootOperator) {
+
+    }
+
+    @Override
+    public void visit(OracleNamedFunctionParameter oracleNamedFunctionParameter) {
+
+    }
+
+    @Override
+    public void visit(AllColumns allColumns) {
+
+    }
+
+    @Override
+    public void visit(AllTableColumns allTableColumns) {
+
+    }
+
+    @Override
+    public void visit(AllValue allValue) {
+
+    }
+
+    @Override
+    public void visit(IsDistinctExpression isDistinctExpression) {
+
+    }
+
+    @Override
+    public void visit(GeometryDistance geometryDistance) {
 
     }
 }

@@ -17,7 +17,6 @@ import java.util.*;
  * @date 2024/2/1 13:27
  */
 @Configuration
-@ConditionalOnClass(TableInfoHelper.class)
 public class TableCache {
     private static final Logger log = LoggerFactory.getLogger(TableCache.class);
 

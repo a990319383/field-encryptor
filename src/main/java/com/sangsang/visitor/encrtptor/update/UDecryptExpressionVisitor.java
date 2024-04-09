@@ -1,6 +1,6 @@
 package com.sangsang.visitor.encrtptor.update;
 
-import com.sangsang.domain.constants.SymbolConstant;
+import com.sangsang.cache.FieldEncryptorPatternCache;
 import com.sangsang.domain.dto.BaseFieldParseTable;
 import com.sangsang.domain.dto.FieldInfoDto;
 import com.sangsang.util.JsqlparserUtil;
@@ -8,8 +8,11 @@ import net.sf.jsqlparser.expression.*;
 import net.sf.jsqlparser.expression.operators.arithmetic.*;
 import net.sf.jsqlparser.expression.operators.conditional.AndExpression;
 import net.sf.jsqlparser.expression.operators.conditional.OrExpression;
+import net.sf.jsqlparser.expression.operators.conditional.XorExpression;
 import net.sf.jsqlparser.expression.operators.relational.*;
 import net.sf.jsqlparser.schema.Column;
+import net.sf.jsqlparser.statement.select.AllColumns;
+import net.sf.jsqlparser.statement.select.AllTableColumns;
 import net.sf.jsqlparser.statement.select.SubSelect;
 
 import java.util.Map;
@@ -132,13 +135,7 @@ public class UDecryptExpressionVisitor extends BaseFieldParseTable implements Ex
         }
 
         //将当前字段进行加密处理
-        Function aesEncryptFunction = new Function();
-        aesEncryptFunction.setName(SymbolConstant.AES_ENCRYPT);
-        aesEncryptFunction.setParameters(new ExpressionList(stringValue, new StringValue("encryptionKey秘钥")));
-        Function toBase64Function = new Function();
-        toBase64Function.setName(SymbolConstant.TO_BASE64);
-        toBase64Function.setParameters(new ExpressionList(aesEncryptFunction));
-
+        Expression toBase64Function = FieldEncryptorPatternCache.getInstance().encryption(stringValue);
         this.expression = toBase64Function;
 
     }
@@ -175,6 +172,11 @@ public class UDecryptExpressionVisitor extends BaseFieldParseTable implements Ex
 
     @Override
     public void visit(OrExpression orExpression) {
+
+    }
+
+    @Override
+    public void visit(XorExpression xorExpression) {
 
     }
 
@@ -266,12 +268,6 @@ public class UDecryptExpressionVisitor extends BaseFieldParseTable implements Ex
     }
 
     @Override
-    public void visit(AllComparisonExpression allComparisonExpression) {
-
-    }
-
-
-    @Override
     public void visit(AnyComparisonExpression anyComparisonExpression) {
 
     }
@@ -303,6 +299,11 @@ public class UDecryptExpressionVisitor extends BaseFieldParseTable implements Ex
 
     @Override
     public void visit(CastExpression cast) {
+
+    }
+
+    @Override
+    public void visit(TryCastExpression tryCastExpression) {
 
     }
 
@@ -382,6 +383,11 @@ public class UDecryptExpressionVisitor extends BaseFieldParseTable implements Ex
 
     }
 
+    @Override
+    public void visit(RowGetExpression rowGetExpression) {
+
+    }
+
 
     @Override
     public void visit(OracleHint hint) {
@@ -420,6 +426,71 @@ public class UDecryptExpressionVisitor extends BaseFieldParseTable implements Ex
 
     @Override
     public void visit(ArrayExpression aThis) {
+
+    }
+
+    @Override
+    public void visit(ArrayConstructor arrayConstructor) {
+
+    }
+
+    @Override
+    public void visit(VariableAssignment variableAssignment) {
+
+    }
+
+    @Override
+    public void visit(XMLSerializeExpr xmlSerializeExpr) {
+
+    }
+
+    @Override
+    public void visit(TimezoneExpression timezoneExpression) {
+
+    }
+
+    @Override
+    public void visit(JsonAggregateFunction jsonAggregateFunction) {
+
+    }
+
+    @Override
+    public void visit(JsonFunction jsonFunction) {
+
+    }
+
+    @Override
+    public void visit(ConnectByRootOperator connectByRootOperator) {
+
+    }
+
+    @Override
+    public void visit(OracleNamedFunctionParameter oracleNamedFunctionParameter) {
+
+    }
+
+    @Override
+    public void visit(AllColumns allColumns) {
+
+    }
+
+    @Override
+    public void visit(AllTableColumns allTableColumns) {
+
+    }
+
+    @Override
+    public void visit(AllValue allValue) {
+
+    }
+
+    @Override
+    public void visit(IsDistinctExpression isDistinctExpression) {
+
+    }
+
+    @Override
+    public void visit(GeometryDistance geometryDistance) {
 
     }
 }

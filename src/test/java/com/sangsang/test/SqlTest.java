@@ -1,12 +1,11 @@
 package com.sangsang.test;
 
-import com.sangsang.cache.TableCache;
+import com.sangsang.cache.FieldEncryptorPatternCache;
 import com.sangsang.visitor.encrtptor.DencryptStatementVisitor;
 import net.sf.jsqlparser.JSQLParserException;
 import net.sf.jsqlparser.parser.CCJSqlParserUtil;
 import net.sf.jsqlparser.statement.Statement;
-import org.junit.Test;
-import org.springframework.test.context.ContextConfiguration;
+import org.junit.jupiter.api.Test;
 
 /**
  * @author liutangqi
@@ -261,6 +260,19 @@ public class SqlTest {
             "\t\tconcat(tu.phone,'-',tu.create_time) as fff\n" +
             "\t    from tb_user tu )a";
 
+    //where 中带case
+    String s16 = "\tselect\n" +
+            "\t*\n" +
+            "from tb_user tu\n" +
+            "left join tb_menu tm \n" +
+            "on tu.id = tm.id\n" +
+            "where tu.phone like \"%aaa%\"\n" +
+            "and\n" +
+            "case tu.phone\n" +
+            "when 'zzz' then tu.phone like 'ggg'\n" +
+            "when 'xxx' then tm.id > 10\n" +
+            "end";
+
     // -----------------insert 测试语句---------------------
     String i1 = "insert into tb_user(id, user_name ,phone) \n" +
             "values(1,'西瓜','18243512315'),(2,'南瓜','18243121315')";
@@ -315,10 +327,13 @@ public class SqlTest {
 
     @Test
     public void testSql() throws JSQLParserException, NoSuchFieldException {
+        //初始化加解密函数
+        FieldEncryptorPatternCache.initDeafultInstance();
         //mock数据
         InitTableInfo.initTable();
 
-        String sql = s3;
+        //需要测试的sql
+        String sql = s16;
         System.out.println("----------------------------------------------------------------------------");
         System.out.println(sql);
         System.out.println("----------------------------------------------------------------------------");

@@ -6,8 +6,7 @@
 
     <groupId>com.sangsang</groupId>
     <artifactId>field-encryptor</artifactId>
-    <!--这个版本和jsqlparser保持一致 3.x 和4.x api有差异-->
-    <version>3.1</version>
+    <version>1.0</version>
     <description>无侵入数据库字段加解密</description>
     <developers>
         <developer>
@@ -25,20 +24,20 @@
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot</artifactId>
-            <version>2.3.0.RELEASE</version>
+            <version>2.5.3</version>
         </dependency>
         <!--spring-boot-test-->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>
-            <version>2.3.0.RELEASE</version>
+            <version>2.5.3</version>
             <scope>test</scope>
         </dependency>
         <!-- mybatis-plus -->
         <dependency>
             <groupId>com.baomidou</groupId>
             <artifactId>mybatis-plus-boot-starter</artifactId>
-            <version>3.3.2</version>
+            <version>3.5.3.1</version>
         </dependency>
         <!--hutool-->
         <dependency>

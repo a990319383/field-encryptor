@@ -1,5 +1,6 @@
 package com.sangsang.visitor.encrtptor.insert;
 
+import com.sangsang.cache.FieldEncryptorPatternCache;
 import com.sangsang.domain.constants.SymbolConstant;
 import net.sf.jsqlparser.expression.Expression;
 import net.sf.jsqlparser.expression.Function;
@@ -55,12 +56,7 @@ public class IDecryptItemsListVisitor implements ItemsListVisitor {
                 StringValue stringValue = (StringValue) expression;
 
                 //将原表达式进行加密
-                Function aesEncryptFunction = new Function();
-                aesEncryptFunction.setName(SymbolConstant.AES_ENCRYPT);
-                aesEncryptFunction.setParameters(new ExpressionList(stringValue, new StringValue("encryptionKey秘钥")));
-                Function toBase64Function = new Function();
-                toBase64Function.setName(SymbolConstant.TO_BASE64);
-                toBase64Function.setParameters(new ExpressionList(aesEncryptFunction));
+                Expression toBase64Function = FieldEncryptorPatternCache.getInstance().encryption(stringValue);
 
                 expression = toBase64Function;
             }
