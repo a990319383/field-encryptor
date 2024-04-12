@@ -2,12 +2,14 @@ package com.sangsang.visitor.encrtptor.where;
 
 import com.sangsang.cache.FieldEncryptorPatternCache;
 import com.sangsang.cache.TableCache;
+import com.sangsang.domain.constants.NumberConstant;
 import com.sangsang.domain.dto.BaseFieldParseTable;
 import com.sangsang.domain.dto.ColumnTableDto;
 import com.sangsang.domain.dto.FieldInfoDto;
 import com.sangsang.util.JsqlparserUtil;
 import com.sangsang.util.StringUtils;
-import com.sangsang.visitor.encrtptor.select.DecryptSelectVisitor;
+import com.sangsang.visitor.encrtptor.fieldparse.FieldParseParseTableSelectVisitor;
+import com.sangsang.visitor.encrtptor.select.SDecryptSelectVisitor;
 import net.sf.jsqlparser.expression.*;
 import net.sf.jsqlparser.expression.operators.arithmetic.*;
 import net.sf.jsqlparser.expression.operators.conditional.AndExpression;
@@ -25,6 +27,7 @@ import java.util.stream.Collectors;
  * 备注：这里使用的jsqlparser的sql解析的访问者
  * 作用：将where 条件后面需要加解密的字段进行解密处理
  * 目前只实现了常见的场景
+ * 备注：where 条件加解密的入口！！！
  *
  * @author liutangqi
  * @date 2024/2/20 14:47
@@ -218,12 +221,32 @@ public class DencryptWhereFieldParseVisitor extends BaseFieldParseTable implemen
 
     @Override
     public void visit(EqualsTo equalsTo) {
-        //如果左右侧都是 Column 类型的话，不用处理加密，都是数据库的字段，都是加密的
-        if ((equalsTo.getLeftExpression() instanceof Column) && equalsTo.getRightExpression() instanceof Column) {
+        //1.如果左右侧都是 Column 类型的话，不用处理加密，都是数据库的字段，都是加密的
+        if ((equalsTo.getLeftExpression() instanceof Column) && (equalsTo.getRightExpression() instanceof Column)) {
             return;
         }
 
-        //解析左右两边的表达式
+        //2.左边是 Column 右边不是 Column ，避免索引失效，将非Column进行加密处理即可
+        if ((equalsTo.getLeftExpression() instanceof Column) && !(equalsTo.getRightExpression() instanceof Column)) {
+            //Column 是需要加密的字段则将非Column进行加密
+            if (JsqlparserUtil.needEncrypt((Column) equalsTo.getLeftExpression(), this.getLayer(), this.getLayerFieldTableMap())) {
+                Expression newRightExpression = FieldEncryptorPatternCache.getInstance().encryption(equalsTo.getRightExpression());
+                equalsTo.setRightExpression(newRightExpression);
+            }
+            return;
+        }
+
+        //3. 左边不是Column 右边是 Column  ，避免索引失效，将非Column进行加密处理即可
+        if ((equalsTo.getRightExpression() instanceof Column) && !(equalsTo.getLeftExpression() instanceof Column)) {
+            //Column 是需要加密的字段则将非Column进行加密
+            if (JsqlparserUtil.needEncrypt((Column) equalsTo.getRightExpression(), this.getLayer(), this.getLayerFieldTableMap())) {
+                Expression newLeftExpression = FieldEncryptorPatternCache.getInstance().encryption(equalsTo.getLeftExpression());
+                equalsTo.setLeftExpression(newLeftExpression);
+            }
+            return;
+        }
+
+        //4.其它情况（两边都不是Column） 解析左右两边的表达式
         Expression leftExpression = equalsTo.getLeftExpression();
         DencryptWhereFieldParseVisitor leftDencryptWhereFieldParseVisitor = new DencryptWhereFieldParseVisitor(leftExpression, this.getLayer(), this.getLayerSelectTableFieldMap(), this.getLayerFieldTableMap());
         leftExpression.accept(leftDencryptWhereFieldParseVisitor);
@@ -279,11 +302,56 @@ public class DencryptWhereFieldParseVisitor extends BaseFieldParseTable implemen
 
     @Override
     public void visit(InExpression inExpression) {
-        //解析表达式
+        //1.当前左边表达式是Column todo-ltq
+        if (inExpression.getLeftExpression() instanceof Column) {
+            //1.1 当前Column不需要加解密，则不做任何处理
+            if (!JsqlparserUtil.needEncrypt((Column) inExpression.getLeftExpression(), this.getLayer(), this.getLayerFieldTableMap())) {
+                return;
+            }
+
+            //1.2 右边是(aaa,bbb,ccc)  Column in (aaa,bbb,ccc) 这种
+            Optional.ofNullable(inExpression.getRightItemsList())
+                    .ifPresent(p -> p.accept(new DencryptWhereItemsListVisitor(this.getLayer(), this.getLayerSelectTableFieldMap(), this.getLayerFieldTableMap())));
+
+            //1.3 右边是 子查询  Column in (select xxx from xxx) 这种
+            Expression rightExpression = inExpression.getRightExpression();
+
+
+        }
+
+
+        //1.当前左边表达式是Column 右边是 (aaa,bbb,ccc)这种
+        if ((inExpression.getLeftExpression() instanceof Column) && (inExpression.getRightItemsList() instanceof ExpressionList)) {
+            //当前表达式需要进行加解密处理，则将右表达式进行加密处理
+            if (JsqlparserUtil.needEncrypt((Column) inExpression.getLeftExpression(), this.getLayer(), this.getLayerFieldTableMap())) {
+                ExpressionList expressionList = (ExpressionList) inExpression.getRightItemsList();
+                List<Expression> expressions = expressionList.getExpressions()
+                        .stream()
+                        .map(m -> FieldEncryptorPatternCache.getInstance().encryption(m))
+                        .collect(Collectors.toList());
+                expressionList.setExpressions(expressions);
+            }
+            return;
+        }
+
+        //2.不是 Column  in (aaa,bbb,ccc) 这种语法的话，则全部需要加密的字段都进行加密
+        //备注： 对 Column in (select xxx from xxx)这种不做单独的优化，直接都做加解密处理，优化成本太高 ，对加密字段这样写sql的时候，导致慢的话，找找自己的原因，这里为了可维护性，不做兼容支持
+        //2.1解析左边表达式 todo-ltq 待优化 ， Column in (select xxx from xxx)  Column需要加密时，不对Column进行列运算
         Expression leftExpression = inExpression.getLeftExpression();
         DencryptWhereFieldParseVisitor leftDencryptWhereFieldParseVisitor = new DencryptWhereFieldParseVisitor(leftExpression, this.getLayer(), this.getLayerSelectTableFieldMap(), this.getLayerFieldTableMap());
         leftExpression.accept(leftDencryptWhereFieldParseVisitor);
         inExpression.setLeftExpression(leftDencryptWhereFieldParseVisitor.getExpression());
+        //2.2解析右边表达式
+        Expression rightExpression = inExpression.getRightExpression();
+        if (rightExpression != null && (rightExpression instanceof SubSelect)) {
+            //备注：右边的子查询是一个完全独立的sql，所以不共用一个解析结果，需要单独解析当前sql中涉及的字段
+            FieldParseParseTableSelectVisitor fieldParseParseTableSelectVisitor = new FieldParseParseTableSelectVisitor(NumberConstant.ONE, null, null);
+            ((SubSelect) rightExpression).getSelectBody().accept(fieldParseParseTableSelectVisitor);
+            //根据上面解析出来sql拥有的字段信息，将子查询进行加解密
+            DencryptWhereFieldParseVisitor rightDencryptWhereFieldParseVisitor = new DencryptWhereFieldParseVisitor(rightExpression, fieldParseParseTableSelectVisitor.getLayer(), fieldParseParseTableSelectVisitor.getLayerSelectTableFieldMap(), fieldParseParseTableSelectVisitor.getLayerFieldTableMap());
+            rightExpression.accept(rightDencryptWhereFieldParseVisitor);
+            inExpression.setRightExpression(rightDencryptWhereFieldParseVisitor.getExpression());
+        }
     }
 
     @Override
@@ -353,12 +421,32 @@ public class DencryptWhereFieldParseVisitor extends BaseFieldParseTable implemen
 
     @Override
     public void visit(NotEqualsTo notEqualsTo) {
-        //如果左右侧都是 Column 类型的话，不用处理加密，都是数据库的字段，都是加密的
+        //1.如果左右侧都是 Column 类型的话，不用处理加密，都是数据库的字段，都是加密的
         if ((notEqualsTo.getLeftExpression() instanceof Column) && notEqualsTo.getRightExpression() instanceof Column) {
             return;
         }
 
-        //解析左右表达式
+        //2.左边是 Column 右边不是 Column ，避免索引失效，将非Column进行加密处理即可
+        if ((notEqualsTo.getLeftExpression() instanceof Column) && !(notEqualsTo.getRightExpression() instanceof Column)) {
+            //Column 是需要加密的字段则将非Column进行加密
+            if (JsqlparserUtil.needEncrypt((Column) notEqualsTo.getLeftExpression(), this.getLayer(), this.getLayerFieldTableMap())) {
+                Expression newRightExpression = FieldEncryptorPatternCache.getInstance().encryption(notEqualsTo.getRightExpression());
+                notEqualsTo.setRightExpression(newRightExpression);
+            }
+            return;
+        }
+
+        //3. 左边不是Column 右边是 Column  ，避免索引失效，将非Column进行加密处理即可
+        if ((notEqualsTo.getRightExpression() instanceof Column) && !(notEqualsTo.getLeftExpression() instanceof Column)) {
+            //Column 是需要加密的字段则将非Column进行加密
+            if (JsqlparserUtil.needEncrypt((Column) notEqualsTo.getRightExpression(), this.getLayer(), this.getLayerFieldTableMap())) {
+                Expression newLeftExpression = FieldEncryptorPatternCache.getInstance().encryption(notEqualsTo.getLeftExpression());
+                notEqualsTo.setLeftExpression(newLeftExpression);
+            }
+            return;
+        }
+
+        //4.其它情况（两边都不是Column） 解析左右两边的表达式
         Expression leftExpression = notEqualsTo.getLeftExpression();
         DencryptWhereFieldParseVisitor leftDencryptWhereFieldParseVisitor = new DencryptWhereFieldParseVisitor(leftExpression, this.getLayer(), this.getLayerSelectTableFieldMap(), this.getLayerFieldTableMap());
         leftExpression.accept(leftDencryptWhereFieldParseVisitor);
@@ -371,7 +459,8 @@ public class DencryptWhereFieldParseVisitor extends BaseFieldParseTable implemen
     }
 
     /**
-     * 其它的表达式，最终都会通过这个类型来进行解析
+     * 其它的表达式，除了 = ，！= , in 这种等值条件以为 ，最终都会通过这个类型来进行解析
+     * 备注：等值条件为了避免列运算影响原有的索引使用情况，不对Column进行运算
      * 注意：这里没办法将Column 转化为 Function 对象，没办法所以直接将新的解密表达式替换了原字段
      *
      * @author liutangqi
@@ -414,7 +503,7 @@ public class DencryptWhereFieldParseVisitor extends BaseFieldParseTable implemen
      **/
     @Override
     public void visit(SubSelect subSelect) {
-        DecryptSelectVisitor sDecryptSelectVisitor = new DecryptSelectVisitor(this.getLayer(), this.getLayerSelectTableFieldMap(), this.getLayerFieldTableMap());
+        SDecryptSelectVisitor sDecryptSelectVisitor = new SDecryptSelectVisitor(this.getLayer(), this.getLayerSelectTableFieldMap(), this.getLayerFieldTableMap());
 
         SelectBody selectBody = subSelect.getSelectBody();
         selectBody.accept(sDecryptSelectVisitor);

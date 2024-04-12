@@ -20,11 +20,11 @@ import java.util.stream.Collectors;
  * @author liutangqi
  * @date 2024/2/29 15:43
  */
-public class DecryptSelectVisitor extends BaseFieldParseTable implements SelectVisitor {
+public class SDecryptSelectVisitor extends BaseFieldParseTable implements SelectVisitor {
 
     private String resultSql;
 
-    public DecryptSelectVisitor(int layer, Map<String, Map<String, Set<FieldInfoDto>>> layerSelectTableFieldMap, Map<String, Map<String, Set<FieldInfoDto>>> layerFieldTableMap) {
+    public SDecryptSelectVisitor(int layer, Map<String, Map<String, Set<FieldInfoDto>>> layerSelectTableFieldMap, Map<String, Map<String, Set<FieldInfoDto>>> layerFieldTableMap) {
         super(layer, layerSelectTableFieldMap, layerFieldTableMap);
     }
 
@@ -43,7 +43,7 @@ public class DecryptSelectVisitor extends BaseFieldParseTable implements SelectV
     public void visit(PlainSelect plainSelect) {
         //1.解密 from 的表 （解密所有内层的语句）
         FromItem fromItem = plainSelect.getFromItem();
-        DecryptFromItemVisitor sDecryptFromItemVisitor = new DecryptFromItemVisitor(this.getLayer(), this.getLayerSelectTableFieldMap(), this.getLayerFieldTableMap());
+        SDecryptFromItemVisitor sDecryptFromItemVisitor = new SDecryptFromItemVisitor(this.getLayer(), this.getLayerSelectTableFieldMap(), this.getLayerFieldTableMap());
         fromItem.accept(sDecryptFromItemVisitor);
 
         //2.将 select *  select 别名.* 转换为select 字段
@@ -59,10 +59,10 @@ public class DecryptSelectVisitor extends BaseFieldParseTable implements SelectV
                         SelectExpressionItem se = (SelectExpressionItem) p;
                         Alias alias = se.getAlias();
                         Expression expression = se.getExpression();
-                        DecryptExpressionVisitor decryptExpressionVisitor = new DecryptExpressionVisitor(alias, expression, this.getLayer(), this.getLayerSelectTableFieldMap(), this.getLayerFieldTableMap());
-                        expression.accept(decryptExpressionVisitor);
-                        se.setAlias(decryptExpressionVisitor.getAlias());
-                        se.setExpression(decryptExpressionVisitor.getExpression());
+                        SDecryptExpressionVisitor SDecryptExpressionVisitor = new SDecryptExpressionVisitor(alias, expression, this.getLayer(), this.getLayerSelectTableFieldMap(), this.getLayerFieldTableMap());
+                        expression.accept(SDecryptExpressionVisitor);
+                        se.setAlias(SDecryptExpressionVisitor.getAlias());
+                        se.setExpression(SDecryptExpressionVisitor.getExpression());
                     }
                 }).collect(Collectors.toList());
 
@@ -101,7 +101,7 @@ public class DecryptSelectVisitor extends BaseFieldParseTable implements SelectV
             select.accept(fieldParseTableSelectVisitor);
 
             //需要加密的字段进行加密处理
-            DecryptSelectVisitor sDecryptSelectVisitor = new DecryptSelectVisitor(NumberConstant.ONE, fieldParseTableSelectVisitor.getLayerSelectTableFieldMap(), fieldParseTableSelectVisitor.getLayerFieldTableMap());
+            SDecryptSelectVisitor sDecryptSelectVisitor = new SDecryptSelectVisitor(NumberConstant.ONE, fieldParseTableSelectVisitor.getLayerSelectTableFieldMap(), fieldParseTableSelectVisitor.getLayerFieldTableMap());
             select.accept(sDecryptSelectVisitor);
 
             //拼接加密后的sql

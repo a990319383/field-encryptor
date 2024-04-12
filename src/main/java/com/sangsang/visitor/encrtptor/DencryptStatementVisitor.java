@@ -8,7 +8,7 @@ import com.sangsang.visitor.encrtptor.fieldparse.FieldParseParseTableFromItemVis
 import com.sangsang.visitor.encrtptor.fieldparse.FieldParseParseTableSelectVisitor;
 import com.sangsang.visitor.encrtptor.insert.IDecryptItemsListVisitor;
 import com.sangsang.visitor.encrtptor.insert.IDecryptSelectVisitor;
-import com.sangsang.visitor.encrtptor.select.DecryptSelectVisitor;
+import com.sangsang.visitor.encrtptor.select.SDecryptSelectVisitor;
 import com.sangsang.visitor.encrtptor.update.UDecryptExpressionVisitor;
 import com.sangsang.visitor.encrtptor.where.DencryptWhereFieldParseVisitor;
 import net.sf.jsqlparser.expression.Expression;
@@ -321,7 +321,7 @@ public class DencryptStatementVisitor implements StatementVisitor {
         }
 
         //3.将需要加密的字段进行加密处理
-        DecryptSelectVisitor SDecryptSelectVisitor = new DecryptSelectVisitor(NumberConstant.ONE, fieldParseTableSelectVisitor.getLayerSelectTableFieldMap(), fieldParseTableSelectVisitor.getLayerFieldTableMap());
+        SDecryptSelectVisitor SDecryptSelectVisitor = new SDecryptSelectVisitor(NumberConstant.ONE, fieldParseTableSelectVisitor.getLayerSelectTableFieldMap(), fieldParseTableSelectVisitor.getLayerFieldTableMap());
         select.getSelectBody().accept(SDecryptSelectVisitor);
 
         //4.处理后的结果赋值

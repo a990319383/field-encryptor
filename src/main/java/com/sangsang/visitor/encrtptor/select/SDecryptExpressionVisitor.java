@@ -28,7 +28,7 @@ import java.util.stream.Collectors;
  * @author liutangqi
  * @date 2024/2/29 16:50
  */
-public class DecryptExpressionVisitor extends BaseFieldParseTable implements ExpressionVisitor {
+public class SDecryptExpressionVisitor extends BaseFieldParseTable implements ExpressionVisitor {
     /**
      * 当前查询项原来的别名
      */
@@ -40,7 +40,7 @@ public class DecryptExpressionVisitor extends BaseFieldParseTable implements Exp
      */
     private Expression expression;
 
-    public DecryptExpressionVisitor(Alias alias, Expression expression, int layer, Map<String, Map<String, Set<FieldInfoDto>>> layerSelectTableFieldMap, Map<String, Map<String, Set<FieldInfoDto>>> layerFieldTableMap) {
+    public SDecryptExpressionVisitor(Alias alias, Expression expression, int layer, Map<String, Map<String, Set<FieldInfoDto>>> layerSelectTableFieldMap, Map<String, Map<String, Set<FieldInfoDto>>> layerFieldTableMap) {
         super(layer, layerSelectTableFieldMap, layerFieldTableMap);
         this.alias = alias;
         this.expression = expression;
@@ -84,9 +84,9 @@ public class DecryptExpressionVisitor extends BaseFieldParseTable implements Exp
                 .orElse(new ArrayList<>())
                 .stream()
                 .map(m -> {
-                    DecryptExpressionVisitor decryptExpressionVisitor = new DecryptExpressionVisitor(this.alias, m, this.getLayer(), this.getLayerSelectTableFieldMap(), this.getLayerFieldTableMap());
-                    m.accept(decryptExpressionVisitor);
-                    return decryptExpressionVisitor.getExpression();
+                    SDecryptExpressionVisitor SDecryptExpressionVisitor = new SDecryptExpressionVisitor(this.alias, m, this.getLayer(), this.getLayerSelectTableFieldMap(), this.getLayerFieldTableMap());
+                    m.accept(SDecryptExpressionVisitor);
+                    return SDecryptExpressionVisitor.getExpression();
                 }).collect(Collectors.toList());
 
         if (function.getParameters() != null) {
@@ -212,6 +212,8 @@ public class DecryptExpressionVisitor extends BaseFieldParseTable implements Exp
     @Override
     public void visit(InExpression inExpression) {
 
+        //todo-ltq
+        System.out.println(inExpression);
     }
 
     @Override
@@ -292,8 +294,8 @@ public class DecryptExpressionVisitor extends BaseFieldParseTable implements Exp
     @Override
     public void visit(SubSelect subSelect) {
         //子查询进行解密处理
-        DecryptSelectVisitor decryptSelectVisitor = new DecryptSelectVisitor(this.getLayer(), this.getLayerSelectTableFieldMap(), this.getLayerFieldTableMap());
-        subSelect.getSelectBody().accept(decryptSelectVisitor);
+        SDecryptSelectVisitor SDecryptSelectVisitor = new SDecryptSelectVisitor(this.getLayer(), this.getLayerSelectTableFieldMap(), this.getLayerFieldTableMap());
+        subSelect.getSelectBody().accept(SDecryptSelectVisitor);
     }
 
     @Override
@@ -301,7 +303,7 @@ public class DecryptExpressionVisitor extends BaseFieldParseTable implements Exp
         //处理case的条件
         Expression switchExpression = caseExpression.getSwitchExpression();
         if (switchExpression != null) {
-            DecryptExpressionVisitor expressionVisitor = new DecryptExpressionVisitor(this.alias, switchExpression, this.getLayer(), this.getLayerSelectTableFieldMap(), this.getLayerFieldTableMap());
+            SDecryptExpressionVisitor expressionVisitor = new SDecryptExpressionVisitor(this.alias, switchExpression, this.getLayer(), this.getLayerSelectTableFieldMap(), this.getLayerFieldTableMap());
             switchExpression.accept(expressionVisitor);
             caseExpression.setSwitchExpression(expressionVisitor.getExpression());
         }
@@ -310,7 +312,7 @@ public class DecryptExpressionVisitor extends BaseFieldParseTable implements Exp
         if (CollectionUtils.isNotEmpty(caseExpression.getWhenClauses())) {
             List<WhenClause> whenClauses = caseExpression.getWhenClauses().stream()
                     .map(m -> {
-                        DecryptExpressionVisitor expressionVisitor = new DecryptExpressionVisitor(this.alias, m, this.getLayer(), this.getLayerSelectTableFieldMap(), this.getLayerFieldTableMap());
+                        SDecryptExpressionVisitor expressionVisitor = new SDecryptExpressionVisitor(this.alias, m, this.getLayer(), this.getLayerSelectTableFieldMap(), this.getLayerFieldTableMap());
                         m.accept(expressionVisitor);
                         // 这里返回的类型肯定是通过构造函数传输过去的，所以可以直接强转（这里过去是WhenClause WhenClause下一层才是Column才会转换类型）
                         return (WhenClause) expressionVisitor.getExpression();
@@ -321,7 +323,7 @@ public class DecryptExpressionVisitor extends BaseFieldParseTable implements Exp
         //处理else
         Expression elseExpression = caseExpression.getElseExpression();
         if (elseExpression != null) {
-            DecryptExpressionVisitor expressionVisitor = new DecryptExpressionVisitor(this.alias, elseExpression, this.getLayer(), this.getLayerSelectTableFieldMap(), this.getLayerFieldTableMap());
+            SDecryptExpressionVisitor expressionVisitor = new SDecryptExpressionVisitor(this.alias, elseExpression, this.getLayer(), this.getLayerSelectTableFieldMap(), this.getLayerFieldTableMap());
             elseExpression.accept(expressionVisitor);
             caseExpression.setElseExpression(expressionVisitor.getExpression());
         }
@@ -331,14 +333,14 @@ public class DecryptExpressionVisitor extends BaseFieldParseTable implements Exp
     public void visit(WhenClause whenClause) {
         Expression thenExpression = whenClause.getThenExpression();
         if (thenExpression != null) {
-            DecryptExpressionVisitor expressionVisitor = new DecryptExpressionVisitor(this.alias, thenExpression, this.getLayer(), this.getLayerSelectTableFieldMap(), this.getLayerFieldTableMap());
+            SDecryptExpressionVisitor expressionVisitor = new SDecryptExpressionVisitor(this.alias, thenExpression, this.getLayer(), this.getLayerSelectTableFieldMap(), this.getLayerFieldTableMap());
             thenExpression.accept(expressionVisitor);
             whenClause.setThenExpression(expressionVisitor.getExpression());
         }
 
         Expression whenExpression = whenClause.getWhenExpression();
         if (whenExpression != null) {
-            DecryptExpressionVisitor expressionVisitor = new DecryptExpressionVisitor(this.alias, whenExpression, this.getLayer(), this.getLayerSelectTableFieldMap(), this.getLayerFieldTableMap());
+            SDecryptExpressionVisitor expressionVisitor = new SDecryptExpressionVisitor(this.alias, whenExpression, this.getLayer(), this.getLayerSelectTableFieldMap(), this.getLayerFieldTableMap());
             whenExpression.accept(expressionVisitor);
             whenClause.setWhenExpression(expressionVisitor.getExpression());
             whenExpression.accept(expressionVisitor);

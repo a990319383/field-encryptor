@@ -273,6 +273,32 @@ public class SqlTest {
             "when 'xxx' then tm.id > 10\n" +
             "end";
 
+    // =  != 时，避免列运算，将Column 另外一边的进行加解密
+    String s17 = "SELECT * from tb_user tu \n" +
+            "WHERE  tu.phone = 'yyy'\n" +
+            "and 'xxx' = tu.phone \n" +
+            "and tu.phone = concat('xxx','yyy')\n" +
+            "and tu.phone != 'zzzz'\n" +
+            "and tu.user_name = '%xxx%'";
+
+    // in 时，避免列运算，将Column 另外一边的进行加解密
+    String s18 = "SELECT *\n" +
+            "from tb_user tu \n" +
+            "WHERE tu.phone not in ('1842','13578')";
+
+    // in (select xxx from) 子查询语法 todo-ltq
+    String s19 = "select \n" +
+            "*\n" +
+            "from tb_user tu \n" +
+            "where  tu.phone in (\n" +
+            "select t.phone from tb_user t \n" +
+            "where t.phone = 'yyyy'\n" +
+            ")";
+
+    // in 前面不是 字段
+    String s20 = "select * from tb_user tu \n" +
+            "where  concat(\"aaa\",tu.phone) in ('111','222')";
+
     // -----------------insert 测试语句---------------------
     String i1 = "insert into tb_user(id, user_name ,phone) \n" +
             "values(1,'西瓜','18243512315'),(2,'南瓜','18243121315')";
@@ -333,7 +359,7 @@ public class SqlTest {
         InitTableInfo.initTable();
 
         //需要测试的sql
-        String sql = s16;
+        String sql = s20;
         System.out.println("----------------------------------------------------------------------------");
         System.out.println(sql);
         System.out.println("----------------------------------------------------------------------------");

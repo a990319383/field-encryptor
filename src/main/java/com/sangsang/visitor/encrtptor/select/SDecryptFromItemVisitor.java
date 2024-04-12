@@ -13,10 +13,10 @@ import java.util.Set;
  * @author liutangqi
  * @date 2024/2/29 16:07
  */
-public class DecryptFromItemVisitor extends BaseFieldParseTable implements FromItemVisitor {
+public class SDecryptFromItemVisitor extends BaseFieldParseTable implements FromItemVisitor {
 
 
-    public DecryptFromItemVisitor(int layer, Map<String, Map<String, Set<FieldInfoDto>>> layerSelectTableFieldMap, Map<String, Map<String, Set<FieldInfoDto>>> layerFieldTableMap) {
+    public SDecryptFromItemVisitor(int layer, Map<String, Map<String, Set<FieldInfoDto>>> layerSelectTableFieldMap, Map<String, Map<String, Set<FieldInfoDto>>> layerFieldTableMap) {
         super(layer, layerSelectTableFieldMap, layerFieldTableMap);
     }
 
@@ -36,7 +36,7 @@ public class DecryptFromItemVisitor extends BaseFieldParseTable implements FromI
     public void visit(SubSelect subSelect) {
         SelectBody selectBody = subSelect.getSelectBody();
         //解密子查询内容
-        selectBody.accept(new DecryptSelectVisitor(this.getLayer() + 1, this.getLayerSelectTableFieldMap(), this.getLayerFieldTableMap()));
+        selectBody.accept(new SDecryptSelectVisitor(this.getLayer() + 1, this.getLayerSelectTableFieldMap(), this.getLayerFieldTableMap()));
     }
 
     @Override
