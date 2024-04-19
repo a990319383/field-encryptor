@@ -74,6 +74,10 @@
 
        select * from tb_user where id in (上面sql的结果集)
 
+### 不兼容语法
+
+-  不支持 convert() 函数的解析（jsqlparse最新版本仍不支持此语法的解析）
+
 #### 参与贡献
 
 gitee地址：

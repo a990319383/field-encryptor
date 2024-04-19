@@ -2,7 +2,7 @@ package com.sangsang.visitor.encrtptor.insert;
 
 import com.sangsang.domain.dto.BaseFieldParseTable;
 import com.sangsang.domain.dto.FieldInfoDto;
-import com.sangsang.visitor.encrtptor.where.DencryptWhereFieldParseVisitor;
+import com.sangsang.visitor.encrtptor.where.WhereDencryptExpressionVisitor;
 import net.sf.jsqlparser.expression.Expression;
 import net.sf.jsqlparser.statement.select.PlainSelect;
 import net.sf.jsqlparser.statement.select.SelectVisitor;
@@ -35,7 +35,7 @@ public class IDecryptSelectVisitor extends BaseFieldParseTable implements Select
         }
 
         //where 条件的相应字段进行解密处理
-        DencryptWhereFieldParseVisitor dencryptWhereFieldVisitor = new DencryptWhereFieldParseVisitor(where, this.getLayer(), this.getLayerSelectTableFieldMap(), this.getLayerFieldTableMap());
+        WhereDencryptExpressionVisitor dencryptWhereFieldVisitor = new WhereDencryptExpressionVisitor(where, this.getLayer(), this.getLayerSelectTableFieldMap(), this.getLayerFieldTableMap());
         where.accept(dencryptWhereFieldVisitor);
 
         //替换原表达式

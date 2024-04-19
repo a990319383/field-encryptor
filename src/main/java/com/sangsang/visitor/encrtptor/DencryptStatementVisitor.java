@@ -10,7 +10,7 @@ import com.sangsang.visitor.encrtptor.insert.IDecryptItemsListVisitor;
 import com.sangsang.visitor.encrtptor.insert.IDecryptSelectVisitor;
 import com.sangsang.visitor.encrtptor.select.SDecryptSelectVisitor;
 import com.sangsang.visitor.encrtptor.update.UDecryptExpressionVisitor;
-import com.sangsang.visitor.encrtptor.where.DencryptWhereFieldParseVisitor;
+import com.sangsang.visitor.encrtptor.where.WhereDencryptExpressionVisitor;
 import net.sf.jsqlparser.expression.Expression;
 import net.sf.jsqlparser.expression.operators.relational.ItemsList;
 import net.sf.jsqlparser.schema.Column;
@@ -111,7 +111,7 @@ public class DencryptStatementVisitor implements StatementVisitor {
         }
 
         //4.将where 条件进行加密
-        DencryptWhereFieldParseVisitor dencryptWhereFieldVisitor = new DencryptWhereFieldParseVisitor(where, fieldParseTableFromItemVisitor.getLayer(), fieldParseTableFromItemVisitor.getLayerSelectTableFieldMap(), fieldParseTableFromItemVisitor.getLayerFieldTableMap());
+        WhereDencryptExpressionVisitor dencryptWhereFieldVisitor = new WhereDencryptExpressionVisitor(where, fieldParseTableFromItemVisitor.getLayer(), fieldParseTableFromItemVisitor.getLayerSelectTableFieldMap(), fieldParseTableFromItemVisitor.getLayerFieldTableMap());
         where.accept(dencryptWhereFieldVisitor);
 
         //5.结果赋值
@@ -143,7 +143,7 @@ public class DencryptStatementVisitor implements StatementVisitor {
         //3.加密where 条件的数据
         Expression where = update.getWhere();
         if (where != null) {
-            DencryptWhereFieldParseVisitor dencryptWhereFieldVisitor = new DencryptWhereFieldParseVisitor(where, fieldParseTableFromItemVisitor.getLayer(), fieldParseTableFromItemVisitor.getLayerSelectTableFieldMap(), fieldParseTableFromItemVisitor.getLayerFieldTableMap());
+            WhereDencryptExpressionVisitor dencryptWhereFieldVisitor = new WhereDencryptExpressionVisitor(where, fieldParseTableFromItemVisitor.getLayer(), fieldParseTableFromItemVisitor.getLayerSelectTableFieldMap(), fieldParseTableFromItemVisitor.getLayerFieldTableMap());
             where.accept(dencryptWhereFieldVisitor);
             //修改后的where赋值
             update.setWhere(dencryptWhereFieldVisitor.getExpression());

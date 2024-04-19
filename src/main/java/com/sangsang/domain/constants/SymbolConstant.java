@@ -1,5 +1,7 @@
 package com.sangsang.domain.constants;
 
+import net.sf.jsqlparser.statement.create.table.ColDataType;
+
 /**
  * 符号相关常量
  *
@@ -49,4 +51,10 @@ public interface SymbolConstant {
      * 从base64转码
      */
     String FROM_BASE64 = "FROM_BASE64";
+
+
+    /**
+     * 类型转换函数想要转换的类型
+     */
+    ColDataType COLDATATYPE_HCAR = new ColDataType("CHAR");
 }

@@ -4,7 +4,7 @@ import com.sangsang.domain.constants.NumberConstant;
 import com.sangsang.domain.dto.BaseFieldParseTable;
 import com.sangsang.domain.dto.FieldInfoDto;
 import com.sangsang.util.JsqlparserUtil;
-import com.sangsang.visitor.encrtptor.where.DencryptWhereFieldParseVisitor;
+import com.sangsang.visitor.encrtptor.where.WhereDencryptExpressionVisitor;
 import com.sangsang.visitor.encrtptor.fieldparse.FieldParseParseTableSelectVisitor;
 import net.sf.jsqlparser.expression.Alias;
 import net.sf.jsqlparser.expression.Expression;
@@ -15,7 +15,8 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 /**
- * select 语句 字段解密 入口
+ * select 语句  字段解密 入口
+ * 备注：包含 select 和 where 语句一同加解密
  *
  * @author liutangqi
  * @date 2024/2/29 15:43
@@ -72,10 +73,10 @@ public class SDecryptSelectVisitor extends BaseFieldParseTable implements Select
         //5.对where条件后的进行解密
         if (plainSelect.getWhere() != null) {
             Expression where = plainSelect.getWhere();
-            DencryptWhereFieldParseVisitor dencryptWhereFieldParseVisitor = new DencryptWhereFieldParseVisitor(where, this.getLayer(), this.getLayerSelectTableFieldMap(), this.getLayerFieldTableMap());
-            where.accept(dencryptWhereFieldParseVisitor);
+            WhereDencryptExpressionVisitor whereDencryptExpressionVisitor = new WhereDencryptExpressionVisitor(where, this.getLayer(), this.getLayerSelectTableFieldMap(), this.getLayerFieldTableMap());
+            where.accept(whereDencryptExpressionVisitor);
             //处理后的条件赋值
-            plainSelect.setWhere(dencryptWhereFieldParseVisitor.getExpression());
+            plainSelect.setWhere(whereDencryptExpressionVisitor.getExpression());
         }
 
         //6.维护解析后的sql

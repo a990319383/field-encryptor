@@ -386,7 +386,10 @@ public class SDecryptExpressionVisitor extends BaseFieldParseTable implements Ex
 
     @Override
     public void visit(CastExpression cast) {
-
+        Expression leftExpression = cast.getLeftExpression();
+        SDecryptExpressionVisitor expressionVisitor = new SDecryptExpressionVisitor(this.alias, leftExpression, this.getLayer(), this.getLayerSelectTableFieldMap(), this.getLayerFieldTableMap());
+        leftExpression.accept(expressionVisitor);
+        cast.setLeftExpression(expressionVisitor.getExpression());
     }
 
     @Override

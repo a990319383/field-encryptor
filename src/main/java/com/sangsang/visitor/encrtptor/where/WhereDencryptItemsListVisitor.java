@@ -18,9 +18,9 @@ import java.util.stream.Collectors;
  * @author liutangqi
  * @date 2024/4/12 15:00
  */
-public class DencryptWhereItemsListVisitor extends BaseFieldParseTable implements ItemsListVisitor {
+public class WhereDencryptItemsListVisitor extends BaseFieldParseTable implements ItemsListVisitor {
 
-    public DencryptWhereItemsListVisitor(int layer, Map<String, Map<String, Set<FieldInfoDto>>> layerSelectTableFieldMap, Map<String, Map<String, Set<FieldInfoDto>>> layerFieldTableMap) {
+    public WhereDencryptItemsListVisitor(int layer, Map<String, Map<String, Set<FieldInfoDto>>> layerSelectTableFieldMap, Map<String, Map<String, Set<FieldInfoDto>>> layerFieldTableMap) {
         super(layer, layerSelectTableFieldMap, layerFieldTableMap);
     }
 

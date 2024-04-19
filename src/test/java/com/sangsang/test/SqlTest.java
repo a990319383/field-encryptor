@@ -299,6 +299,14 @@ public class SqlTest {
     String s20 = "select * from tb_user tu \n" +
             "where  concat(\"aaa\",tu.phone) in ('111','222')";
 
+    // 测试convert函数如何拼接的 (JsqlParse不支持 convert函数！！！)
+    String s21 = "SELECT \n" +
+            "convert(tu.phone using utf8mb4)\n" +
+            "from tb_user tu";
+
+    //使用 cast 函数 某些场景下平替 convert 函数 （说的场景就是 AES_DECRYPT 中文解密乱码，点名批评一下）
+    String s22 = "select cast(tu.phone as char) from tb_user tu";
+
     // -----------------insert 测试语句---------------------
     String i1 = "insert into tb_user(id, user_name ,phone) \n" +
             "values(1,'西瓜','18243512315'),(2,'南瓜','18243121315')";
@@ -359,7 +367,7 @@ public class SqlTest {
         InitTableInfo.initTable();
 
         //需要测试的sql
-        String sql = s20;
+        String sql = s22;
         System.out.println("----------------------------------------------------------------------------");
         System.out.println(sql);
         System.out.println("----------------------------------------------------------------------------");
