@@ -295,17 +295,33 @@ public class SqlTest {
             "where t.phone = 'yyyy'\n" +
             ")";
 
-    // in 前面不是 字段
+    // in 前面不是 字段 右边是常量
     String s20 = "select * from tb_user tu \n" +
             "where  concat(\"aaa\",tu.phone) in ('111','222')";
 
+    // in 前面不是字段  右边是子查询
+    String s21 = "\n" +
+            "select\n" +
+            "\t*\n" +
+            "from\n" +
+            "\ttb_user tu\n" +
+            "where\n" +
+            "\tconcat(tu.phone,'aaa') in (\n" +
+            "\tselect\n" +
+            "\t\tt.phone\n" +
+            "\tfrom\n" +
+            "\t\ttb_user t\n" +
+            "\twhere\n" +
+            "\t\tt.phone = 'yyyy' \n" +
+            "            )";
+
     // 测试convert函数如何拼接的 (JsqlParse不支持 convert函数！！！)
-    String s21 = "SELECT \n" +
+    String s22 = "SELECT \n" +
             "convert(tu.phone using utf8mb4)\n" +
             "from tb_user tu";
 
     //使用 cast 函数 某些场景下平替 convert 函数 （说的场景就是 AES_DECRYPT 中文解密乱码，点名批评一下）
-    String s22 = "select cast(tu.phone as char) from tb_user tu";
+    String s23 = "select cast(tu.phone as char) from tb_user tu";
 
     // -----------------insert 测试语句---------------------
     String i1 = "insert into tb_user(id, user_name ,phone) \n" +
@@ -367,7 +383,7 @@ public class SqlTest {
         InitTableInfo.initTable();
 
         //需要测试的sql
-        String sql = s22;
+        String sql = s10;
         System.out.println("----------------------------------------------------------------------------");
         System.out.println(sql);
         System.out.println("----------------------------------------------------------------------------");

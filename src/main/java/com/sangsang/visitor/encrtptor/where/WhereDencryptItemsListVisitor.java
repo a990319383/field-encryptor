@@ -27,6 +27,7 @@ public class WhereDencryptItemsListVisitor extends BaseFieldParseTable implement
     @Override
     public void visit(SubSelect subSelect) {
         //目前暂未发现走这里的语法
+        //右边是子查询的时候，不是走的这个入口，调用方类型不是ItemsList  而是Expression
     }
 
     @Override
