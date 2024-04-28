@@ -92,9 +92,9 @@ public class SDecryptSelectVisitor extends BaseFieldParseTable implements Select
      **/
     @Override
     public void visit(SetOperationList setOpList) {
-        List<SetOperation> operations = setOpList.getOperations();
-
         List<SelectBody> selects = setOpList.getSelects();
+
+        List<SelectBody> resSelectBody = new ArrayList<>();
         for (int i = 0; i < selects.size(); i++) {
             SelectBody select = selects.get(i);
             //解析每个union的语句自己拥有的字段信息
@@ -105,10 +105,11 @@ public class SDecryptSelectVisitor extends BaseFieldParseTable implements Select
             SDecryptSelectVisitor sDecryptSelectVisitor = new SDecryptSelectVisitor(NumberConstant.ONE, fieldParseTableSelectVisitor.getLayerSelectTableFieldMap(), fieldParseTableSelectVisitor.getLayerFieldTableMap());
             select.accept(sDecryptSelectVisitor);
 
-            //拼接加密后的sql
-            String operation = i < selects.size() - 1 ? operations.get(i).toString() : "";
-            this.resultSql = Optional.ofNullable(this.resultSql).orElse("") + sDecryptSelectVisitor.getResultSql() + " " + operation + " ";
+            //维护加解密之后的语句
+            resSelectBody.add(select);
         }
+        setOpList.setSelects(resSelectBody);
+        this.resultSql = setOpList.toString();
     }
 
     @Override

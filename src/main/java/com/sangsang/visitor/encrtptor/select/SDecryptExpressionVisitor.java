@@ -17,6 +17,8 @@ import net.sf.jsqlparser.schema.Column;
 import net.sf.jsqlparser.statement.select.AllColumns;
 import net.sf.jsqlparser.statement.select.AllTableColumns;
 import net.sf.jsqlparser.statement.select.SubSelect;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -29,6 +31,7 @@ import java.util.stream.Collectors;
  * @date 2024/2/29 16:50
  */
 public class SDecryptExpressionVisitor extends BaseFieldParseTable implements ExpressionVisitor {
+    private static final Logger log = LoggerFactory.getLogger(SDecryptExpressionVisitor.class);
     /**
      * 当前查询项原来的别名
      */
@@ -211,9 +214,7 @@ public class SDecryptExpressionVisitor extends BaseFieldParseTable implements Ex
 
     @Override
     public void visit(InExpression inExpression) {
-
-        //todo-ltq
-        System.out.println(inExpression);
+        log.warn("【SDecryptExpressionVisitor】暂不支持 inExpression");
     }
 
     @Override

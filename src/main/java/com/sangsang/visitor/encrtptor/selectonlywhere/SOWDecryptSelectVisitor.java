@@ -1,7 +1,9 @@
 package com.sangsang.visitor.encrtptor.selectonlywhere;
 
+import com.sangsang.domain.constants.NumberConstant;
 import com.sangsang.domain.dto.BaseFieldParseTable;
 import com.sangsang.domain.dto.FieldInfoDto;
+import com.sangsang.visitor.encrtptor.fieldparse.FieldParseParseTableSelectVisitor;
 import com.sangsang.visitor.encrtptor.where.WhereDencryptExpressionVisitor;
 import net.sf.jsqlparser.expression.Expression;
 import net.sf.jsqlparser.statement.select.*;
@@ -13,7 +15,7 @@ import java.util.*;
 
 /**
  * select 语句只针对where条件进行加解密 入口
- * 注意：区别于 com.sangsang.visitor.encrtptor.select.SDecryptSelectVisitor  此类只对where条件后面的数据进行加解密
+ * 注意：区别于 com.sangsang.visitor.encrtptor.select.SDecryptSelectVisitor  此类只对where条件后面的数据进行加解密，对查询的字段不加密
  *
  * @author liutangqi
  * @date 2024/2/29 15:43
@@ -45,7 +47,6 @@ public class SOWDecryptSelectVisitor extends BaseFieldParseTable implements Sele
 
     /**
      * union 查询
-     * todo-ltq 备注：只加解密where后面的，用到union查询的情况非常小，这样用的时候，sql非常难看，暂不支持，后续有空了再实现
      *
      * @author liutangqi
      * @date 2024/2/29 16:12
@@ -53,7 +54,23 @@ public class SOWDecryptSelectVisitor extends BaseFieldParseTable implements Sele
      **/
     @Override
     public void visit(SetOperationList setOpList) {
-        log.warn("【SOWDecryptSelectVisitor】暂不支持 union查询");
+        List<SelectBody> selects = setOpList.getSelects();
+
+        List<SelectBody> resSelectBody = new ArrayList<>();
+        for (int i = 0; i < selects.size(); i++) {
+            SelectBody select = selects.get(i);
+            //解析每个union的语句自己拥有的字段信息
+            FieldParseParseTableSelectVisitor fieldParseTableSelectVisitor = new FieldParseParseTableSelectVisitor(NumberConstant.ONE, null, null);
+            select.accept(fieldParseTableSelectVisitor);
+
+            //需要加密的where条件进行加密处理
+            SOWDecryptSelectVisitor sDecryptSelectVisitor = new SOWDecryptSelectVisitor(NumberConstant.ONE, fieldParseTableSelectVisitor.getLayerSelectTableFieldMap(), fieldParseTableSelectVisitor.getLayerFieldTableMap());
+            select.accept(sDecryptSelectVisitor);
+
+            //维护加解密之后的语句
+            resSelectBody.add(select);
+        }
+        setOpList.setSelects(resSelectBody);
     }
 
     @Override

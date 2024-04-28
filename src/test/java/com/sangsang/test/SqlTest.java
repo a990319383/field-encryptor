@@ -116,10 +116,11 @@ public class SqlTest {
 
 
     // union
-    String s6 = "\t\t\n" +
-            "\t\tselect * from tb_user tu \n" +
+    String s6 = "\t\tselect * from tb_user tu \n" +
             "\t\tunion all \n" +
-            "\t\tselect * from tb_user tu2 ";
+            "\t\tselect * from tb_user tu2 \n" +
+            "\t\tunion \n" +
+            "\t\tselect * from tb_user tu3";
 
     String s7 = "select\n" +
             "\tb.ph,\n" +
@@ -286,7 +287,7 @@ public class SqlTest {
             "from tb_user tu \n" +
             "WHERE tu.phone not in ('1842','13578')";
 
-    // in (select xxx from) 子查询语法 todo-ltq
+    // in (select xxx from) 子查询语法
     String s19 = "select \n" +
             "*\n" +
             "from tb_user tu \n" +
@@ -322,6 +323,14 @@ public class SqlTest {
 
     //使用 cast 函数 某些场景下平替 convert 函数 （说的场景就是 AES_DECRYPT 中文解密乱码，点名批评一下）
     String s23 = "select cast(tu.phone as char) from tb_user tu";
+
+    //group by having
+    String s24 = "SELECT \n" +
+            "tu.phone,\n" +
+            "count(1) as nums\n" +
+            "from tb_user tu \n" +
+            "group by tu.phone \n" +
+            "having count(1) > 1";
 
     // -----------------insert 测试语句---------------------
     String i1 = "insert into tb_user(id, user_name ,phone) \n" +
@@ -383,7 +392,7 @@ public class SqlTest {
         InitTableInfo.initTable();
 
         //需要测试的sql
-        String sql = s10;
+        String sql = s6;
         System.out.println("----------------------------------------------------------------------------");
         System.out.println(sql);
         System.out.println("----------------------------------------------------------------------------");
