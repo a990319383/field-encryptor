@@ -343,7 +343,15 @@ public class SqlTest {
             "select  user_name,phone from  tb_user  tu\n" +
             "where tu.phone is not null \n" +
             ")";
-
+    // ON DUPLICATE KEY UPDATE
+    String i3 = "insert into tb_user\n" +
+            "(user_name,login_name,phone)\n" +
+            "values (\"xxx\",\"yyy\",'zzzz')\n" +
+            "ON DUPLICATE KEY UPDATE\n" +
+            "user_name = values(user_name),\n" +
+            "login_name = values(login_name),\n" +
+            "phone = values(phone),\n" +
+            "update_time = now()";
 
     // --------------delete 测试语句 ---------------
 
@@ -392,7 +400,7 @@ public class SqlTest {
         InitTableInfo.initTable();
 
         //需要测试的sql
-        String sql = s6;
+        String sql = i3;
         System.out.println("----------------------------------------------------------------------------");
         System.out.println(sql);
         System.out.println("----------------------------------------------------------------------------");

@@ -216,7 +216,11 @@ public class DencryptStatementVisitor implements StatementVisitor {
             select.getSelectBody().accept(iDecryptSelectVisitor);
         }
 
-        //4.处理好的sql赋值
+        //4.ON DUPLICATE KEY UPDATE 语法 此语法不用单独处理，即可兼容
+//        List<Column> duplicateUpdateColumns = insert.getDuplicateUpdateColumns();
+//        List<Expression> duplicateUpdateExpressionList = insert.getDuplicateUpdateExpressionList();
+
+        //5.处理好的sql赋值
         this.resultSql = insert.toString();
     }
 
