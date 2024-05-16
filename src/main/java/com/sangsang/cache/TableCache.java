@@ -61,7 +61,9 @@ public class TableCache {
             //该表的所有字段
             Set<String> tableFiledSet = new HashSet<>();
             //维护主键
-            tableFiledSet.add(tableInfo.getKeyColumn().toLowerCase());
+            Optional.ofNullable(tableInfo.getKeyColumn())
+                    .map(String::toLowerCase)
+                    .ifPresent(id -> tableFiledSet.add(id));
 
             for (TableFieldInfo tableFieldInfo : tableFieldInfos) {
                 tableFiledSet.add(tableFieldInfo.getColumn().toLowerCase());
