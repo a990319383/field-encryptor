@@ -15,7 +15,7 @@ import java.util.*;
 
 /**
  * select 语句只针对where条件进行加解密 入口
- * 注意：区别于 com.sangsang.visitor.encrtptor.select.SDecryptSelectVisitor  此类只对where条件后面的数据进行加解密，对查询的字段不加密
+ * 注意：区别于 SDecryptSelectVisitor  此类只对where条件后面的数据进行加解密，对查询的字段不加密
  *
  * @author liutangqi
  * @date 2024/2/29 15:43

@@ -1,10 +1,7 @@
 package com.sangsang.visitor.encrtptor.insert;
 
 import com.sangsang.cache.FieldEncryptorPatternCache;
-import com.sangsang.domain.constants.SymbolConstant;
 import net.sf.jsqlparser.expression.Expression;
-import net.sf.jsqlparser.expression.Function;
-import net.sf.jsqlparser.expression.StringValue;
 import net.sf.jsqlparser.expression.operators.relational.ExpressionList;
 import net.sf.jsqlparser.expression.operators.relational.ItemsListVisitor;
 import net.sf.jsqlparser.expression.operators.relational.MultiExpressionList;
