@@ -51,12 +51,9 @@ public class IDecryptItemsListVisitor implements ItemsListVisitor {
         for (int i = 0; i < expressions.size(); i++) {
             Expression expression = expressions.get(i);
             //当前字段需要加密，并且当前字段是String类型的，才进行加密处理
-            if (needEncryptIndex.contains(String.valueOf(i)) && expression instanceof StringValue) {
-                //原表达式的值
-                StringValue stringValue = (StringValue) expression;
-
+            if (needEncryptIndex.contains(String.valueOf(i))) {
                 //将原表达式进行加密
-                Expression toBase64Function = FieldEncryptorPatternCache.getInstance().encryption(stringValue);
+                Expression toBase64Function = FieldEncryptorPatternCache.getInstance().encryption(expression);
 
                 expression = toBase64Function;
             }

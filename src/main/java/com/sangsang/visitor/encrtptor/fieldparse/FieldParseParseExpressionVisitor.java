@@ -57,6 +57,7 @@ public class FieldParseParseExpressionVisitor extends BaseFieldParseTable implem
     @Override
     public void visit(Function function) {
         //加解密场景下字段解析仅需处理别名，将这个别名的字段归属在 DecryptConstant.FUNCTION_TMP 这张虚拟的表别名中
+        //有些嵌套查询时会有* ，* 时需要包含此处理结果，所以需要把这个维护进去（所以搜索DecryptConstant.FUNCTION_TMP 这个key值没有其它取的地方，因为是*的时候用到，不需要key）
         if (alias != null) {
             String aliasColumName = alias.getName();
             //function处理后的结果，放的结果的key是这个
