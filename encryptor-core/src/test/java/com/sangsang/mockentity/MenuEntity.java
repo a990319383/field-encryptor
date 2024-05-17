@@ -28,4 +28,7 @@ public class MenuEntity extends BaseEntity {
     @FieldEncryptor
     private String path;
 
+    @TableField(exist = false)
+    private String aaa;
+
 }
