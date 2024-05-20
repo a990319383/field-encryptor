@@ -6,6 +6,7 @@ import com.baomidou.mybatisplus.annotation.TableName;
 import com.baomidou.mybatisplus.core.metadata.TableFieldInfo;
 import com.baomidou.mybatisplus.core.metadata.TableInfo;
 import com.baomidou.mybatisplus.core.metadata.TableInfoHelper;
+import com.baomidou.mybatisplus.core.toolkit.StringUtils;
 import com.sangsang.domain.annos.FieldEncryptor;
 import com.sangsang.domain.dto.TableFieldDto;
 import com.sangsang.domain.dto.TableInfoDto;
@@ -154,6 +155,7 @@ public class TableCache {
             Set<TableFieldDto> tableFieldDtos = allFields.stream().map(field -> {
                 //4.1 解析获取数据库字段名
                 String filedName = Optional.ofNullable(field.getAnnotation(TableField.class))
+                        .filter(f -> StringUtils.isNotBlank(f.value()))
                         .map(m -> m.value())
                         .orElse(StrUtil.toUnderlineCase(field.getName()));
                 //4.2获取此字段上拥有的@FieldEncryptor 注解
