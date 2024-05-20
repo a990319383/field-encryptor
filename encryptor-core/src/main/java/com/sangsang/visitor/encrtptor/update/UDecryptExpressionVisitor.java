@@ -20,10 +20,12 @@ import java.util.Set;
 
 /**
  * update语句，判断该字段是否需要解密
+ * jsqlparse版本升级后，此类没用作废了
  *
  * @author liutangqi
  * @date 2024/3/11 14:26
  */
+@Deprecated
 public class UDecryptExpressionVisitor extends BaseFieldParseTable implements ExpressionVisitor {
 
     /**

@@ -1,5 +1,6 @@
 package com.sangsang.visitor.encrtptor;
 
+import com.sangsang.cache.FieldEncryptorPatternCache;
 import com.sangsang.cache.TableCache;
 import com.sangsang.domain.annos.FieldEncryptor;
 import com.sangsang.domain.constants.NumberConstant;
@@ -9,7 +10,6 @@ import com.sangsang.visitor.encrtptor.fieldparse.FieldParseParseTableSelectVisit
 import com.sangsang.visitor.encrtptor.insert.IDecryptItemsListVisitor;
 import com.sangsang.visitor.encrtptor.insert.IDecryptSelectVisitor;
 import com.sangsang.visitor.encrtptor.select.SDecryptSelectVisitor;
-import com.sangsang.visitor.encrtptor.update.UDecryptExpressionVisitor;
 import com.sangsang.visitor.encrtptor.where.WhereDencryptExpressionVisitor;
 import net.sf.jsqlparser.expression.Expression;
 import net.sf.jsqlparser.expression.operators.relational.ItemsList;
@@ -43,6 +43,7 @@ import net.sf.jsqlparser.statement.select.SetOperationList;
 import net.sf.jsqlparser.statement.show.ShowTablesStatement;
 import net.sf.jsqlparser.statement.truncate.Truncate;
 import net.sf.jsqlparser.statement.update.Update;
+import net.sf.jsqlparser.statement.update.UpdateSet;
 import net.sf.jsqlparser.statement.upsert.Upsert;
 import net.sf.jsqlparser.statement.values.ValuesStatement;
 
@@ -150,24 +151,31 @@ public class DencryptStatementVisitor implements StatementVisitor {
             update.setWhere(dencryptWhereFieldVisitor.getExpression());
         }
 
-        //4.加密处理set的数据 （只加密 set 后面的表达式不是来自于其它表的，来自从其它表里面取的，默认是从密文到密文，不需要加密）
-        //set 后面的值
-        List<Expression> expressions = update.getExpressions();
-        //set 前面所属的字段（这个字段不用处理，只用加密expressions即可）
-        List<Column> columns = update.getColumns();
-        List<Expression> encryptExpression = new ArrayList<>();
-        for (int i = 0; i < expressions.size(); i++) {
-            //和当前set值配对的字段
-            Column column = columns.get(i);
-            Expression expression = expressions.get(i);
-            UDecryptExpressionVisitor uDecryptExpressionVisitor = new UDecryptExpressionVisitor(column, expression, fieldParseTableFromItemVisitor.getLayer(), fieldParseTableFromItemVisitor.getLayerSelectTableFieldMap(), fieldParseTableFromItemVisitor.getLayerFieldTableMap());
-            expression.accept(uDecryptExpressionVisitor);
-            //获取修改后的表达式
-            encryptExpression.add(uDecryptExpressionVisitor.getExpression());
+        //4.加密处理set的数据
+        List<UpdateSet> updateSets = update.getUpdateSets();
+        for (UpdateSet updateSet : updateSets) {
+            List<Column> columns = updateSet.getColumns();
+            List<Expression> expressions = updateSet.getExpressions();
+            //处理每对需要加密的字段，只处理一边是数据库字段，一边是常量的，两边都是数据库字段的，默认都是加密的，不需要处理
+            for (int i = 0; i < columns.size(); i++) {
+                Column column = columns.get(i);
+                Expression expression = expressions.get(i);
+                //两边都是来自数据库的则不处理
+                if (expression instanceof Column) {
+                    continue;
+                }
+                //左边的Column 字段不需要加密不做处理
+                if (!JsqlparserUtil.needEncrypt(column, fieldParseTableFromItemVisitor.getLayer(), fieldParseTableFromItemVisitor.getLayerFieldTableMap())) {
+                    continue;
+                }
+                //数据进行加密处理
+                Expression encryptionExpression = FieldEncryptorPatternCache.getInstance().encryption(expression);
+                //加密后赋值
+                expressions.set(i, encryptionExpression);
+            }
         }
 
         //5.处理结果赋值
-        update.setExpressions(encryptExpression);
         this.resultSql = update.toString();
 
     }
