@@ -26,6 +26,10 @@ public interface SymbolConstant {
      * test as 取别名
      */
     String AS = " as ";
+    /**
+     * 数据库别名的漂
+     */
+    String FLOAT = "`";
 
     /**
      * 默认秘钥

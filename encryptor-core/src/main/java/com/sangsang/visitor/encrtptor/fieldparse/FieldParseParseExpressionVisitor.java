@@ -3,6 +3,7 @@ package com.sangsang.visitor.encrtptor.fieldparse;
 import cn.hutool.core.util.ObjectUtil;
 import com.baomidou.mybatisplus.core.toolkit.StringUtils;
 import com.sangsang.domain.constants.DecryptConstant;
+import com.sangsang.domain.constants.SymbolConstant;
 import com.sangsang.domain.dto.BaseFieldParseTable;
 import com.sangsang.domain.dto.ColumnTableDto;
 import com.sangsang.domain.dto.FieldInfoDto;
@@ -56,18 +57,20 @@ public class FieldParseParseExpressionVisitor extends BaseFieldParseTable implem
 
     @Override
     public void visit(Function function) {
-        //加解密场景下字段解析仅需处理别名，将这个别名的字段归属在 DecryptConstant.FUNCTION_TMP 这张虚拟的表别名中
+        //别名如果不存在的话，就用Function的ToString的结果作为别名
+        alias = Optional.ofNullable(alias)
+                .orElse(new Alias(SymbolConstant.FLOAT + function.toString() + SymbolConstant.FLOAT));
+
+        //将这个别名的字段归属在 DecryptConstant.FUNCTION_TMP 这张虚拟的表别名中
         //有些嵌套查询时会有* ，* 时需要包含此处理结果，所以需要把这个维护进去（所以搜索DecryptConstant.FUNCTION_TMP 这个key值没有其它取的地方，因为是*的时候用到，不需要key）
-        if (alias != null) {
-            String aliasColumName = alias.getName();
-            //function处理后的结果，放的结果的key是这个
-            String tableAliasName = DecryptConstant.FUNCTION_TMP;
+        String aliasColumName = alias.getName();
+        //function处理后的结果，放的结果的key是这个
+        String tableAliasName = DecryptConstant.FUNCTION_TMP;
 
-            FieldInfoDto fieldInfoDto = FieldInfoDto.builder().columnName(aliasColumName).sourceTableName(null).sourceColumn(null).fromSourceTable(false).build();
+        FieldInfoDto fieldInfoDto = FieldInfoDto.builder().columnName(aliasColumName).sourceTableName(null).sourceColumn(null).fromSourceTable(false).build();
 
-            //将当前字段存入layerSelectTableFieldMap 中
-            JsqlparserUtil.putFieldInfo(this.getLayerSelectTableFieldMap(), this.getLayer(), tableAliasName, fieldInfoDto);
-        }
+        //将当前字段存入layerSelectTableFieldMap 中
+        JsqlparserUtil.putFieldInfo(this.getLayerSelectTableFieldMap(), this.getLayer(), tableAliasName, fieldInfoDto);
     }
 
     @Override
@@ -269,8 +272,8 @@ public class FieldParseParseExpressionVisitor extends BaseFieldParseTable implem
         subSelect.getSelectBody().accept(sFieldSelectItemVisitor);
 
         //3.找出上面新解析出的结果，只取这一层的，其它层的结果不需要关心（因为这个结果需要单独处理别名 这种语法下select （select ） 内层select的别名是没有意义的，是以外层的select语句为准的,select 的内层关联的表字段也是没有意义的）
-        Map<String, Set<FieldInfoDto>> newSelectTableFieldMap = JsqlparserUtil.parseNewlyIncreased(this.getLayerSelectTableFieldMap().get(String.valueOf(this.getLayer())),
-                cloneLayerSelectTableFieldMap.get(String.valueOf(this.getLayer())));
+        Map<String, Set<FieldInfoDto>> newSelectTableFieldMap = JsqlparserUtil.parseNewlyIncreased(this.getLayerSelectTableFieldMap().getOrDefault(String.valueOf(this.getLayer()), new HashMap<>()),
+                cloneLayerSelectTableFieldMap.getOrDefault(String.valueOf(this.getLayer()), new HashMap<>()));
 
         //4.结果合并 (注意：新增加的结果的别名需要修改成外层select的别名)
         for (Map.Entry<String, Set<FieldInfoDto>> fieldInfoEntry : newSelectTableFieldMap.entrySet()) {

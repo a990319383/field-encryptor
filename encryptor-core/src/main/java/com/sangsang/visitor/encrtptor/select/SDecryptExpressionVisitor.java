@@ -1,5 +1,6 @@
 package com.sangsang.visitor.encrtptor.select;
 
+import cn.hutool.core.util.ObjectUtil;
 import com.baomidou.mybatisplus.core.toolkit.CollectionUtils;
 import com.sangsang.cache.FieldEncryptorPatternCache;
 import com.sangsang.cache.TableCache;
@@ -7,6 +8,7 @@ import com.sangsang.domain.dto.BaseFieldParseTable;
 import com.sangsang.domain.dto.ColumnTableDto;
 import com.sangsang.domain.dto.FieldInfoDto;
 import com.sangsang.util.JsqlparserUtil;
+import com.sangsang.visitor.encrtptor.fieldparse.FieldParseParseTableSelectVisitor;
 import net.sf.jsqlparser.expression.*;
 import net.sf.jsqlparser.expression.operators.arithmetic.*;
 import net.sf.jsqlparser.expression.operators.conditional.AndExpression;
@@ -294,7 +296,16 @@ public class SDecryptExpressionVisitor extends BaseFieldParseTable implements Ex
      **/
     @Override
     public void visit(SubSelect subSelect) {
-        //子查询进行解密处理
+        //这种语法的里面都是单独的语句，所以这里将里层的语句单独解析一次
+        //1.将现在的两个存储解析结果的map深克隆拷贝一份，用这两份数据去解析子查询的结果，避免这个子查询也拥有子查询，导致影响当前解析结果的map的下一层结果出错
+        Map<String, Map<String, Set<FieldInfoDto>>> cloneLayerSelectTableFieldMap = ObjectUtil.cloneByStream(this.getLayerSelectTableFieldMap());
+        Map<String, Map<String, Set<FieldInfoDto>>> cloneLayerFieldTableMap = ObjectUtil.cloneByStream(this.getLayerFieldTableMap());
+
+        //2.单独解析当前子查询的语法 （单独解析是为了好提取，因为解析的两个Map值的别名需要单独修改）
+        FieldParseParseTableSelectVisitor sFieldSelectItemVisitor = new FieldParseParseTableSelectVisitor(this.getLayer(), cloneLayerSelectTableFieldMap, cloneLayerFieldTableMap);
+        subSelect.getSelectBody().accept(sFieldSelectItemVisitor);
+
+        //3.利用解析后的表结构Map进行子查询解密处理
         SDecryptSelectVisitor SDecryptSelectVisitor = new SDecryptSelectVisitor(this.getLayer(), this.getLayerSelectTableFieldMap(), this.getLayerFieldTableMap());
         subSelect.getSelectBody().accept(SDecryptSelectVisitor);
     }
