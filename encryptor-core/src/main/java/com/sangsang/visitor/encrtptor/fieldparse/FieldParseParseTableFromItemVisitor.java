@@ -58,7 +58,7 @@ public class FieldParseParseTableFromItemVisitor extends BaseFieldParseTable imp
         subSelect.getSelectBody().accept(fieldParseTableSelectVisitor);
 
         //2.解析这一层涉及到的表的全部字段，子查询的时，本层的表的全部字段就是下一层的全部select的字段，本层的表名就是别名
-        Map<String, Set<FieldInfoDto>> selectTableFieldMap = this.getLayerSelectTableFieldMap().get(String.valueOf(this.getLayer() + 1));
+        Map<String, Set<FieldInfoDto>> selectTableFieldMap = this.getLayerSelectTableFieldMap().getOrDefault(String.valueOf(this.getLayer() + 1), new HashMap<>());
         //本层的字段都是来源于嵌套查询的结果集，不是真实表，所以将 fromSourceTable设置为false
         Set<FieldInfoDto> fieldInfoSet = selectTableFieldMap
                 .values()

@@ -330,7 +330,7 @@ public class DencryptStatementVisitor implements StatementVisitor {
         FieldParseParseTableSelectVisitor fieldParseTableSelectVisitor = new FieldParseParseTableSelectVisitor(NumberConstant.ONE, null, null);
         select.getSelectBody().accept(fieldParseTableSelectVisitor);
 
-        //2.如果不是union语句 并且 该sql涉及的表都不需要加解密，则不处理后续逻辑 （union语句没有整个解析到这个结果集中，union语句是分成多次解析的）
+        //2.如果不是union语句  并且 该sql涉及的表都不需要加解密，则不处理后续逻辑 （union语句没有整个解析到这个结果集中，union语句是分成多次解析的）
         if (!select.toString().toLowerCase().contains(SymbolConstant.UNION) && !JsqlparserUtil.needEncrypt(fieldParseTableSelectVisitor.getLayerSelectTableFieldMap(), fieldParseTableSelectVisitor.getLayerFieldTableMap())) {
             this.resultSql = select.toString();
             return;
