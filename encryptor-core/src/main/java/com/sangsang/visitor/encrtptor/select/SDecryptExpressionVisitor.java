@@ -3,9 +3,7 @@ package com.sangsang.visitor.encrtptor.select;
 import cn.hutool.core.util.ObjectUtil;
 import com.baomidou.mybatisplus.core.toolkit.CollectionUtils;
 import com.sangsang.cache.FieldEncryptorPatternCache;
-import com.sangsang.cache.TableCache;
 import com.sangsang.domain.dto.BaseFieldParseTable;
-import com.sangsang.domain.dto.ColumnTableDto;
 import com.sangsang.domain.dto.FieldInfoDto;
 import com.sangsang.util.JsqlparserUtil;
 import com.sangsang.visitor.encrtptor.fieldparse.FieldParseParseTableSelectVisitor;
@@ -263,24 +261,16 @@ public class SDecryptExpressionVisitor extends BaseFieldParseTable implements Ex
      **/
     @Override
     public void visit(Column column) {
-        //1.解析当前字段所属的表信息
-        ColumnTableDto columnTableDto = JsqlparserUtil.parseColumn(column, this.getLayer(), this.getLayerFieldTableMap());
-
-
-        //2.当前字段不需要解密直接返回 (实体类上面没有标注@FieldEncryptor注解 或者字段不是来源自真实表)
-        // 注意：select只有最直接和真实表获取字段的那层才需要加解密
-        if (!columnTableDto.isFromSourceTable() || Optional.ofNullable(TableCache.getTableFieldEncryptInfo())
-                .map(m -> m.get(columnTableDto.getSourceTableName()))
-                .map(m -> m.get(columnTableDto.getSourceColumn()))
-                .orElse(null) == null) {
+        //1.判断当前列是否需要加解密
+        if (!JsqlparserUtil.needEncrypt(column, this.getLayer(), this.getLayerFieldTableMap())) {
             return;
         }
 
-        //3.将该字段进行解密处理
+        //2.将该字段进行解密处理
         Expression decryptFunction = FieldEncryptorPatternCache.getInstance().decryption(column);
         this.expression = decryptFunction;
 
-        //4.别名处理（字段经过加密函数后，如果之前没有别名的话，需要用之前的字段名作为别名，不然ORM映射的时候会无法匹配）
+        //3.别名处理（字段经过加密函数后，如果之前没有别名的话，需要用之前的字段名作为别名，不然ORM映射的时候会无法匹配）
         this.alias = Optional.ofNullable(alias).orElse(new Alias(column.getColumnName()));
     }
 
@@ -306,7 +296,7 @@ public class SDecryptExpressionVisitor extends BaseFieldParseTable implements Ex
         subSelect.getSelectBody().accept(sFieldSelectItemVisitor);
 
         //3.利用解析后的表结构Map进行子查询解密处理
-        SDecryptSelectVisitor SDecryptSelectVisitor = new SDecryptSelectVisitor(this.getLayer(), this.getLayerSelectTableFieldMap(), this.getLayerFieldTableMap());
+        SDecryptSelectVisitor SDecryptSelectVisitor = new SDecryptSelectVisitor(this.getLayer(), sFieldSelectItemVisitor.getLayerSelectTableFieldMap(), sFieldSelectItemVisitor.getLayerFieldTableMap());
         subSelect.getSelectBody().accept(SDecryptSelectVisitor);
     }
 

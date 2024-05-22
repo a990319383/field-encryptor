@@ -26,11 +26,21 @@ public interface SymbolConstant {
      * test as 取别名
      */
     String AS = " as ";
+
     /**
      * 数据库别名的漂
      */
     String FLOAT = "`";
 
+    /**
+     * 空白字符
+     */
+    String BLANK = "";
+
+    /**
+     * union
+     */
+    String UNION = "union";
     /**
      * 默认秘钥
      */

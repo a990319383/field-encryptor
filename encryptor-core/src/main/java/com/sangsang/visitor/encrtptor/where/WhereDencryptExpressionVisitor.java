@@ -18,7 +18,10 @@ import net.sf.jsqlparser.expression.operators.conditional.OrExpression;
 import net.sf.jsqlparser.expression.operators.conditional.XorExpression;
 import net.sf.jsqlparser.expression.operators.relational.*;
 import net.sf.jsqlparser.schema.Column;
-import net.sf.jsqlparser.statement.select.*;
+import net.sf.jsqlparser.statement.select.AllColumns;
+import net.sf.jsqlparser.statement.select.AllTableColumns;
+import net.sf.jsqlparser.statement.select.SelectBody;
+import net.sf.jsqlparser.statement.select.SubSelect;
 import org.springframework.util.CollectionUtils;
 
 import java.util.*;
@@ -454,7 +457,6 @@ public class WhereDencryptExpressionVisitor extends BaseFieldParseTable implemen
     /**
      * 其它的表达式，除了 = ，！= , in 这种等值条件以为 ，最终都会通过这个类型来进行解析
      * 备注：等值条件为了避免列运算影响原有的索引使用情况，不对Column进行运算
-     * 注意：这里没办法将Column 转化为 Function 对象，所以将转换结果赋值给当前的 expression 对象
      *
      * @author liutangqi
      * @date 2024/2/28 17:00
@@ -475,7 +477,7 @@ public class WhereDencryptExpressionVisitor extends BaseFieldParseTable implemen
         //3. 当前字段不需要解密(实体类上面没有标注@FieldEncryptor注解 或者字段不是来源自真实表)
         if (!columnTableDto.isFromSourceTable() || Optional.ofNullable(TableCache.getTableFieldEncryptInfo())
                 .map(m -> m.get(tableTrueName))
-                .map(m -> m.get(columTrueName))
+                .map(m -> JsqlparserUtil.getValueIgnoreFloat(m, columTrueName))
                 .orElse(null) == null) {
             return;
         }

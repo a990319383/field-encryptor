@@ -4,6 +4,7 @@ import com.sangsang.cache.FieldEncryptorPatternCache;
 import com.sangsang.cache.TableCache;
 import com.sangsang.domain.annos.FieldEncryptor;
 import com.sangsang.domain.constants.NumberConstant;
+import com.sangsang.domain.constants.SymbolConstant;
 import com.sangsang.util.JsqlparserUtil;
 import com.sangsang.visitor.encrtptor.fieldparse.FieldParseParseTableFromItemVisitor;
 import com.sangsang.visitor.encrtptor.fieldparse.FieldParseParseTableSelectVisitor;
@@ -39,7 +40,6 @@ import net.sf.jsqlparser.statement.replace.Replace;
 import net.sf.jsqlparser.statement.select.FromItem;
 import net.sf.jsqlparser.statement.select.Join;
 import net.sf.jsqlparser.statement.select.Select;
-import net.sf.jsqlparser.statement.select.SetOperationList;
 import net.sf.jsqlparser.statement.show.ShowTablesStatement;
 import net.sf.jsqlparser.statement.truncate.Truncate;
 import net.sf.jsqlparser.statement.update.Update;
@@ -47,7 +47,10 @@ import net.sf.jsqlparser.statement.update.UpdateSet;
 import net.sf.jsqlparser.statement.upsert.Upsert;
 import net.sf.jsqlparser.statement.values.ValuesStatement;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 
 /**
  * 解析sql的入口 （crud所有类型的sql ）
@@ -199,7 +202,7 @@ public class DencryptStatementVisitor implements StatementVisitor {
         List<Column> columns = insert.getColumns();
         for (int i = 0; i < columns.size(); i++) {
             Column column = columns.get(i);
-            if (fieldEncryptMap.get(column.getColumnName().toLowerCase()) != null) {
+            if (JsqlparserUtil.getValueIgnoreFloat(fieldEncryptMap, column.getColumnName().toLowerCase()) != null) {
                 needEncryptIndex.add(String.valueOf(i));
             }
         }
@@ -328,7 +331,7 @@ public class DencryptStatementVisitor implements StatementVisitor {
         select.getSelectBody().accept(fieldParseTableSelectVisitor);
 
         //2.如果不是union语句 并且 该sql涉及的表都不需要加解密，则不处理后续逻辑 （union语句没有整个解析到这个结果集中，union语句是分成多次解析的）
-        if (!(select.getSelectBody() instanceof SetOperationList) && !JsqlparserUtil.needEncrypt(fieldParseTableSelectVisitor.getLayerSelectTableFieldMap(), fieldParseTableSelectVisitor.getLayerFieldTableMap())) {
+        if (!select.toString().toLowerCase().contains(SymbolConstant.UNION) && !JsqlparserUtil.needEncrypt(fieldParseTableSelectVisitor.getLayerSelectTableFieldMap(), fieldParseTableSelectVisitor.getLayerFieldTableMap())) {
             this.resultSql = select.toString();
             return;
         }

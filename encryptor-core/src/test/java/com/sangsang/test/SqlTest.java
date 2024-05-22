@@ -332,6 +332,11 @@ public class SqlTest {
             "group by tu.phone \n" +
             "having count(1) > 1";
 
+    //别名中有 ``
+    String s25 = "\tSELECT `phone`,user_name  from tb_user \n" +
+            "\twhere `phone` like 'aaa%'\n" +
+            "\tand phone = '111'";
+
     // -----------------insert 测试语句---------------------
     String i1 = "insert into tb_user(id, user_name ,phone) \n" +
             "values(1,'西瓜','18243512315'),(2,'南瓜','18243121315')";
@@ -400,7 +405,7 @@ public class SqlTest {
         InitTableInfo.initTable();
 
         //需要测试的sql
-        String sql = u3;
+        String sql = s25;
         System.out.println("----------------------------------------------------------------------------");
         System.out.println(sql);
         System.out.println("----------------------------------------------------------------------------");

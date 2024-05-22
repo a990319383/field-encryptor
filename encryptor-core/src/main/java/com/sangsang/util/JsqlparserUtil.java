@@ -2,13 +2,20 @@ package com.sangsang.util;
 
 import com.baomidou.mybatisplus.core.toolkit.CollectionUtils;
 import com.sangsang.cache.TableCache;
+import com.sangsang.domain.annos.FieldEncryptor;
+import com.sangsang.domain.constants.SymbolConstant;
 import com.sangsang.domain.dto.ColumnTableDto;
 import com.sangsang.domain.dto.FieldInfoDto;
-import net.sf.jsqlparser.expression.*;
+import net.sf.jsqlparser.expression.Alias;
+import net.sf.jsqlparser.expression.Function;
+import net.sf.jsqlparser.expression.StringValue;
 import net.sf.jsqlparser.expression.operators.relational.ExpressionList;
 import net.sf.jsqlparser.schema.Column;
 import net.sf.jsqlparser.schema.Table;
-import net.sf.jsqlparser.statement.select.*;
+import net.sf.jsqlparser.statement.select.AllColumns;
+import net.sf.jsqlparser.statement.select.AllTableColumns;
+import net.sf.jsqlparser.statement.select.SelectExpressionItem;
+import net.sf.jsqlparser.statement.select.SelectItem;
 
 import java.util.*;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -118,7 +125,7 @@ public class JsqlparserUtil {
         if (table == null) {
             layerFieldTableMap.get(String.valueOf(layer)).entrySet()
                     .forEach(f -> {
-                        List<FieldInfoDto> matchFields = f.getValue().stream().filter(fi -> Objects.equals(fi.getColumnName(), columName)).collect(Collectors.toList());
+                        List<FieldInfoDto> matchFields = f.getValue().stream().filter(fi -> JsqlparserUtil.equalsIgnoreFloat(fi.getColumnName(), columName)).collect(Collectors.toList());
                         if (CollectionUtils.isNotEmpty(matchFields)) {
                             //当前层的所有字段里面叫这个的，正确sql语法中只会有一个，所以get(0)
                             FieldInfoDto matchField = matchFields.get(0);
@@ -136,7 +143,7 @@ public class JsqlparserUtil {
             List<FieldInfoDto> matchFields = Optional.ofNullable(layerFieldTableMap.get(String.valueOf(layer))
                     .get(columnTableName))
                     .orElse(new HashSet<>())
-                    .stream().filter(f -> Objects.equals(f.getColumnName(), columName))
+                    .stream().filter(f -> JsqlparserUtil.equalsIgnoreFloat(f.getColumnName(), columName))
                     .collect(Collectors.toList());
             if (CollectionUtils.isNotEmpty(matchFields)) {
                 //当前层的所有字段里面叫这个的，正确sql语法中只会有一个，所以get(0)
@@ -172,7 +179,7 @@ public class JsqlparserUtil {
         return columnTableDto.isFromSourceTable()
                 && Optional.ofNullable(TableCache.getTableFieldEncryptInfo())
                 .map(m -> m.get(columnTableDto.getSourceTableName()))
-                .map(m -> m.get(columnTableDto.getSourceColumn()))
+                .map(m -> JsqlparserUtil.getValueIgnoreFloat(m, columnTableDto.getSourceColumn()))
                 .orElse(null) != null;
     }
 
@@ -266,4 +273,47 @@ public class JsqlparserUtil {
     }
 
 
+    /**
+     * 忽略漂，看两个名字是否相同
+     *
+     * @author liutangqi
+     * @date 2024/5/22 9:07
+     * @Param [name1, name2]
+     **/
+    public static boolean equalsIgnoreFloat(String name1, String name2) {
+        if (Objects.equals(name1, name2)) {
+            return true;
+        }
+        if (StringUtils.isBlank(name1) || StringUtils.isBlank(name2)) {
+            return false;
+        }
+
+        String n1 = name1.trim().replaceAll(SymbolConstant.FLOAT, "");
+        String n2 = name2.trim().replaceAll(SymbolConstant.FLOAT, "");
+        return Objects.equals(n1, n2);
+    }
+
+
+    /**
+     * 忽略漂，从Map中取值
+     *
+     * @author liutangqi
+     * @date 2024/5/22 9:21
+     * @Param [map, key]
+     **/
+    public static FieldEncryptor getValueIgnoreFloat(Map<String, FieldEncryptor> map, String key) {
+        FieldEncryptor fieldEncryptor = map.get(key);
+        //找到了直接返回
+        if (fieldEncryptor != null) {
+            return fieldEncryptor;
+        }
+
+        //key包含漂 则去掉漂去找
+        if (key.contains(SymbolConstant.FLOAT)) {
+            return map.get(key.replaceAll(SymbolConstant.FLOAT, SymbolConstant.BLANK));
+        } else {
+            //key 不包含漂 加上漂去找
+            return map.get(SymbolConstant.FLOAT + key.trim() + SymbolConstant.FLOAT);
+        }
+    }
 }
