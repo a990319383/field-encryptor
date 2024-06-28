@@ -23,6 +23,7 @@ import javax.annotation.PostConstruct;
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 import java.util.*;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 
 /**
@@ -51,6 +52,11 @@ public class TableCache {
      * value: 改表实体类上所有的字段 小写
      */
     private static final Map<String, Set<String>> TABLE_FIELD_MAP = new HashMap<>();
+
+    /**
+     * 是否初始化完成的标识
+     */
+    private static final AtomicBoolean initFinish = new AtomicBoolean(false);
 
     /**
      * 初始化当前表结构信息
@@ -83,6 +89,8 @@ public class TableCache {
         //3.将表结构信息处理，加载到缓存的各个Map中
         fillCacheMap(tableInfoDtos);
 
+        //4.设置初始化完成
+        initFinish.set(true);
         log.info("【初始化表字段加密信息】处理完毕 耗时：{}ms", (System.currentTimeMillis() - startTime));
     }
 
@@ -249,5 +257,17 @@ public class TableCache {
      **/
     public static Map<String, Set<String>> getTableFieldMap() {
         return TABLE_FIELD_MAP;
+    }
+
+
+    /**
+     * 获取当前表结构信息是否初始化完毕
+     *
+     * @author liutangqi
+     * @date 2024/6/27 18:12
+     * @Param []
+     **/
+    public static boolean initFinish() {
+        return initFinish.get();
     }
 }
