@@ -95,11 +95,11 @@ public class FieldEncryptorInterceptor implements Interceptor {
             log.info("【FieldEncryptor】当前表结构还未加载完，sql执行开始自旋等待");
             try {
                 //随机休眠，避免启动时请求都休眠同样的时间，导致同一时间访问数据库，增加数据库压力
-                Long sleepTime = Long.valueOf(random.nextInt(201 - 100) + 100);
+                int sleepTime = random.nextInt(201 - 100) + 100;
                 TimeUnit.MILLISECONDS.sleep(sleepTime);
                 count++;
-            } catch (InterruptedException e) {
-                e.printStackTrace();
+            } catch (Exception e) {
+                log.error("【FieldEncryptor】自旋异常", e);
             }
         }
 
