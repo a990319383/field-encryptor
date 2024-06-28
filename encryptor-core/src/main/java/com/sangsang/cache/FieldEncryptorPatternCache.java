@@ -5,6 +5,7 @@ import com.sangsang.encryptor.DefaultFieldEncryptorPattern;
 import com.sangsang.encryptor.EncryptorProperties;
 import com.sangsang.encryptor.FieldEncryptorPattern;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.config.BeanPostProcessor;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Configuration;
 
@@ -12,12 +13,13 @@ import javax.annotation.PostConstruct;
 
 /**
  * 缓存当前加解密算法的bean
+ * 优先加载这个bean，避免有些@PostConstruct 加载数据库东西到redis时，此时还没处理完，导致redis中存储了密文
  *
  * @author liutangqi
  * @date 2024/4/8 14:34
  */
 @Configuration
-public class FieldEncryptorPatternCache {
+public class FieldEncryptorPatternCache implements BeanPostProcessor {
 
     @Autowired
     private ApplicationContext applicationContext;
