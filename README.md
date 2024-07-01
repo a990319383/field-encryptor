@@ -8,17 +8,44 @@
 
 ​	由mybatis拦截器，替换原sql，达到无侵入的效果
 
+​	操作简单，只用在实体类指定需要加解密的字段，对业务代码0侵入
+
 
 #### 安装教程
 
 1. 使用
 
    - 引入pom依赖
-   - 需要加解密的表的实体类的对应字段上面标注 @FieldEncryptor
+
+     - 如果数据库实体类和引入mybatis-plus 的不在一个模块的话，实体类的模块只引入encryptor-annos
+
+       之前有mybatis-plus依赖的业务模块再引入encryptor-core
+
+     - 如果实体类和引入mybatis-plus的业务模块在一起的话，直接引入encryptor-core即可
+
+   - 需要加解密的表的**实体类**的对应字段上面标注 @FieldEncryptor
+
+     - 注意：只需要在@TableName的实体类上标注加密字段，不需要每个接口请求响应去标注
+
+   - 将项目表结构信息加载入缓存
+
+     - 多模块项目，所有的实体类不在同一个JVM的时候需要手动指定扫描实体类的路径
+
+       ```
+       field.encryptor.scanEntityPackage[0]=com..*.model
+       ```
+
+     - 所有实体类都在一个JVM时，不需要额外配置，默认加载当前模块mybatis-plus加载的实体类
+
+   - 自定义加密秘钥
+
+     ```
+     field.encryptor.secretKey=xxxx自定义秘钥
+     ```
 
 2. 个性化配置
 
-   - 自定义秘钥  
+   - 自定义秘钥 
 
      配置文件中加入 field.encryptor.secretKey = 自己的秘钥
 
@@ -74,7 +101,7 @@
 
        select * from tb_user where id in (上面sql的结果集)
 
-### 不兼容语法
+#### 不兼容语法
 
 -  不支持 convert() 函数的解析（jsqlparse最新版本仍不支持此语法的解析）
 
