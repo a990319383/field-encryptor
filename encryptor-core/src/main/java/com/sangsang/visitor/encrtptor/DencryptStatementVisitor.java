@@ -215,7 +215,7 @@ public class DencryptStatementVisitor implements StatementVisitor {
             itemsList.accept(iDecryptItemsListVisitor);
         }
 
-        //情况2：insert select 语句
+        //情况2：insert select 语句  （注意：默认是从明文到明文或者从密文到密文，没有一个明文一个密文的情况，所以这里只有对where条件加解密的情况，没有对select字段的处理）
         Select select = insert.getSelect();
         if (select != null) {
             //解析当前查询语句的每层表的全部字段
