@@ -1,5 +1,8 @@
 package com.sangsang.util;
 
+import com.sangsang.domain.constants.DecryptConstant;
+import com.sangsang.domain.constants.SymbolConstant;
+
 /**
  * 避免引入多余的包，这里将commons.lang3的工具类给拷贝过来
  *
@@ -62,4 +65,60 @@ public class StringUtils {
         return !isBlank(cs);
     }
 
+
+    /**
+     * 获取字符串中出现指定字符串的次数
+     *
+     * @author liutangqi
+     * @date 2024/7/10 18:10
+     * @Param [superstring 母串, substring 子串]
+     **/
+    public static int wordCount(String superstring, String substring) {
+        int count = 0;
+        if (StringUtils.isBlank(superstring) || StringUtils.isBlank(substring)) {
+            return count;
+        }
+
+        int index = 0;
+        while ((index = superstring.indexOf(substring, index)) != -1) {
+            count++;
+            // 移动到找到的子串之后
+            index += substring.length();
+        }
+        return count;
+    }
+
+
+    /**
+     * 将sql中的 ？ 替换为 DecryptConstant.PLACEHOLDER + 自增序号，从0开始
+     *
+     * @author liutangqi
+     * @date 2024/7/10 18:05
+     * @Param [sql]
+     **/
+    public static String question2Placeholder(String sql) {
+        //找出原sql中的 ？个数
+        int wordCount = StringUtils.wordCount(sql, SymbolConstant.QUESTION_MARK);
+        for (int i = 0; i < wordCount; i++) {
+            sql = sql.replaceFirst(SymbolConstant.ESC_QUESTION_MARK, DecryptConstant.PLACEHOLDER + i);
+        }
+        return sql;
+    }
+
+
+    /**
+     * 将sql中的 DecryptConstant.PLACEHOLDER + 自增序号，从0开始 替换为 ？
+     *
+     * @author liutangqi
+     * @date 2024/7/10 18:06
+     * @Param
+     **/
+    public static String placeholder2Question(String sql) {
+        //找出原sql中的 DecryptConstant.PLACEHOLDER个数
+        int wordCount = StringUtils.wordCount(sql, DecryptConstant.PLACEHOLDER);
+        for (int i = 0; i < wordCount; i++) {
+            sql = sql.replaceFirst(DecryptConstant.PLACEHOLDER + i, SymbolConstant.ESC_QUESTION_MARK);
+        }
+        return sql;
+    }
 }

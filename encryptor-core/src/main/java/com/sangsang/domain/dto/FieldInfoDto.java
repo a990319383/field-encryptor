@@ -17,7 +17,6 @@ public class FieldInfoDto implements Serializable {
     /**
      * 该字段来源自哪个字段
      * 注意：小写
-     * 注意：目前不兼容一个字段由几个字段的值聚合而成的写法
      */
     private String sourceColumn;
     /**

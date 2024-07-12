@@ -1,6 +1,9 @@
 package com.sangsang.util;
 
+import com.baomidou.mybatisplus.annotation.TableField;
+
 import java.lang.reflect.Field;
+import java.lang.reflect.Modifier;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -33,6 +36,24 @@ public class ReflectUtils {
             superClass = superClass.getSuperclass();
         }
         return res;
+    }
+
+    /**
+     * 获取所有非static修饰的字段
+     *
+     * @author liutangqi
+     * @date 2024/7/9 11:03
+     * @Param [cls]
+     **/
+    public static List<Field> getNotStaticFields(Class cls) {
+        //1.获取类的所有字段
+        List<Field> allFields = ReflectUtils.getAllFields(cls);
+
+        //2.过滤掉不属于实体类的字段，过滤掉static修饰的字段
+        return allFields.stream()
+                .filter(f -> f.getAnnotation(TableField.class) == null || f.getAnnotation(TableField.class).exist())
+                .filter(f -> !Modifier.isStatic(f.getModifiers()))
+                .collect(Collectors.toList());
     }
 
 

@@ -1,6 +1,8 @@
 package com.sangsang.test;
 
 import com.sangsang.cache.FieldEncryptorPatternCache;
+import com.sangsang.util.StringUtils;
+import com.sangsang.visitor.beanencrtptor.BeanEncrtptorStatementVisitor;
 import com.sangsang.visitor.encrtptor.DencryptStatementVisitor;
 import net.sf.jsqlparser.JSQLParserException;
 import net.sf.jsqlparser.parser.CCJSqlParserUtil;
@@ -25,12 +27,12 @@ public class SqlTest {
             "\t\ton\n" +
             "\t\ttu.id = tm.id\n" +
             "where\n" +
-            "\ttu.phone like \"%xxx%\"\n" +
-            " and tu.phone = 'yyyyy'" +
+            "\ttu.phone like ? " +
+            " and tu.phone = ?" +
             "\tand tm.menu_name != null\n" +
-            "\tand tm.parent_id in (1, 2, 3)\n" +
+            "\tand tm.parent_id in (?, ?, ?)\n" +
             "\tor tm.path is not null\n" +
-            "\tor (tm.parent_id = 1\n" +
+            "\tor (tm.parent_id = ?\n" +
             "\t\tand tm.create_time is not null )";
 
     //多层嵌套 带*
@@ -45,7 +47,7 @@ public class SqlTest {
             "\t\t)a\n" +
             "where\n" +
             "\ta.id >0\n" +
-            "\tand a.phone = 'xxxx'";
+            "\tand a.phone = ? ";
 
 
     //多层嵌套，where 条件中用上一层的字段作为筛选
@@ -72,14 +74,14 @@ public class SqlTest {
             "\t\t\ton\n" +
             "\t\t\ttu.id = tm.id) a\n" +
             "\twhere\n" +
-            "\t\tph >1\n" +
+            "\t\tph = ?\n" +
             "\t\t\t) b";
 
     // select (select xxx from ) from
     String s4 = "select\n" +
             "\ttu.phone as ph ,\n" +
             "\tmenu_name as mName,\n" +
-            "\t(select tm2.menu_name from tb_menu tm2 where tm2.id = tm.id ) as m2Name\n" +
+            "\t(select tm2.menu_name from tb_menu tm2 where tm2.id = tm.id and tm2.id = ? ) as m2Name\n" +
             "from\n" +
             "\ttb_user tu\n" +
             "left join tb_menu tm \n" +
@@ -293,12 +295,12 @@ public class SqlTest {
             "from tb_user tu \n" +
             "where  tu.phone in (\n" +
             "select t.phone from tb_user t \n" +
-            "where t.phone = 'yyyy'\n" +
+            "where t.phone = ? " +
             ")";
 
     // in 前面不是 字段 右边是常量
     String s20 = "select * from tb_user tu \n" +
-            "where  concat(\"aaa\",tu.phone) in ('111','222')";
+            "where  concat(\"aaa\",tu.phone) in (? , ?)";
 
     // in 前面不是字段  右边是子查询
     String s21 = "\n" +
@@ -336,6 +338,7 @@ public class SqlTest {
     String s25 = "\tSELECT `phone`,user_name  from tb_user \n" +
             "\twhere `phone` like 'aaa%'\n" +
             "\tand phone = '111'";
+
 
     // -----------------insert 测试语句---------------------
     String i1 = "insert into tb_user(id, user_name ,phone) \n" +
@@ -405,7 +408,7 @@ public class SqlTest {
         InitTableInfo.initTable();
 
         //需要测试的sql
-        String sql = s25;
+        String sql = s4;
         System.out.println("----------------------------------------------------------------------------");
         System.out.println(sql);
         System.out.println("----------------------------------------------------------------------------");
@@ -421,4 +424,28 @@ public class SqlTest {
 
     }
 
+
+    @Test
+    public void testBeanEncryptor() throws JSQLParserException, NoSuchFieldException {
+        //初始化加解密函数
+        FieldEncryptorPatternCache.initDeafultInstance();
+        //mock数据
+        InitTableInfo.initTable();
+
+        //需要测试的sql
+        String sql = s4;
+        System.out.println("----------------------------------------------------------------------------");
+        System.out.println(sql);
+        System.out.println("----------------------------------------------------------------------------");
+
+        //将原sql ？ 替换为自定义的占位符
+        String placeholderSql = StringUtils.question2Placeholder(sql);
+
+        //开始解析sql
+        Statement statement = CCJSqlParserUtil.parse(placeholderSql);
+        BeanEncrtptorStatementVisitor beanEncrtptorStatementVisitor = new BeanEncrtptorStatementVisitor();
+        statement.accept(beanEncrtptorStatementVisitor);
+        System.out.println(beanEncrtptorStatementVisitor.getFieldEncryptorInfos());
+        System.out.println(beanEncrtptorStatementVisitor.getPlaceholderColumnTableMap());
+    }
 }

@@ -3,12 +3,11 @@ package com.sangsang.util;
 import com.baomidou.mybatisplus.core.toolkit.CollectionUtils;
 import com.sangsang.cache.TableCache;
 import com.sangsang.domain.annos.FieldEncryptor;
+import com.sangsang.domain.constants.DecryptConstant;
 import com.sangsang.domain.constants.SymbolConstant;
 import com.sangsang.domain.dto.ColumnTableDto;
 import com.sangsang.domain.dto.FieldInfoDto;
-import net.sf.jsqlparser.expression.Alias;
-import net.sf.jsqlparser.expression.Function;
-import net.sf.jsqlparser.expression.StringValue;
+import net.sf.jsqlparser.expression.*;
 import net.sf.jsqlparser.expression.operators.relational.ExpressionList;
 import net.sf.jsqlparser.schema.Column;
 import net.sf.jsqlparser.schema.Table;
@@ -315,5 +314,50 @@ public class JsqlparserUtil {
             //key 不包含漂 加上漂去找
             return map.get(SymbolConstant.FLOAT + key.trim() + SymbolConstant.FLOAT);
         }
+    }
+
+
+    /**
+     * 如果表达式的一边是Column 一边是我们的特殊表达式，则将他们的对应关系维护到placeholderColumnTableMap 中
+     *
+     * @author liutangqi
+     * @date 2024/7/11 11:24
+     * @Param [layer 当前层数, layerFieldTableMap 当前层所有的字段信息,expression 表达式, placeholderColumnTableMap 存放结果集的map]
+     **/
+    public static void parseWhereColumTable(int layer,
+                                            Map<String, Map<String, Set<FieldInfoDto>>> layerFieldTableMap,
+                                            BinaryExpression expression,
+                                            Map<String, ColumnTableDto> placeholderColumnTableMap) {
+        Expression leftExpression = expression.getLeftExpression();
+        Expression rightExpression = expression.getRightExpression();
+
+        parseWhereColumTable(layer, layerFieldTableMap, leftExpression, rightExpression, placeholderColumnTableMap);
+    }
+
+
+    /**
+     * 如果表达式的一边是Column 一边是我们的特殊表达式，则将他们的对应关系维护到placeholderColumnTableMap 中
+     *
+     * @author liutangqi
+     * @date 2024/7/11 11:24
+     * @Param [layer 当前层数, layerFieldTableMap 当前层所有的字段信息,leftExpression 左表达式,rightExpression右表达式, placeholderColumnTableMap 存放结果集的map]
+     **/
+    public static void parseWhereColumTable(int layer,
+                                            Map<String, Map<String, Set<FieldInfoDto>>> layerFieldTableMap,
+                                            Expression leftExpression,
+                                            Expression rightExpression,
+                                            Map<String, ColumnTableDto> placeholderColumnTableMap) {
+        //左边是列，右边是我们的占位符
+        if (leftExpression instanceof Column && rightExpression.toString().contains(DecryptConstant.PLACEHOLDER)) {
+            ColumnTableDto columnTableDto = JsqlparserUtil.parseColumn((Column) leftExpression, layer, layerFieldTableMap);
+            placeholderColumnTableMap.put(rightExpression.toString(), columnTableDto);
+        }
+
+        //左边是我们的占位符 右边是列
+        if (rightExpression instanceof Column && leftExpression.toString().contains(DecryptConstant.PLACEHOLDER)) {
+            ColumnTableDto columnTableDto = JsqlparserUtil.parseColumn((Column) rightExpression, layer, layerFieldTableMap);
+            placeholderColumnTableMap.put(leftExpression.toString(), columnTableDto);
+        }
+
     }
 }

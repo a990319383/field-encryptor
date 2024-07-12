@@ -655,7 +655,7 @@ public class WhereDencryptExpressionVisitor extends BaseFieldParseTable implemen
 
     @Override
     public void visit(RegExpMySQLOperator regExpMySQLOperator) {
-
+        //todo-ltq 正则表达式后续抽空适配了
     }
 
     @Override

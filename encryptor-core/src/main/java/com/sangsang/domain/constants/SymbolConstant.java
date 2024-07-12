@@ -21,6 +21,16 @@ public interface SymbolConstant {
      * 双引号
      */
     String DOUBLE_QUOTES = "\"";
+    /**
+     * 问号
+     */
+    String QUESTION_MARK = "?";
+
+    /**
+     * 转义的问号，用于存在正则匹配的api时，对问号的处理
+     */
+    String ESC_QUESTION_MARK = "\\?";
+
 
     /**
      * test as 取别名
