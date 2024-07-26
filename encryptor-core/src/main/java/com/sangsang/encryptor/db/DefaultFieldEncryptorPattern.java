@@ -1,6 +1,7 @@
-package com.sangsang.encryptor;
+package com.sangsang.encryptor.db;
 
 import com.sangsang.domain.constants.SymbolConstant;
+import com.sangsang.encryptor.EncryptorProperties;
 import net.sf.jsqlparser.expression.CastExpression;
 import net.sf.jsqlparser.expression.Expression;
 import net.sf.jsqlparser.expression.Function;
@@ -12,7 +13,7 @@ import org.springframework.stereotype.Component;
 
 
 /**
- * 默认的加解密算法
+ * 数据库函数加密模式下默认的加解密算法
  *
  * @author liutangqi
  * @date 2024/4/8 14:13

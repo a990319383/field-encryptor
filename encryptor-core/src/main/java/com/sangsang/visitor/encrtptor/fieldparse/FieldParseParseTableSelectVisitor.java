@@ -1,5 +1,7 @@
 package com.sangsang.visitor.encrtptor.fieldparse;
 
+import com.baomidou.mybatisplus.core.toolkit.CollectionUtils;
+import com.sangsang.domain.constants.NumberConstant;
 import com.sangsang.domain.dto.BaseFieldParseTable;
 import com.sangsang.domain.dto.FieldInfoDto;
 import net.sf.jsqlparser.statement.select.*;
@@ -46,7 +48,8 @@ public class FieldParseParseTableSelectVisitor extends BaseFieldParseTable imple
     /**
      * union all
      * union
-     * 解析字段是为了字段加密服务的，  这里应该没必要解析，所以这里注释掉   union的字段加密，都是将每条sql单独解析的，所以这里不用处理
+     * 在使用数据库本身的函数加解密的模式下，这种语法的解析没有必要，不会使用这个解析结果的，union的几条sql都是单独解析，进行加解密处理的
+     * 在使用java bean 进行加解密的模式下，我们需要知道每个字段对应的表，才知道是否需要加解密，这里只解析union的第一个sql,因为对于标准的数据安全的场景，只要这个字段是需要加密的，那这个字段涉及的所有表都是应该加解密的，所以我们只解析第一张表的字段归属
      *
      * @author liutangqi
      * @date 2024/3/6 13:58
@@ -54,6 +57,13 @@ public class FieldParseParseTableSelectVisitor extends BaseFieldParseTable imple
      **/
     @Override
     public void visit(SetOperationList setOpList) {
+        List<SelectBody> selects = setOpList.getSelects();
+        if (CollectionUtils.isEmpty(selects)) {
+            return;
+        }
+        SelectBody selectBody = selects.get(0);
+        FieldParseParseTableSelectVisitor fieldParseParseTableSelectVisitor = new FieldParseParseTableSelectVisitor(this.getLayer(), this.getLayerSelectTableFieldMap(), this.getLayerFieldTableMap());
+        selectBody.accept(fieldParseParseTableSelectVisitor);
     }
 
     @Override

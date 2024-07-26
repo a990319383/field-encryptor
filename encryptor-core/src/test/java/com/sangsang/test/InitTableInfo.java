@@ -13,8 +13,6 @@ public class InitTableInfo {
 
     /**
      * 将TableCache的数据做个mock
-     * 实体类是 com.sangsang.mockentity.MenuEntity  com.sangsang.mockentity.UserEntity
-     * 其中，只有tb_user表的phone字段需要进行加密
      *
      * @author liutangqi
      * @date 2024/4/2 15:58

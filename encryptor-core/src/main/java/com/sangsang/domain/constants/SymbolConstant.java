@@ -13,6 +13,12 @@ public interface SymbolConstant {
      * 句号
      */
     String FULL_STOP = ".";
+
+    /**
+     * 带转义符的句号
+     */
+    String ESC_FULL_STOP = "\\.";
+
     /**
      * 单引号
      */

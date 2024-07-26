@@ -1,12 +1,8 @@
-package com.sangsang.visitor.beanencrtptor.where;
+package com.sangsang.visitor.beanencrtptor.select;
 
-import com.sangsang.domain.constants.NumberConstant;
 import com.sangsang.domain.dto.BaseFieldParseTable;
 import com.sangsang.domain.dto.ColumnTableDto;
 import com.sangsang.domain.dto.PlaceholderFieldParseTable;
-import com.sangsang.util.JsqlparserUtil;
-import com.sangsang.visitor.beanencrtptor.select.PlaceholderSelectVisitor;
-import com.sangsang.visitor.encrtptor.fieldparse.FieldParseParseTableSelectVisitor;
 import net.sf.jsqlparser.expression.*;
 import net.sf.jsqlparser.expression.operators.arithmetic.*;
 import net.sf.jsqlparser.expression.operators.conditional.AndExpression;
@@ -16,28 +12,25 @@ import net.sf.jsqlparser.expression.operators.relational.*;
 import net.sf.jsqlparser.schema.Column;
 import net.sf.jsqlparser.statement.select.AllColumns;
 import net.sf.jsqlparser.statement.select.AllTableColumns;
-import net.sf.jsqlparser.statement.select.SelectBody;
 import net.sf.jsqlparser.statement.select.SubSelect;
 
 import java.util.Map;
-import java.util.Set;
 
 /**
- * 解析where 条件中#{}条件入参条件所属的表以及字段
+ * 将select的每一项中需要进行#{}占位符的进行解析
  *
  * @author liutangqi
- * @date 2024/7/11 10:47
+ * @date 2024/7/14 22:09
  */
-public class PlaceholderWhereExpressionVisitor extends PlaceholderFieldParseTable implements ExpressionVisitor {
+public class PlaceholderSelectExpressionVisitor extends PlaceholderFieldParseTable implements ExpressionVisitor {
 
-    public PlaceholderWhereExpressionVisitor(PlaceholderFieldParseTable placeholderFieldParseTable) {
+    public PlaceholderSelectExpressionVisitor(PlaceholderFieldParseTable placeholderFieldParseTable) {
         super(placeholderFieldParseTable, placeholderFieldParseTable.getPlaceholderColumnTableMap());
     }
 
-    public PlaceholderWhereExpressionVisitor(BaseFieldParseTable baseFieldParseTable, Map<String, ColumnTableDto> placeholderColumnTableMap) {
+    public PlaceholderSelectExpressionVisitor(BaseFieldParseTable baseFieldParseTable, Map<String, ColumnTableDto> placeholderColumnTableMap) {
         super(baseFieldParseTable, placeholderColumnTableMap);
     }
-
 
     @Override
     public void visit(BitwiseRightShift bitwiseRightShift) {
@@ -104,18 +97,9 @@ public class PlaceholderWhereExpressionVisitor extends PlaceholderFieldParseTabl
 
     }
 
-    /**
-     * 括起来的一堆条件
-     *
-     * @author liutangqi
-     * @date 2024/7/12 14:41
-     * @Param [parenthesis]
-     **/
     @Override
     public void visit(Parenthesis parenthesis) {
-        //解析括号括起来的表达式
-        Expression exp = parenthesis.getExpression();
-        exp.accept(this);
+
     }
 
     @Override
@@ -150,33 +134,17 @@ public class PlaceholderWhereExpressionVisitor extends PlaceholderFieldParseTabl
 
     @Override
     public void visit(AndExpression andExpression) {
-        //类似递归解析左右两边的表达式
-        Expression leftExpression = andExpression.getLeftExpression();
-        leftExpression.accept(this);
 
-        Expression rightExpression = andExpression.getRightExpression();
-        rightExpression.accept(this);
     }
 
     @Override
     public void visit(OrExpression orExpression) {
-        //类似递归解析左右两边的表达式
-        Expression leftExpression = orExpression.getLeftExpression();
-        leftExpression.accept(this);
-
-        Expression rightExpression = orExpression.getRightExpression();
-        rightExpression.accept(this);
 
     }
 
     @Override
     public void visit(XorExpression xorExpression) {
-        //类似递归解析左右两边的表达式
-        Expression leftExpression = xorExpression.getLeftExpression();
-        leftExpression.accept(this);
 
-        Expression rightExpression = xorExpression.getRightExpression();
-        rightExpression.accept(this);
     }
 
     @Override
@@ -184,20 +152,9 @@ public class PlaceholderWhereExpressionVisitor extends PlaceholderFieldParseTabl
 
     }
 
-    /**
-     * 左右表达式，当有一边表达式是 我们替换的占位符，有一边是Column，则将他们对应关系维护进结果集中
-     *
-     * @author liutangqi
-     * @date 2024/7/11 11:08
-     * @Param [equalsTo]
-     **/
     @Override
     public void visit(EqualsTo equalsTo) {
-        //如果有一边表达式是 特殊的占位符，则维护占位符对应的表字段信息
-        JsqlparserUtil.parseWhereColumTable(this.getLayer(),
-                this.getLayerFieldTableMap(),
-                equalsTo,
-                this.getPlaceholderColumnTableMap());
+
     }
 
     @Override
@@ -210,39 +167,8 @@ public class PlaceholderWhereExpressionVisitor extends PlaceholderFieldParseTabl
 
     }
 
-
     @Override
     public void visit(InExpression inExpression) {
-        //1.当前左边表达式是Column
-        if (inExpression.getLeftExpression() instanceof Column) {
-            //1.1 右边是 (aaa,bbb,ccc)  Column in (aaa,bbb,ccc) 这种 如果右边是预编译的参数 将右边的#{} 的关系维护到结果集map中
-            if (inExpression.getRightItemsList() != null && inExpression.getRightItemsList() instanceof ExpressionList) {
-                ExpressionList rightItemsList = (ExpressionList) inExpression.getRightItemsList();
-                rightItemsList.getExpressions().forEach(f -> JsqlparserUtil.parseWhereColumTable(this.getLayer(),
-                        this.getLayerFieldTableMap(),
-                        inExpression.getLeftExpression(),
-                        f,
-                        this.getPlaceholderColumnTableMap()));
-
-            }
-
-            //1.2 右边是子查询 Column in (select xxx from xxx) 这种: 只需要解析子查询的where 中的占位符
-            if (inExpression.getRightExpression() != null && inExpression.getRightExpression() instanceof SubSelect) {
-                //1.2.1 取出右边的select语句
-                SelectBody selectBody = ((SubSelect) inExpression.getRightExpression()).getSelectBody();
-                //1.2.2 因为这个sql是一个完全独立的sql，所以单独解析这个sql拥有的字段信息
-                FieldParseParseTableSelectVisitor fieldParseParseTableSelectVisitor = new FieldParseParseTableSelectVisitor(NumberConstant.ONE, null, null);
-                selectBody.accept(fieldParseParseTableSelectVisitor);
-                //1.2.3 利用这个单独的sql的解析结果，对这个sql的where的#{}占位符进行分析
-                PlaceholderSelectVisitor placeholderSelectVisitor = new PlaceholderSelectVisitor(fieldParseParseTableSelectVisitor, this.getPlaceholderColumnTableMap());
-                selectBody.accept(placeholderSelectVisitor);
-            }
-        } else {
-            //2. 当左边的不是Column时（比如左边是列运算，就是Function，不是单纯的列） 栗子： where concat(a.phone,b.name) in ( 'xxx','xxx')
-            // 这种情况不做处理，这种情况#{}占位符所属的字段信息是一个聚合结果，同时来源多张表，不支持此种写法，两个单独的字段聚合后，单独加密和整体加密密文肯定不同
-            // 写出这种sql的时候请反省一下自己，硬要用这种写法的，请使用数据库函数加密的模式
-        }
-
 
     }
 
@@ -263,11 +189,7 @@ public class PlaceholderWhereExpressionVisitor extends PlaceholderFieldParseTabl
 
     @Override
     public void visit(LikeExpression likeExpression) {
-        //如果有一边表达式是 特殊的占位符，则维护占位符对应的表字段信息
-        JsqlparserUtil.parseWhereColumTable(this.getLayer(),
-                this.getLayerFieldTableMap(),
-                likeExpression,
-                this.getPlaceholderColumnTableMap());
+
     }
 
     @Override
@@ -282,11 +204,7 @@ public class PlaceholderWhereExpressionVisitor extends PlaceholderFieldParseTabl
 
     @Override
     public void visit(NotEqualsTo notEqualsTo) {
-        //如果有一边表达式是 特殊的占位符，则维护占位符对应的表字段信息
-        JsqlparserUtil.parseWhereColumTable(this.getLayer(),
-                this.getLayerFieldTableMap(),
-                notEqualsTo,
-                this.getPlaceholderColumnTableMap());
+
     }
 
     @Override
@@ -295,28 +213,27 @@ public class PlaceholderWhereExpressionVisitor extends PlaceholderFieldParseTabl
     }
 
     /**
-     * 子查询
-     * 当exist时会走子查询的逻辑
+     * select (select xxx from tb_table) as xxx from
      *
      * @author liutangqi
-     * @date 2024/7/12 10:18
+     * @date 2024/7/14 22:31
      * @Param [subSelect]
      **/
     @Override
     public void visit(SubSelect subSelect) {
-        // todo-ltq
-        System.out.println("***************SubSelect********************");
-
+        //处理占位符
+        subSelect.getSelectBody().accept(new PlaceholderSelectVisitor(this));
     }
 
     @Override
     public void visit(CaseExpression caseExpression) {
+        //todo-ltq
 
     }
 
     @Override
     public void visit(WhenClause whenClause) {
-
+        //todo-ltq
     }
 
     @Override

@@ -1,5 +1,6 @@
 package com.sangsang.visitor.encrtptor.select;
 
+import com.baomidou.mybatisplus.core.toolkit.CollectionUtils;
 import com.sangsang.domain.constants.NumberConstant;
 import com.sangsang.domain.dto.BaseFieldParseTable;
 import com.sangsang.domain.dto.FieldInfoDto;
@@ -79,7 +80,22 @@ public class SDecryptSelectVisitor extends BaseFieldParseTable implements Select
             plainSelect.setWhere(whereDencryptExpressionVisitor.getExpression());
         }
 
-        //6.维护解析后的sql
+        //6.对join  的on后面的参数进行加解密处理
+        List<Join> joins = plainSelect.getJoins();
+        if (CollectionUtils.isNotEmpty(joins)) {
+            for (Join join : joins) {
+                List<Expression> dencryptExpressions = new ArrayList<>();
+                for (Expression expression : join.getOnExpressions()) {
+                    WhereDencryptExpressionVisitor whereDencryptExpressionVisitor = new WhereDencryptExpressionVisitor(expression, this.getLayer(), this.getLayerSelectTableFieldMap(), this.getLayerFieldTableMap());
+                    expression.accept(whereDencryptExpressionVisitor);
+                    dencryptExpressions.add(whereDencryptExpressionVisitor.getExpression());
+                }
+                //处理后的结果赋值
+                join.setOnExpressions(dencryptExpressions);
+            }
+        }
+
+        //7.维护解析后的sql
         this.resultSql = plainSelect.toString();
     }
 

@@ -1,5 +1,6 @@
 package com.sangsang.interceptor;
 
+import com.sangsang.domain.constants.PatternTypeConstant;
 import com.sangsang.util.StringUtils;
 import com.sangsang.visitor.encrtptor.DencryptStatementVisitor;
 import net.sf.jsqlparser.parser.CCJSqlParserUtil;
@@ -9,7 +10,7 @@ import org.apache.ibatis.mapping.BoundSql;
 import org.apache.ibatis.plugin.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
 import java.lang.reflect.Field;
@@ -17,13 +18,14 @@ import java.sql.Connection;
 import java.util.Properties;
 
 /**
+ * 采用数据库函数加解密模式
  * 将sql需要加解密的字段进行加解密处理
  *
  * @author liutangqi
  * @date 2023/11/9 19:03
  */
 @Component
-@ConditionalOnClass(name = "org.apache.ibatis.plugin.Interceptor")
+@ConditionalOnProperty(name = "field.encryptor.patternType", value = PatternTypeConstant.DB)
 @Intercepts({@Signature(type = StatementHandler.class, method = "prepare", args = {Connection.class, Integer.class})})
 public class FieldEncryptorInterceptor implements Interceptor {
 

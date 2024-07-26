@@ -109,7 +109,7 @@ public class SqlTest {
             "\t\t\ttb_menu tm3\n" +
             "\t\twhere\n" +
             "\t\t\ttm3.id = tu.id\n" +
-            "\t\t\tand tu.phone = 'yyyy'\n" +
+            "\t\t\tand tu.phone =  ?\n" +
             "\t\t) as m3Ph\n" +
             "\tfrom\n" +
             "\t\ttb_user tu\n" +
@@ -118,11 +118,11 @@ public class SqlTest {
 
 
     // union
-    String s6 = "\t\tselect * from tb_user tu \n" +
+    String s6 = "\t\tselect * from tb_user tu where tu.phone = ? \n" +
             "\t\tunion all \n" +
-            "\t\tselect * from tb_user tu2 \n" +
+            "\t\tselect * from tb_user tu2  where tu2.phone = ? \n" +
             "\t\tunion \n" +
-            "\t\tselect * from tb_user tu3";
+            "\t\tselect * from tb_user tu3 where tu3.phone = ?";
 
     String s7 = "select\n" +
             "\tb.ph,\n" +
@@ -147,7 +147,7 @@ public class SqlTest {
             "\t\t\ton\n" +
             "\t\t\ttu.id = tm.id) a\n" +
             "\twhere\n" +
-            "\t\tph >1\n" +
+            "\t\tph = ? \n" +
             "\t\t\t) b";
 
     // 同一张表一个字段出现多次，但别名不同  （tb_menu 表的 mmenu_name）
@@ -174,7 +174,7 @@ public class SqlTest {
             "\t\t\ton\n" +
             "\t\t\ttu.id = tm.id) a\n" +
             "\twhere\n" +
-            "\t\tph >1\n" +
+            "\t\tph = ?\n" +
             "\t\t\t) b";
 
     //case when
@@ -339,6 +339,9 @@ public class SqlTest {
             "\twhere `phone` like 'aaa%'\n" +
             "\tand phone = '111'";
 
+    // on 后面有写死的条件筛选
+    String s26 = "select menuName, login_name, ph, a.create_time from ( select phone as ph, tu.login_name, tm.create_time, tm.menu_name as menuName from tb_user tu left join tb_menu tm on tu.id = tm.id and tu.login_name = ? and tu.phone = ?) a";
+
 
     // -----------------insert 测试语句---------------------
     String i1 = "insert into tb_user(id, user_name ,phone) \n" +
@@ -408,7 +411,7 @@ public class SqlTest {
         InitTableInfo.initTable();
 
         //需要测试的sql
-        String sql = s4;
+        String sql = s26;
         System.out.println("----------------------------------------------------------------------------");
         System.out.println(sql);
         System.out.println("----------------------------------------------------------------------------");
@@ -433,7 +436,7 @@ public class SqlTest {
         InitTableInfo.initTable();
 
         //需要测试的sql
-        String sql = s4;
+        String sql = s9;
         System.out.println("----------------------------------------------------------------------------");
         System.out.println(sql);
         System.out.println("----------------------------------------------------------------------------");

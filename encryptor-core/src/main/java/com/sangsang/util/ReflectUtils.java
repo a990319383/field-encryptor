@@ -1,6 +1,5 @@
 package com.sangsang.util;
 
-import com.baomidou.mybatisplus.annotation.TableField;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
@@ -51,7 +50,6 @@ public class ReflectUtils {
 
         //2.过滤掉不属于实体类的字段，过滤掉static修饰的字段
         return allFields.stream()
-                .filter(f -> f.getAnnotation(TableField.class) == null || f.getAnnotation(TableField.class).exist())
                 .filter(f -> !Modifier.isStatic(f.getModifiers()))
                 .collect(Collectors.toList());
     }

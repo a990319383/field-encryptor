@@ -184,7 +184,6 @@ public class BeanEncrtptorStatementVisitor implements StatementVisitor {
 
     }
 
-    //todo-ltq  uninon 语句 只解析第一个sql即可 （正确的union语句，一个字段，不同的union段肯定要么都加密，要么都不加密）
     @Override
     public void visit(Select select) {
         //1.解析select拥有的字段对应的表结构信息
@@ -194,7 +193,7 @@ public class BeanEncrtptorStatementVisitor implements StatementVisitor {
 
         //1.2.获取sql 查询的所有字段
         Map<String, Map<String, Set<FieldInfoDto>>> layerSelectTableFieldMap = fieldParseTableSelectVisitor.getLayerSelectTableFieldMap();
-        List<FieldInfoDto> selectFiles = layerSelectTableFieldMap.get(String.valueOf(NumberConstant.ONE))
+        List<FieldInfoDto> selectFiles = layerSelectTableFieldMap.getOrDefault(String.valueOf(NumberConstant.ONE), new HashMap<>())
                 .values()
                 .stream()
                 .flatMap(Collection::stream)

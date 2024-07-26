@@ -273,6 +273,20 @@ public class JsqlparserUtil {
 
 
     /**
+     * 根据表和字段信息，判断该字段是否需要加解密
+     *
+     * @author liutangqi
+     * @date 2024/7/24 15:24
+     * @Param [dto]
+     **/
+    public static boolean needEncrypt(ColumnTableDto dto) {
+        return TableCache.getTableFieldEncryptInfo()
+                .getOrDefault(dto.getSourceTableName(), new HashMap<>())
+                .get(dto.getSourceColumn()) != null;
+    }
+
+
+    /**
      * 忽略漂，看两个名字是否相同
      *
      * @author liutangqi
@@ -358,6 +372,5 @@ public class JsqlparserUtil {
             ColumnTableDto columnTableDto = JsqlparserUtil.parseColumn((Column) rightExpression, layer, layerFieldTableMap);
             placeholderColumnTableMap.put(leftExpression.toString(), columnTableDto);
         }
-
     }
 }

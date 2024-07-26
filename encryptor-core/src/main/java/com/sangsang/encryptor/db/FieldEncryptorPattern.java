@@ -1,4 +1,4 @@
-package com.sangsang.encryptor;
+package com.sangsang.encryptor.db;
 
 import net.sf.jsqlparser.expression.Expression;
 

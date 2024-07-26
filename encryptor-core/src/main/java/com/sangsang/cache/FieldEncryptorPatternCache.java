@@ -1,9 +1,10 @@
 package com.sangsang.cache;
 
 import com.sangsang.domain.constants.SymbolConstant;
-import com.sangsang.encryptor.DefaultFieldEncryptorPattern;
+import com.sangsang.encryptor.bean.BeanFieldEncryptorPattern;
+import com.sangsang.encryptor.db.DefaultFieldEncryptorPattern;
 import com.sangsang.encryptor.EncryptorProperties;
-import com.sangsang.encryptor.FieldEncryptorPattern;
+import com.sangsang.encryptor.db.FieldEncryptorPattern;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.config.BeanPostProcessor;
 import org.springframework.context.ApplicationContext;
@@ -27,10 +28,16 @@ public class FieldEncryptorPatternCache implements BeanPostProcessor {
     //缓存当前加解密的bean
     private static FieldEncryptorPattern fieldEncryptorPattern;
 
+    //缓存当前java bean加解密模式下的bean
+    private static BeanFieldEncryptorPattern beanFieldEncryptorPattern;
+
     @PostConstruct
     public void init() {
         if (fieldEncryptorPattern == null) {
             fieldEncryptorPattern = applicationContext.getBean(FieldEncryptorPattern.class);
+        }
+        if (beanFieldEncryptorPattern == null) {
+            beanFieldEncryptorPattern = applicationContext.getBean(BeanFieldEncryptorPattern.class);
         }
     }
 
@@ -50,7 +57,7 @@ public class FieldEncryptorPatternCache implements BeanPostProcessor {
     }
 
     /**
-     * 获取当前的加解密的bean
+     * 获取数据库加解密模式下实现类
      *
      * @author liutangqi
      * @date 2024/4/8 14:37
@@ -60,4 +67,15 @@ public class FieldEncryptorPatternCache implements BeanPostProcessor {
         return fieldEncryptorPattern;
     }
 
+
+    /**
+     * 获取java bean 加解密模式下的实现类
+     *
+     * @author liutangqi
+     * @date 2024/7/24 17:46
+     * @Param []
+     **/
+    public static BeanFieldEncryptorPattern getBeanInstance() {
+        return beanFieldEncryptorPattern;
+    }
 }
