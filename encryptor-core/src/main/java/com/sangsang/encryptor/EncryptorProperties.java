@@ -1,7 +1,7 @@
 package com.sangsang.encryptor;
 
+import com.sangsang.domain.constants.PatternTypeConstant;
 import com.sangsang.domain.constants.SymbolConstant;
-import com.sangsang.domain.enums.PatternEnum;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.stereotype.Component;
 
@@ -28,9 +28,9 @@ public class EncryptorProperties {
     /**
      * 加解密的模式类型，默认使用数据库的库函数进行加解密
      *
-     * @see PatternEnum
+     * @see PatternTypeConstant
      */
-    private String patternType = PatternEnum.DB.getType();
+    private String patternType;
 
 
     public List<String> getScanEntityPackage() {

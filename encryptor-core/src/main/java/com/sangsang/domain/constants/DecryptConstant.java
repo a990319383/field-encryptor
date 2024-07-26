@@ -1,5 +1,11 @@
 package com.sangsang.domain.constants;
 
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.Arrays;
+import java.util.Date;
+import java.util.List;
+
 /**
  * @author liutangqi
  * @date 2024/3/15 11:27
@@ -14,5 +20,22 @@ public interface DecryptConstant {
      * 对于？ 占位符的替换，后面拼接自增序号，从0开始
      */
     String PLACEHOLDER = "encryptor_placeholder_";
+
+    /**
+     * 基本数据类型对应的包装类 + 字符串类型 + 时间类型 的集合
+     */
+    List<Class> FUNDAMENTAL = Arrays.asList(Boolean.class,
+            Character.class,
+            Byte.class,
+            Short.class,
+            Integer.class,
+            Long.class,
+            Float.class,
+            Double.class,
+            String.class,
+            LocalDateTime.class,
+            LocalDate.class,
+            Date.class
+    );
 
 }

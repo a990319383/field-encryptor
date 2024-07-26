@@ -38,19 +38,20 @@ public class ReflectUtils {
     }
 
     /**
-     * 获取所有非static修饰的字段
+     * 获取所有非static,非final修饰的字段
      *
      * @author liutangqi
      * @date 2024/7/9 11:03
      * @Param [cls]
      **/
-    public static List<Field> getNotStaticFields(Class cls) {
+    public static List<Field> getNotStaticFinalFields(Class cls) {
         //1.获取类的所有字段
         List<Field> allFields = ReflectUtils.getAllFields(cls);
 
-        //2.过滤掉不属于实体类的字段，过滤掉static修饰的字段
+        //2.过滤掉不属于实体类的字段，过滤掉static,final修饰的字段
         return allFields.stream()
                 .filter(f -> !Modifier.isStatic(f.getModifiers()))
+                .filter(f -> !Modifier.isFinal(f.getModifiers()))
                 .collect(Collectors.toList());
     }
 

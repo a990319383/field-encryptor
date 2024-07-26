@@ -25,7 +25,7 @@ import java.util.Properties;
  * @date 2023/11/9 19:03
  */
 @Component
-@ConditionalOnProperty(name = "field.encryptor.patternType", value = PatternTypeConstant.DB)
+@ConditionalOnProperty(name = "field.encryptor.patternType", havingValue = PatternTypeConstant.DB)
 @Intercepts({@Signature(type = StatementHandler.class, method = "prepare", args = {Connection.class, Integer.class})})
 public class FieldEncryptorInterceptor implements Interceptor {
 
