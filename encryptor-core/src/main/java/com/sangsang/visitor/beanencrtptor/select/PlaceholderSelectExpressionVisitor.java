@@ -1,5 +1,6 @@
 package com.sangsang.visitor.beanencrtptor.select;
 
+import com.baomidou.mybatisplus.core.toolkit.CollectionUtils;
 import com.sangsang.domain.dto.BaseFieldParseTable;
 import com.sangsang.domain.dto.ColumnTableDto;
 import com.sangsang.domain.dto.PlaceholderFieldParseTable;

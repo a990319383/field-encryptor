@@ -7,6 +7,7 @@ import com.sangsang.domain.dto.BaseFieldParseTable;
 import com.sangsang.domain.dto.FieldInfoDto;
 import com.sangsang.util.JsqlparserUtil;
 import com.sangsang.visitor.encrtptor.fieldparse.FieldParseParseTableSelectVisitor;
+import com.sangsang.visitor.encrtptor.where.WhereDencryptExpressionVisitor;
 import net.sf.jsqlparser.expression.*;
 import net.sf.jsqlparser.expression.operators.arithmetic.*;
 import net.sf.jsqlparser.expression.operators.conditional.AndExpression;
@@ -197,9 +198,18 @@ public class SDecryptExpressionVisitor extends BaseFieldParseTable implements Ex
 
     }
 
+    /**
+     * select 语句中存在 case when 字段 = xxx then 这种语法的时候， 其中字段=xxx 会走这里的解析
+     * 这种语法和where中的处理方式一样，所以走where的逻辑
+     *
+     * @author liutangqi
+     * @date 2024/7/30 16:49
+     * @Param [equalsTo]
+     **/
     @Override
     public void visit(EqualsTo equalsTo) {
-
+        // when  字段= xxx 这种时候，走where的解析
+        equalsTo.accept(new WhereDencryptExpressionVisitor(equalsTo, this.getLayer(), this.getLayerSelectTableFieldMap(), this.getLayerFieldTableMap()));
     }
 
     @Override
@@ -300,6 +310,14 @@ public class SDecryptExpressionVisitor extends BaseFieldParseTable implements Ex
         subSelect.getSelectBody().accept(SDecryptSelectVisitor);
     }
 
+    /**
+     * case 字段 when xxx then
+     * case when 字段=xxx then
+     *
+     * @author liutangqi
+     * @date 2024/7/30 15:35
+     * @Param [caseExpression]
+     **/
     @Override
     public void visit(CaseExpression caseExpression) {
         //处理case的条件
@@ -331,6 +349,13 @@ public class SDecryptExpressionVisitor extends BaseFieldParseTable implements Ex
         }
     }
 
+    /**
+     * 上面的CaseExpression 中解析when的时候会调用这里
+     *
+     * @author liutangqi
+     * @date 2024/7/30 15:38
+     * @Param [whenClause]
+     **/
     @Override
     public void visit(WhenClause whenClause) {
         Expression thenExpression = whenClause.getThenExpression();
@@ -345,7 +370,6 @@ public class SDecryptExpressionVisitor extends BaseFieldParseTable implements Ex
             SDecryptExpressionVisitor expressionVisitor = new SDecryptExpressionVisitor(this.alias, whenExpression, this.getLayer(), this.getLayerSelectTableFieldMap(), this.getLayerFieldTableMap());
             whenExpression.accept(expressionVisitor);
             whenClause.setWhenExpression(expressionVisitor.getExpression());
-            whenExpression.accept(expressionVisitor);
         }
     }
 

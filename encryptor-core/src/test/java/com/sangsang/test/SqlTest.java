@@ -187,14 +187,14 @@ public class SqlTest {
             "\ttu.user_name \n" +
             "\tend as xxx,\n" +
             "\tcase tu.phone \n" +
-            "\twhen '111' then \n" +
+            "\twhen ? then \n" +
             "\ttu.phone \n" +
             "\telse \n" +
             "\ttm.menu_name \n" +
             "\tend as yyy,\n" +
             "\tcase  \n" +
-            "\twhen tu.phone = '333333' then \n" +
-            "\ttu.phone \n" +
+            "\twhen tu.phone = ? then \n" +
+            "\t ? \n" +
             "\telse \n" +
             "\ttm.create_time \n" +
             "\tend as zzz,\n" +
@@ -411,7 +411,7 @@ public class SqlTest {
         InitTableInfo.initTable();
 
         //需要测试的sql
-        String sql = s26;
+        String sql = s9;
         System.out.println("----------------------------------------------------------------------------");
         System.out.println(sql);
         System.out.println("----------------------------------------------------------------------------");
