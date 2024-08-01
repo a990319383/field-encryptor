@@ -17,6 +17,7 @@ import net.sf.jsqlparser.statement.values.ValuesStatement;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * 将select语句中的#{}占位符和数据库表字段对应起来
@@ -26,6 +27,9 @@ import java.util.Map;
  */
 public class PlaceholderSelectVisitor extends PlaceholderFieldParseTable implements SelectVisitor {
 
+    public PlaceholderSelectVisitor(int layer, Map<String, Map<String, Set<FieldInfoDto>>> layerSelectTableFieldMap, Map<String, Map<String, Set<FieldInfoDto>>> layerFieldTableMap, Map<String, ColumnTableDto> placeholderColumnTableMap) {
+        super(layer, layerSelectTableFieldMap, layerFieldTableMap, placeholderColumnTableMap);
+    }
 
     public PlaceholderSelectVisitor(PlaceholderFieldParseTable placeholderFieldParseTable) {
         super(placeholderFieldParseTable, placeholderFieldParseTable.getPlaceholderColumnTableMap());

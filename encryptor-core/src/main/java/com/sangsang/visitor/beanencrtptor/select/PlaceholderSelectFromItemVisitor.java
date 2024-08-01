@@ -38,7 +38,7 @@ public class PlaceholderSelectFromItemVisitor extends PlaceholderFieldParseTable
      **/
     @Override
     public void visit(SubSelect subSelect) {
-        PlaceholderSelectVisitor placeholderSelectVisitor = new PlaceholderSelectVisitor(this);
+        PlaceholderSelectVisitor placeholderSelectVisitor = new PlaceholderSelectVisitor((this.getLayer() + 1), this.getLayerSelectTableFieldMap(), this.getLayerFieldTableMap(), this.getPlaceholderColumnTableMap());
         subSelect.getSelectBody().accept(placeholderSelectVisitor);
     }
 

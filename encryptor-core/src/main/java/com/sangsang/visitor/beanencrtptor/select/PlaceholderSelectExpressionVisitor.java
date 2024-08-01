@@ -1,9 +1,11 @@
 package com.sangsang.visitor.beanencrtptor.select;
 
 import com.baomidou.mybatisplus.core.toolkit.CollectionUtils;
+import com.sangsang.domain.constants.DecryptConstant;
 import com.sangsang.domain.dto.BaseFieldParseTable;
 import com.sangsang.domain.dto.ColumnTableDto;
 import com.sangsang.domain.dto.PlaceholderFieldParseTable;
+import com.sangsang.util.JsqlparserUtil;
 import net.sf.jsqlparser.expression.*;
 import net.sf.jsqlparser.expression.operators.arithmetic.*;
 import net.sf.jsqlparser.expression.operators.conditional.AndExpression;
@@ -24,6 +26,16 @@ import java.util.Map;
  * @date 2024/7/14 22:09
  */
 public class PlaceholderSelectExpressionVisitor extends PlaceholderFieldParseTable implements ExpressionVisitor {
+
+    /**
+     * 当处理    case 字段  when xxx
+     * 的when语句的时候，需要知道这个when语句所属的case后面的字段，这个变量是存储这种情况的case字段的
+     */
+    private Expression switchExpression;
+
+    public void setCaseExpression(Expression switchExpression) {
+        this.switchExpression = switchExpression;
+    }
 
     public PlaceholderSelectExpressionVisitor(PlaceholderFieldParseTable placeholderFieldParseTable) {
         super(placeholderFieldParseTable, placeholderFieldParseTable.getPlaceholderColumnTableMap());
@@ -226,15 +238,77 @@ public class PlaceholderSelectExpressionVisitor extends PlaceholderFieldParseTab
         subSelect.getSelectBody().accept(new PlaceholderSelectVisitor(this));
     }
 
+    /**
+     * case 字段 when xxx then
+     * case when 字段=xxx then
+     * 只有下面情况的占位符才有字段对应，需要进行处理
+     * 情况1: case 表字段  when ?占位符 then xxx
+     * 情况2: case when 表字段=? then （这种情况条件在when里面）
+     * 情况3：... then 表字段>= ?占位符
+     *
+     * @author liutangqi
+     * @date 2024/7/30 15:39
+     * @Param [caseExpression]
+     **/
     @Override
     public void visit(CaseExpression caseExpression) {
-        //todo-ltq
+        //记录当前的case 后面的所属字段，如果when 语句后面是表达式的话，需要知道case后面的所属字段，才知道是否需要加密
+        this.switchExpression = caseExpression.getSwitchExpression();
+
+        //处理when条件
+        if (CollectionUtils.isNotEmpty(caseExpression.getWhenClauses())) {
+            for (WhenClause whenClause : caseExpression.getWhenClauses()) {
+                //这里处理的逻辑在下面的public void visit(WhenClause whenClause)会处理
+                whenClause.accept(this);
+            }
+        }
+
+        //else条件 只用处理else中是 表达式的场景  栗子：  case 字段 when xxx then  字段 >= ?占位符  else 字段 >= ?占位符，只有这种情况下，占位符才有对应的表字段信息
+        Expression elseExpression = caseExpression.getElseExpression();
+        if (elseExpression instanceof BinaryExpression) {
+            //如果有一边表达式是 特殊的占位符，则维护占位符对应的表字段信息
+            JsqlparserUtil.parseWhereColumTable(this.getLayer(),
+                    this.getLayerFieldTableMap(),
+                    (BinaryExpression) elseExpression,
+                    this.getPlaceholderColumnTableMap());
+        }
 
     }
 
+    /**
+     * 上面case when 中的when语句会走这里
+     *
+     * @author liutangqi
+     * @date 2024/7/30 17:35
+     * @Param [whenClause]
+     **/
     @Override
     public void visit(WhenClause whenClause) {
-        //todo-ltq
+        //对应case when的情况1： case 表字段  when ?占位符 then xxx
+        if (this.switchExpression instanceof Column && whenClause.getWhenExpression().toString().contains(DecryptConstant.PLACEHOLDER)) {
+            ColumnTableDto columnTableDto = JsqlparserUtil.parseColumn((Column) this.switchExpression, this.getLayer(), this.getLayerFieldTableMap());
+            this.getPlaceholderColumnTableMap().put(whenClause.getWhenExpression().toString(), columnTableDto);
+        }
+
+        //对应case when 的情况2： case  when 表字段=?占位符 then
+        if (whenClause.getWhenExpression() instanceof BinaryExpression) {
+            //如果有一边表达式是 特殊的占位符，则维护占位符对应的表字段信息
+            JsqlparserUtil.parseWhereColumTable(this.getLayer(),
+                    this.getLayerFieldTableMap(),
+                    (BinaryExpression) whenClause.getWhenExpression(),
+                    this.getPlaceholderColumnTableMap());
+        }
+
+        //对应case when 的情况3  ：... then 表字段>= ?占位符
+        Expression thenExpression = whenClause.getThenExpression();
+        if (thenExpression instanceof BinaryExpression) {
+            //如果有一边表达式是 特殊的占位符，则维护占位符对应的表字段信息
+            JsqlparserUtil.parseWhereColumTable(this.getLayer(),
+                    this.getLayerFieldTableMap(),
+                    (BinaryExpression) thenExpression,
+                    this.getPlaceholderColumnTableMap());
+        }
+
     }
 
     @Override

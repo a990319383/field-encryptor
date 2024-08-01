@@ -320,57 +320,13 @@ public class SDecryptExpressionVisitor extends BaseFieldParseTable implements Ex
      **/
     @Override
     public void visit(CaseExpression caseExpression) {
-        //处理case的条件
-        Expression switchExpression = caseExpression.getSwitchExpression();
-        if (switchExpression != null) {
-            SDecryptExpressionVisitor expressionVisitor = new SDecryptExpressionVisitor(this.alias, switchExpression, this.getLayer(), this.getLayerSelectTableFieldMap(), this.getLayerFieldTableMap());
-            switchExpression.accept(expressionVisitor);
-            caseExpression.setSwitchExpression(expressionVisitor.getExpression());
-        }
-
-        //处理when的条件
-        if (CollectionUtils.isNotEmpty(caseExpression.getWhenClauses())) {
-            List<WhenClause> whenClauses = caseExpression.getWhenClauses().stream()
-                    .map(m -> {
-                        SDecryptExpressionVisitor expressionVisitor = new SDecryptExpressionVisitor(this.alias, m, this.getLayer(), this.getLayerSelectTableFieldMap(), this.getLayerFieldTableMap());
-                        m.accept(expressionVisitor);
-                        // 这里返回的类型肯定是通过构造函数传输过去的，所以可以直接强转（这里过去是WhenClause WhenClause下一层才是Column才会转换类型）
-                        return (WhenClause) expressionVisitor.getExpression();
-                    }).collect(Collectors.toList());
-            caseExpression.setWhenClauses(whenClauses);
-        }
-
-        //处理else
-        Expression elseExpression = caseExpression.getElseExpression();
-        if (elseExpression != null) {
-            SDecryptExpressionVisitor expressionVisitor = new SDecryptExpressionVisitor(this.alias, elseExpression, this.getLayer(), this.getLayerSelectTableFieldMap(), this.getLayerFieldTableMap());
-            elseExpression.accept(expressionVisitor);
-            caseExpression.setElseExpression(expressionVisitor.getExpression());
-        }
+        //case when 语句的处理 select 和where的处理方式一样，避免冗余代码，这里直接复用where条件的处理方式
+        WhereDencryptExpressionVisitor whereDencryptExpressionVisitor = new WhereDencryptExpressionVisitor(caseExpression, this.getLayer(), this.getLayerSelectTableFieldMap(), this.getLayerFieldTableMap());
+        caseExpression.accept(whereDencryptExpressionVisitor);
     }
 
-    /**
-     * 上面的CaseExpression 中解析when的时候会调用这里
-     *
-     * @author liutangqi
-     * @date 2024/7/30 15:38
-     * @Param [whenClause]
-     **/
     @Override
     public void visit(WhenClause whenClause) {
-        Expression thenExpression = whenClause.getThenExpression();
-        if (thenExpression != null) {
-            SDecryptExpressionVisitor expressionVisitor = new SDecryptExpressionVisitor(this.alias, thenExpression, this.getLayer(), this.getLayerSelectTableFieldMap(), this.getLayerFieldTableMap());
-            thenExpression.accept(expressionVisitor);
-            whenClause.setThenExpression(expressionVisitor.getExpression());
-        }
-
-        Expression whenExpression = whenClause.getWhenExpression();
-        if (whenExpression != null) {
-            SDecryptExpressionVisitor expressionVisitor = new SDecryptExpressionVisitor(this.alias, whenExpression, this.getLayer(), this.getLayerSelectTableFieldMap(), this.getLayerFieldTableMap());
-            whenExpression.accept(expressionVisitor);
-            whenClause.setWhenExpression(expressionVisitor.getExpression());
-        }
     }
 
     @Override

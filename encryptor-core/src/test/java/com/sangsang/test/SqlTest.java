@@ -81,7 +81,7 @@ public class SqlTest {
     String s4 = "select\n" +
             "\ttu.phone as ph ,\n" +
             "\tmenu_name as mName,\n" +
-            "\t(select tm2.menu_name from tb_menu tm2 where tm2.id = tm.id and tm2.id = ? ) as m2Name\n" +
+            "\t(select tm2.menu_name from tb_menu tm2 where tm2.id = tm.id and tm2.id = ? and tu.phone = ? ) as m2Name\n" +
             "from\n" +
             "\ttb_user tu\n" +
             "left join tb_menu tm \n" +
@@ -212,21 +212,21 @@ public class SqlTest {
     String s10 = "\tselect * from \n" +
             "\ttb_user tu \n" +
             "\twhere \n" +
-            "\texists ( select count(1) from tb_menu tm where tm.id = tu.id \n" +
+            "\texists ( select count(1) from tb_menu tm where tm.id = tu.id and tu.phone = ? \n" +
             "\tand tm.menu_name  = tu.phone and tu.phone like '%xxx%' \n" +
             "\t)";
 
     // select 查询字段 和where 带function  没别名
     String s11 = "select \n" +
-            "concat('xxx:',tu.phone)\n" +
+            "concat(?,tu.phone)\n" +
             "from tb_user tu \n" +
-            "where concat('yyy:',tu.phone) like '1840'";
+            "where concat(?,tu.phone) like ?";
 
     //select 查询字段 和where 带function  有别名
     String s12 = "select \n" +
             "concat('xxx:',tu.phone) as ph\n" +
             "from tb_user tu \n" +
-            "where concat('yyy:',tu.phone) like '1840'";
+            "where concat(?,tu.phone) like ?";
 
     // select function 里面存在多个列
     String s13 = "select\n" +
@@ -269,25 +269,25 @@ public class SqlTest {
             "from tb_user tu\n" +
             "left join tb_menu tm \n" +
             "on tu.id = tm.id\n" +
-            "where tu.phone like \"%aaa%\"\n" +
+            "where tu.phone like ? \n" +
             "and\n" +
             "case tu.phone\n" +
-            "when 'zzz' then tu.phone like 'ggg'\n" +
-            "when 'xxx' then tm.id > 10\n" +
+            "when ? then tu.phone like ? \n" +
+            "when 'xxx' then tm.id > ? \n" +
             "end";
 
     // =  != 时，避免列运算，将Column 另外一边的进行加解密
     String s17 = "SELECT * from tb_user tu \n" +
-            "WHERE  tu.phone = 'yyy'\n" +
+            "WHERE  tu.phone = ?\n" +
             "and 'xxx' = tu.phone \n" +
-            "and tu.phone = concat('xxx','yyy')\n" +
-            "and tu.phone != 'zzzz'\n" +
-            "and tu.user_name = '%xxx%'";
+            "and tu.phone = concat(? ,'yyy')\n" +
+            "and tu.phone != ?\n" +
+            "and tu.user_name = ?";
 
     // in 时，避免列运算，将Column 另外一边的进行加解密
     String s18 = "SELECT *\n" +
             "from tb_user tu \n" +
-            "WHERE tu.phone not in ('1842','13578')";
+            "WHERE tu.phone not in (?,?)";
 
     // in (select xxx from) 子查询语法
     String s19 = "select \n" +
@@ -315,7 +315,7 @@ public class SqlTest {
             "\tfrom\n" +
             "\t\ttb_user t\n" +
             "\twhere\n" +
-            "\t\tt.phone = 'yyyy' \n" +
+            "\t\tt.phone = ? \n" +
             "            )";
 
     // 测试convert函数如何拼接的 (JsqlParse不支持 convert函数！！！)
@@ -336,12 +336,15 @@ public class SqlTest {
 
     //别名中有 ``
     String s25 = "\tSELECT `phone`,user_name  from tb_user \n" +
-            "\twhere `phone` like 'aaa%'\n" +
-            "\tand phone = '111'";
+            "\twhere `phone` like ? \n" +
+            "\tand phone = ? ";
 
     // on 后面有写死的条件筛选
     String s26 = "select menuName, login_name, ph, a.create_time from ( select phone as ph, tu.login_name, tm.create_time, tm.menu_name as menuName from tb_user tu left join tb_menu tm on tu.id = tm.id and tu.login_name = ? and tu.phone = ?) a";
 
+
+    // 正则
+    String s27 = "";
 
     // -----------------insert 测试语句---------------------
     String i1 = "insert into tb_user(id, user_name ,phone) \n" +
@@ -411,7 +414,7 @@ public class SqlTest {
         InitTableInfo.initTable();
 
         //需要测试的sql
-        String sql = s9;
+        String sql = s16;
         System.out.println("----------------------------------------------------------------------------");
         System.out.println(sql);
         System.out.println("----------------------------------------------------------------------------");
@@ -436,7 +439,7 @@ public class SqlTest {
         InitTableInfo.initTable();
 
         //需要测试的sql
-        String sql = s9;
+        String sql = s4;
         System.out.println("----------------------------------------------------------------------------");
         System.out.println(sql);
         System.out.println("----------------------------------------------------------------------------");

@@ -5,6 +5,7 @@ import com.sangsang.domain.dto.BaseFieldParseTable;
 import com.sangsang.domain.dto.ColumnTableDto;
 import com.sangsang.domain.dto.PlaceholderFieldParseTable;
 import com.sangsang.util.JsqlparserUtil;
+import com.sangsang.visitor.beanencrtptor.select.PlaceholderSelectExpressionVisitor;
 import com.sangsang.visitor.beanencrtptor.select.PlaceholderSelectVisitor;
 import com.sangsang.visitor.encrtptor.fieldparse.FieldParseParseTableSelectVisitor;
 import net.sf.jsqlparser.expression.*;
@@ -238,9 +239,19 @@ public class PlaceholderWhereExpressionVisitor extends PlaceholderFieldParseTabl
                 selectBody.accept(placeholderSelectVisitor);
             }
         } else {
-            //2. 当左边的不是Column时（比如左边是列运算，就是Function，不是单纯的列） 栗子： where concat(a.phone,b.name) in ( 'xxx','xxx')
-            // 这种情况不做处理，这种情况#{}占位符所属的字段信息是一个聚合结果，同时来源多张表，不支持此种写法，两个单独的字段聚合后，单独加密和整体加密密文肯定不同
-            // 写出这种sql的时候请反省一下自己，硬要用这种写法的，请使用数据库函数加密的模式
+            //2.1 左边不是Column，但是右边是子查询时，需要对子查询的where进行处理  栗子： wher  concat(a.phone,b.name) in (select xxx from 表 where  xxx= ?占位符)
+            if (inExpression.getRightExpression() instanceof SubSelect) {
+                //备注：右边的子查询是一个完全独立的sql，所以不共用一个解析结果，需要单独解析当前sql中涉及的字段
+                FieldParseParseTableSelectVisitor fieldParseParseTableSelectVisitor = new FieldParseParseTableSelectVisitor(NumberConstant.ONE, null, null);
+                ((SubSelect) inExpression.getRightExpression()).getSelectBody().accept(fieldParseParseTableSelectVisitor);
+                //基于新解析的表结构信息 和当前存储？占位符的Map 解析其中的where条件
+                PlaceholderWhereExpressionVisitor placeholderWhereExpressionVisitor = new PlaceholderWhereExpressionVisitor(fieldParseParseTableSelectVisitor, this.getPlaceholderColumnTableMap());
+                inExpression.getRightExpression().accept(placeholderWhereExpressionVisitor);
+            } else {
+                //2.2 当左边的不是Column时（比如左边是列运算，就是Function，不是单纯的列） 栗子： where concat(a.phone,b.name) in ( ?,?)
+                // 这种情况不做处理，这种情况#{}占位符所属的字段信息是一个聚合结果，同时来源多张表，不支持此种写法，两个单独的字段聚合后，单独加密和整体加密密文肯定不同
+                // 写出这种sql的时候请反省一下自己，表结构是不是有问题，硬要用这种写法的，请使用数据库函数加密的模式
+            }
         }
 
 
@@ -304,24 +315,31 @@ public class PlaceholderWhereExpressionVisitor extends PlaceholderFieldParseTabl
      **/
     @Override
     public void visit(SubSelect subSelect) {
-        // todo-ltq
-        System.out.println("***************SubSelect********************");
-
+        //注意：exist这种情况，层数不需要加1，这里使用的字段和上级是同一层的
+        subSelect.getSelectBody().accept(new PlaceholderSelectVisitor(this.getLayer(), this.getLayerSelectTableFieldMap(), this.getLayerFieldTableMap(), this.getPlaceholderColumnTableMap()));
     }
 
+    /**
+     * 对于处理占位符的所属字段，where 后面的case  和 select后面的case处理情况一致，这里直接复用select的case的逻辑
+     *
+     * @author liutangqi
+     * @date 2024/7/31 10:58
+     * @Param [caseExpression]
+     **/
     @Override
     public void visit(CaseExpression caseExpression) {
-
+        //复用select的case 的逻辑
+        caseExpression.accept(new PlaceholderSelectExpressionVisitor(this));
     }
 
     @Override
     public void visit(WhenClause whenClause) {
-
     }
 
     @Override
     public void visit(ExistsExpression existsExpression) {
-
+        //exist 这里会走 SubSelect 子查询的逻辑
+        existsExpression.getRightExpression().accept(this);
     }
 
     @Override

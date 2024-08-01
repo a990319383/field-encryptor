@@ -498,6 +498,7 @@ public class WhereDencryptExpressionVisitor extends BaseFieldParseTable implemen
      **/
     @Override
     public void visit(SubSelect subSelect) {
+        //注意：exist这种情况，层数不需要加1，这里使用的字段和上级是同一层的
         SDecryptSelectVisitor sDecryptSelectVisitor = new SDecryptSelectVisitor(this.getLayer(), this.getLayerSelectTableFieldMap(), this.getLayerFieldTableMap());
 
         SelectBody selectBody = subSelect.getSelectBody();
