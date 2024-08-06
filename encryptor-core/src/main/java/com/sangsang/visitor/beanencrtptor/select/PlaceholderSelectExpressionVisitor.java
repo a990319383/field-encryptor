@@ -398,7 +398,10 @@ public class PlaceholderSelectExpressionVisitor extends PlaceholderFieldParseTab
 
     @Override
     public void visit(RegExpMySQLOperator regExpMySQLOperator) {
-
+        JsqlparserUtil.parseWhereColumTable(this.getLayer(),
+                this.getLayerFieldTableMap(),
+                regExpMySQLOperator,
+                this.getPlaceholderColumnTableMap());
     }
 
     @Override

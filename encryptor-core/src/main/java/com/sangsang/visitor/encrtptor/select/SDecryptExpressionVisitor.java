@@ -421,7 +421,9 @@ public class SDecryptExpressionVisitor extends BaseFieldParseTable implements Ex
 
     @Override
     public void visit(RegExpMySQLOperator regExpMySQLOperator) {
-
+        //正则 语句的处理 select 和where的处理方式一样，避免冗余代码，这里直接复用where条件的处理方式
+        WhereDencryptExpressionVisitor whereDencryptExpressionVisitor = new WhereDencryptExpressionVisitor(regExpMySQLOperator, this.getLayer(), this.getLayerSelectTableFieldMap(), this.getLayerFieldTableMap());
+        regExpMySQLOperator.accept(whereDencryptExpressionVisitor);
     }
 
     @Override

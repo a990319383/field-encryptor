@@ -656,7 +656,16 @@ public class WhereDencryptExpressionVisitor extends BaseFieldParseTable implemen
 
     @Override
     public void visit(RegExpMySQLOperator regExpMySQLOperator) {
-        //todo-ltq 正则表达式后续抽空适配了
+        //解析左右表达式
+        Expression leftExpression = regExpMySQLOperator.getLeftExpression();
+        WhereDencryptExpressionVisitor leftWhereDencryptExpressionVisitor = new WhereDencryptExpressionVisitor(leftExpression, this.getLayer(), this.getLayerSelectTableFieldMap(), this.getLayerFieldTableMap());
+        leftExpression.accept(leftWhereDencryptExpressionVisitor);
+        regExpMySQLOperator.setLeftExpression(leftWhereDencryptExpressionVisitor.getExpression());
+
+        Expression rightExpression = regExpMySQLOperator.getRightExpression();
+        WhereDencryptExpressionVisitor rightWhereDencryptExpressionVisitor = new WhereDencryptExpressionVisitor(rightExpression, this.getLayer(), this.getLayerSelectTableFieldMap(), this.getLayerFieldTableMap());
+        rightExpression.accept(rightWhereDencryptExpressionVisitor);
+        regExpMySQLOperator.setRightExpression(rightWhereDencryptExpressionVisitor.getExpression());
     }
 
     @Override

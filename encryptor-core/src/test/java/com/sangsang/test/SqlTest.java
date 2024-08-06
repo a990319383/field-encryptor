@@ -343,8 +343,17 @@ public class SqlTest {
     String s26 = "select menuName, login_name, ph, a.create_time from ( select phone as ph, tu.login_name, tm.create_time, tm.menu_name as menuName from tb_user tu left join tb_menu tm on tu.id = tm.id and tu.login_name = ? and tu.phone = ?) a";
 
 
-    // 正则
-    String s27 = "";
+    // 正则 （select 和 where 条件都有 case when todo-ltq）
+    String s27 = " select \n" +
+            " tu.login_name ,\n" +
+            " tu.user_name regexp ?,\n" +
+            " case \n" +
+            " when tu.phone regexp ? \n" +
+            " then tu.login_name regexp ? \n" +
+            " else tu.role_id regexp ? \n" +
+            " end\n" +
+            "from tb_user tu \n" +
+            "where phone REGEXP ?";
 
     // -----------------insert 测试语句---------------------
     String i1 = "insert into tb_user(id, user_name ,phone) \n" +
@@ -414,7 +423,7 @@ public class SqlTest {
         InitTableInfo.initTable();
 
         //需要测试的sql
-        String sql = s16;
+        String sql = s27;
         System.out.println("----------------------------------------------------------------------------");
         System.out.println(sql);
         System.out.println("----------------------------------------------------------------------------");
@@ -439,7 +448,7 @@ public class SqlTest {
         InitTableInfo.initTable();
 
         //需要测试的sql
-        String sql = s4;
+        String sql = s27;
         System.out.println("----------------------------------------------------------------------------");
         System.out.println(sql);
         System.out.println("----------------------------------------------------------------------------");
