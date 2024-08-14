@@ -1,5 +1,6 @@
 package com.sangsang.visitor.encrtptor;
 
+import com.baomidou.mybatisplus.core.toolkit.CollectionUtils;
 import com.sangsang.cache.FieldEncryptorPatternCache;
 import com.sangsang.cache.TableCache;
 import com.sangsang.domain.annos.FieldEncryptor;
@@ -46,6 +47,8 @@ import net.sf.jsqlparser.statement.update.Update;
 import net.sf.jsqlparser.statement.update.UpdateSet;
 import net.sf.jsqlparser.statement.upsert.Upsert;
 import net.sf.jsqlparser.statement.values.ValuesStatement;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -59,6 +62,8 @@ import java.util.Optional;
  * @date 2024/2/29 17:55
  */
 public class DencryptStatementVisitor implements StatementVisitor {
+    private static final Logger log = LoggerFactory.getLogger(DencryptStatementVisitor.class);
+
     /**
      * 加密完成后的sql
      */
@@ -200,6 +205,11 @@ public class DencryptStatementVisitor implements StatementVisitor {
         List<String> needEncryptIndex = new ArrayList<>();
         //insert 的字段名
         List<Column> columns = insert.getColumns();
+        if (CollectionUtils.isEmpty(columns)) {
+            log.warn("【field-encryptor】insert 语句未指定表字段顺序，不支持自动加解密，请规范语法 原sql:{}", insert.toString());
+            return;
+        }
+
         for (int i = 0; i < columns.size(); i++) {
             Column column = columns.get(i);
             if (JsqlparserUtil.getValueIgnoreFloat(fieldEncryptMap, column.getColumnName().toLowerCase()) != null) {

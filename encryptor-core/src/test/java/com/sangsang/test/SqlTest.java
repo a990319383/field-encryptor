@@ -360,24 +360,27 @@ public class SqlTest {
 
     // -----------------insert 测试语句---------------------
     String i1 = "insert into tb_user(id, user_name ,phone) \n" +
-            "values(1,'西瓜','18243512315'),(2,'南瓜','18243121315')";
+            "values(1,?,'18243512315'),(2,'南瓜',?)";
 
     // insert select 语句
     String i2 = "insert into \n" +
             "tb_user(user_name,phone)\n" +
             "(\n" +
             "select  user_name,phone from  tb_user  tu\n" +
-            "where tu.phone is not null \n" +
+            "where tu.phone = ? \n" +
             ")";
     // ON DUPLICATE KEY UPDATE
     String i3 = "insert into tb_user\n" +
             "(user_name,login_name,phone)\n" +
-            "values (\"xxx\",\"yyy\",'zzzz')\n" +
+            "values (?,?,?)\n" +
             "ON DUPLICATE KEY UPDATE\n" +
             "user_name = values(user_name),\n" +
             "login_name = values(login_name),\n" +
             "phone = values(phone),\n" +
             "update_time = now()";
+
+    // insert 语句没有指定字段  注意：不支持此语法！！！ 无法确定字段顺序
+    String i4 = "insert into tb_user  values( ?,?,?,?,?,?,?,?)";
 
     // --------------delete 测试语句 ---------------
 
@@ -399,8 +402,8 @@ public class SqlTest {
             "join tb_menu tm \n" +
             "on tu.id = tm.id \n" +
             "set tm.menu_name = tm.`path` ,\n" +
-            "tu.phone = 'yyy'\n" +
-            "where tu.phone like '%xxx%'";
+            "tu.phone = ? \n" +
+            "where tu.phone like ? ";
 
     //update 联多张表  set的时候存在 其它表的值，也存在常量值
     String u2 = "update tb_user tu \n" +
@@ -409,14 +412,14 @@ public class SqlTest {
             "join tb_user tu2 \n" +
             "on tu.id = tu2.id \n" +
             "set tu.phone = tm.`path` ,\n" +
-            "tm.menu_name = 'yyy'\n" +
-            "where tu.phone like '%xxx%'";
+            "tm.menu_name = ? \n" +
+            "where tu.phone like ? ";
 
     //update 一张表
     String u3 = "\tupdate tb_user \n" +
             "\tset create_time = now(),\n" +
-            "\tphone = 'xxx'\n" +
-            "\twhere phone = 'yyy'";
+            "\tphone = ?\n" +
+            "\twhere phone = ?";
 
     @Test
     public void testSql() throws JSQLParserException, NoSuchFieldException {
@@ -426,7 +429,7 @@ public class SqlTest {
         InitTableInfo.initTable();
 
         //需要测试的sql
-        String sql = s27;
+        String sql = i4;
         System.out.println("----------------------------------------------------------------------------");
         System.out.println(sql);
         System.out.println("----------------------------------------------------------------------------");
@@ -451,7 +454,7 @@ public class SqlTest {
         InitTableInfo.initTable();
 
         //需要测试的sql
-        String sql = d1;
+        String sql = i3;
         System.out.println("----------------------------------------------------------------------------");
         System.out.println(sql);
         System.out.println("----------------------------------------------------------------------------");

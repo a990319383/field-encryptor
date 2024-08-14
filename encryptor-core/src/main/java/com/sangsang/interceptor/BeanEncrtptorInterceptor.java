@@ -165,7 +165,7 @@ public class BeanEncrtptorInterceptor implements Interceptor {
      *
      * @author liutangqi
      * @date 2024/7/24 14:49
-     * @Param [configuration, obj, parameter]
+     * @Param [configuration, boundSql, parameter]
      **/
     private Object parseObj(Configuration configuration, BoundSql boundSql, ParameterMapping parameter) {
         Object obj = boundSql.getParameterObject();
