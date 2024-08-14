@@ -21,7 +21,7 @@ public class PlaceholderFieldParseTable extends BaseFieldParseTable {
 
     public PlaceholderFieldParseTable(int layer, Map<String, Map<String, Set<FieldInfoDto>>> layerSelectTableFieldMap, Map<String, Map<String, Set<FieldInfoDto>>> layerFieldTableMap, Map<String, ColumnTableDto> placeholderColumnTableMap) {
         super(layer, layerSelectTableFieldMap, layerFieldTableMap);
-        this.placeholderColumnTableMap = placeholderColumnTableMap;
+        this.placeholderColumnTableMap = Optional.ofNullable(placeholderColumnTableMap).orElse(new HashMap<>());
     }
 
     public PlaceholderFieldParseTable(BaseFieldParseTable baseFieldParseTable, Map<String, ColumnTableDto> placeholderColumnTableMap) {

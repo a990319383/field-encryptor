@@ -5,8 +5,13 @@ import com.sangsang.domain.constants.NumberConstant;
 import com.sangsang.domain.dto.ColumnTableDto;
 import com.sangsang.domain.dto.FieldEncryptorInfoDto;
 import com.sangsang.domain.dto.FieldInfoDto;
+import com.sangsang.util.JsqlparserUtil;
 import com.sangsang.visitor.beanencrtptor.select.PlaceholderSelectVisitor;
+import com.sangsang.visitor.beanencrtptor.where.PlaceholderWhereExpressionVisitor;
+import com.sangsang.visitor.encrtptor.fieldparse.FieldParseParseTableFromItemVisitor;
 import com.sangsang.visitor.encrtptor.fieldparse.FieldParseParseTableSelectVisitor;
+import net.sf.jsqlparser.expression.Expression;
+import net.sf.jsqlparser.schema.Table;
 import net.sf.jsqlparser.statement.*;
 import net.sf.jsqlparser.statement.alter.Alter;
 import net.sf.jsqlparser.statement.alter.AlterSession;
@@ -28,6 +33,8 @@ import net.sf.jsqlparser.statement.grant.Grant;
 import net.sf.jsqlparser.statement.insert.Insert;
 import net.sf.jsqlparser.statement.merge.Merge;
 import net.sf.jsqlparser.statement.replace.Replace;
+import net.sf.jsqlparser.statement.select.FromItem;
+import net.sf.jsqlparser.statement.select.Join;
 import net.sf.jsqlparser.statement.select.Select;
 import net.sf.jsqlparser.statement.show.ShowTablesStatement;
 import net.sf.jsqlparser.statement.truncate.Truncate;
@@ -91,7 +98,36 @@ public class BeanEncrtptorStatementVisitor implements StatementVisitor {
 
     @Override
     public void visit(Delete delete) {
+        //1.where 条件 不存在，则不进行加密处理（delete语句主要对delete的条件进行加密）
+        Expression where = delete.getWhere();
+        if (where == null) {
+            return;
+        }
 
+        //2.解析涉及到的表拥有的全部字段信息
+        FieldParseParseTableFromItemVisitor fieldParseTableFromItemVisitor = new FieldParseParseTableFromItemVisitor(NumberConstant.ONE, null, null);
+        // from 后的表
+        Table table = delete.getTable();
+        table.accept(fieldParseTableFromItemVisitor);
+
+        //join 的表
+        List<Join> joins = Optional.ofNullable(delete.getJoins()).orElse(new ArrayList<>());
+        for (Join join : joins) {
+            FromItem rightItem = join.getRightItem();
+            rightItem.accept(fieldParseTableFromItemVisitor);
+        }
+
+        //3.当前sql涉及到的表不需要加密的不做处理
+        if (!JsqlparserUtil.needEncrypt(fieldParseTableFromItemVisitor.getLayerSelectTableFieldMap(), fieldParseTableFromItemVisitor.getLayerFieldTableMap())) {
+            return;
+        }
+
+        //4.将where 条件进行加密
+        PlaceholderWhereExpressionVisitor placeholderWhereExpressionVisitor = new PlaceholderWhereExpressionVisitor(fieldParseTableFromItemVisitor, this.placeholderColumnTableMap);
+        where.accept(placeholderWhereExpressionVisitor);
+
+        //5.结果赋值
+        this.placeholderColumnTableMap = placeholderWhereExpressionVisitor.getPlaceholderColumnTableMap();
     }
 
     @Override

@@ -343,7 +343,7 @@ public class SqlTest {
     String s26 = "select menuName, login_name, ph, a.create_time from ( select phone as ph, tu.login_name, tm.create_time, tm.menu_name as menuName from tb_user tu left join tb_menu tm on tu.id = tm.id and tu.login_name = ? and tu.phone = ?) a";
 
 
-    // 正则 （select 和 where 条件都有 case when todo-ltq）
+    // 正则 （select 和 where 条件都有 case when ）
     String s27 = " select \n" +
             " tu.login_name ,\n" +
             " tu.user_name regexp ?,\n" +
@@ -354,6 +354,9 @@ public class SqlTest {
             " end\n" +
             "from tb_user tu \n" +
             "where phone REGEXP ?";
+
+    //json函数 (select 1.拼接成json  2.从json中根据key获取value值) todo-ltq
+    String s28 = "";
 
     // -----------------insert 测试语句---------------------
     String i1 = "insert into tb_user(id, user_name ,phone) \n" +
@@ -383,7 +386,7 @@ public class SqlTest {
             "from tb_user tu \n" +
             "join tb_menu tm \n" +
             "on tu.id = tm.id \n" +
-            "where tu.phone = 'xxx'";
+            "where tu.phone = ? ";
 
     // delte 一张表
     String d2 = "\t delete from tb_user \n" +
@@ -448,7 +451,7 @@ public class SqlTest {
         InitTableInfo.initTable();
 
         //需要测试的sql
-        String sql = s27;
+        String sql = d1;
         System.out.println("----------------------------------------------------------------------------");
         System.out.println(sql);
         System.out.println("----------------------------------------------------------------------------");

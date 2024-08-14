@@ -42,10 +42,11 @@ import java.util.stream.Collectors;
  * @date 2024/7/9 14:06
  */
 @Intercepts({
-        @Signature(type = Executor.class, method = "query", args = {MappedStatement.class, Object.class, RowBounds.class, ResultHandler.class, CacheKey.class, BoundSql.class})
+        @Signature(type = Executor.class, method = "query", args = {MappedStatement.class, Object.class, RowBounds.class, ResultHandler.class, CacheKey.class, BoundSql.class}),
+        @Signature(type = Executor.class, method = "update", args = {MappedStatement.class, Object.class})
 })
 @ConditionalOnProperty(name = "field.encryptor.patternType", havingValue = PatternTypeConstant.BEAN)
-public class BeanEncrtptorQueryInterceptor implements Interceptor {
+public class BeanEncrtptorInterceptor implements Interceptor {
 
     /**
      * 将入参的字段和占位符？ 对应起来  （boundSql.getParameterMappings()获取的参数和占位符的顺序是一致的，这个结果集里面也有对应的占位符的key，这样就可以全部关联起来了）
@@ -61,7 +62,8 @@ public class BeanEncrtptorQueryInterceptor implements Interceptor {
     public Object intercept(Invocation invocation) throws Throwable {
         //1.获取核心类(@Signature 后面的args顺序和下面获取的一致)
         MappedStatement mappedStatement = (MappedStatement) invocation.getArgs()[0];
-        BoundSql boundSql = (BoundSql) invocation.getArgs()[5];
+        Object parameter = invocation.getArgs()[1];
+        BoundSql boundSql = mappedStatement.getBoundSql(parameter);
         Configuration configuration = mappedStatement.getConfiguration();
         String originalSql = boundSql.getSql();
 
@@ -121,7 +123,7 @@ public class BeanEncrtptorQueryInterceptor implements Interceptor {
         //2.将其中需要加密的字段进行加密
         for (ParameterMapping parameterMapping : parameterMappings) {
             //获取当前映射字段的入参值
-            Object propertyValue = parseObj(configuration, boundSql.getParameterObject(), parameterMapping);
+            Object propertyValue = parseObj(configuration, boundSql, parameterMapping);
 
             //如果需要加密的话，将加密后的值，替换原有入参
             if (propertyValue instanceof String && encrytor(parameterMapping, objectObjectHashMap, pair.getKey())) {
@@ -165,14 +167,21 @@ public class BeanEncrtptorQueryInterceptor implements Interceptor {
      * @date 2024/7/24 14:49
      * @Param [configuration, obj, parameter]
      **/
-    private Object parseObj(Configuration configuration, Object obj, ParameterMapping parameter) {
+    private Object parseObj(Configuration configuration, BoundSql boundSql, ParameterMapping parameter) {
+        Object obj = boundSql.getParameterObject();
+        String property = parameter.getProperty();
+
+        //0.判断boundsql中AdditionalParameter是否存在，存在就取boundsql中的(当入参在实体类中存在List时会走这段逻辑)
+        if (boundSql.hasAdditionalParameter(property)) {
+            return boundSql.getAdditionalParameter(property);
+        }
+
         //1. 基本数据类型的包装类或者字符串或时间类型，直接返回原值
         if (DecryptConstant.FUNDAMENTAL.contains(obj.getClass())) {
             return obj;
         }
 
         //2.其它类型的值，通过反射获取，如果入参是  dto.xxx 这种，则分开解析每一段，直至获取最终值
-        String property = parameter.getProperty();
         String[] propertyArr = property.split(SymbolConstant.ESC_FULL_STOP);
 
         //上一层对象
