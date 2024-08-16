@@ -1,10 +1,10 @@
 package com.sangsang.cache;
 
 import com.sangsang.domain.constants.SymbolConstant;
-import com.sangsang.encryptor.bean.BeanFieldEncryptorPattern;
-import com.sangsang.encryptor.db.DefaultFieldEncryptorPattern;
+import com.sangsang.encryptor.pojo.PoJoFieldEncryptorPattern;
+import com.sangsang.encryptor.db.DefaultDBFieldEncryptorPattern;
 import com.sangsang.encryptor.EncryptorProperties;
-import com.sangsang.encryptor.db.FieldEncryptorPattern;
+import com.sangsang.encryptor.db.DBFieldEncryptorPattern;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.config.BeanPostProcessor;
 import org.springframework.context.ApplicationContext;
@@ -26,18 +26,18 @@ public class FieldEncryptorPatternCache implements BeanPostProcessor {
     private ApplicationContext applicationContext;
 
     //缓存当前加解密的bean
-    private static FieldEncryptorPattern fieldEncryptorPattern;
+    private static DBFieldEncryptorPattern DBFieldEncryptorPattern;
 
-    //缓存当前java bean加解密模式下的bean
-    private static BeanFieldEncryptorPattern beanFieldEncryptorPattern;
+    //缓存当前java pojo加解密模式下的bean
+    private static PoJoFieldEncryptorPattern pojoFieldEncryptorPattern;
 
     @PostConstruct
     public void init() {
-        if (fieldEncryptorPattern == null) {
-            fieldEncryptorPattern = applicationContext.getBean(FieldEncryptorPattern.class);
+        if (DBFieldEncryptorPattern == null) {
+            DBFieldEncryptorPattern = applicationContext.getBean(DBFieldEncryptorPattern.class);
         }
-        if (beanFieldEncryptorPattern == null) {
-            beanFieldEncryptorPattern = applicationContext.getBean(BeanFieldEncryptorPattern.class);
+        if (pojoFieldEncryptorPattern == null) {
+            pojoFieldEncryptorPattern = applicationContext.getBean(PoJoFieldEncryptorPattern.class);
         }
     }
 
@@ -49,10 +49,10 @@ public class FieldEncryptorPatternCache implements BeanPostProcessor {
      * @Param []
      **/
     public static void initDeafultInstance() {
-        if (fieldEncryptorPattern == null) {
+        if (DBFieldEncryptorPattern == null) {
             EncryptorProperties encryptorProperties = new EncryptorProperties();
             encryptorProperties.setSecretKey(SymbolConstant.DEFAULT_SECRET_KEY);
-            fieldEncryptorPattern = new DefaultFieldEncryptorPattern(encryptorProperties);
+            DBFieldEncryptorPattern = new DefaultDBFieldEncryptorPattern(encryptorProperties);
         }
     }
 
@@ -63,19 +63,19 @@ public class FieldEncryptorPatternCache implements BeanPostProcessor {
      * @date 2024/4/8 14:37
      * @Param []
      **/
-    public static FieldEncryptorPattern getInstance() {
-        return fieldEncryptorPattern;
+    public static DBFieldEncryptorPattern getInstance() {
+        return DBFieldEncryptorPattern;
     }
 
 
     /**
-     * 获取java bean 加解密模式下的实现类
+     * 获取java pojo 加解密模式下的实现类
      *
      * @author liutangqi
      * @date 2024/7/24 17:46
      * @Param []
      **/
-    public static BeanFieldEncryptorPattern getBeanInstance() {
-        return beanFieldEncryptorPattern;
+    public static PoJoFieldEncryptorPattern getBeanInstance() {
+        return pojoFieldEncryptorPattern;
     }
 }

@@ -2,8 +2,8 @@ package com.sangsang.test;
 
 import com.sangsang.cache.FieldEncryptorPatternCache;
 import com.sangsang.util.StringUtils;
-import com.sangsang.visitor.beanencrtptor.BeanEncrtptorStatementVisitor;
-import com.sangsang.visitor.encrtptor.DencryptStatementVisitor;
+import com.sangsang.visitor.pojoencrtptor.PoJoEncrtptorStatementVisitor;
+import com.sangsang.visitor.dbencrtptor.DBDencryptStatementVisitor;
 import net.sf.jsqlparser.JSQLParserException;
 import net.sf.jsqlparser.parser.CCJSqlParserUtil;
 import net.sf.jsqlparser.statement.Statement;
@@ -437,17 +437,17 @@ public class SqlTest {
         //开始解析sql
         Statement statement = CCJSqlParserUtil.parse(sql);
 
-        DencryptStatementVisitor dencryptStatementVisitor = new DencryptStatementVisitor();
-        statement.accept(dencryptStatementVisitor);
+        DBDencryptStatementVisitor DBDencryptStatementVisitor = new DBDencryptStatementVisitor();
+        statement.accept(DBDencryptStatementVisitor);
         System.out.println("----------------------------------------------------------------------------");
-        System.out.println((dencryptStatementVisitor.getResultSql()));
+        System.out.println((DBDencryptStatementVisitor.getResultSql()));
         System.out.println("----------------------------------------------------------------------------");
 
     }
 
 
     @Test
-    public void testBeanEncryptor() throws JSQLParserException, NoSuchFieldException {
+    public void testPoJoEncryptor() throws JSQLParserException, NoSuchFieldException {
         //初始化加解密函数
         FieldEncryptorPatternCache.initDeafultInstance();
         //mock数据
@@ -464,9 +464,9 @@ public class SqlTest {
 
         //开始解析sql
         Statement statement = CCJSqlParserUtil.parse(placeholderSql);
-        BeanEncrtptorStatementVisitor beanEncrtptorStatementVisitor = new BeanEncrtptorStatementVisitor();
-        statement.accept(beanEncrtptorStatementVisitor);
-        System.out.println(beanEncrtptorStatementVisitor.getFieldEncryptorInfos());
-        System.out.println(beanEncrtptorStatementVisitor.getPlaceholderColumnTableMap());
+        PoJoEncrtptorStatementVisitor poJoEncrtptorStatementVisitor = new PoJoEncrtptorStatementVisitor();
+        statement.accept(poJoEncrtptorStatementVisitor);
+        System.out.println(poJoEncrtptorStatementVisitor.getFieldEncryptorInfos());
+        System.out.println(poJoEncrtptorStatementVisitor.getPlaceholderColumnTableMap());
     }
 }

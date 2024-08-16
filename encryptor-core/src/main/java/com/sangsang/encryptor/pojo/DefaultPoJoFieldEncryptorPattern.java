@@ -1,0 +1,60 @@
+package com.sangsang.encryptor.pojo;
+
+import cn.hutool.core.util.HexUtil;
+import cn.hutool.crypto.symmetric.DES;
+import com.sangsang.encryptor.EncryptorProperties;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
+import org.springframework.stereotype.Component;
+
+/**
+ * java pojo 加密方式下的默认加解密算法
+ * 默认采用DES算法
+ *
+ * @author liutangqi
+ * @date 2024/7/24 17:41
+ */
+@Component
+@ConditionalOnMissingBean(PoJoFieldEncryptorPattern.class)
+public class DefaultPoJoFieldEncryptorPattern implements PoJoFieldEncryptorPattern {
+    private static final Logger log = LoggerFactory.getLogger(DefaultPoJoFieldEncryptorPattern.class);
+
+    @Autowired
+    private EncryptorProperties encryptorProperties;
+
+    private DES des;
+
+    @Override
+    public String encryption(String cleartext) {
+        String ciphertext = cleartext;
+        try {
+            if (des == null) {
+                des = new DES(encryptorProperties.getSecretKey().getBytes());
+            }
+            byte[] encryptBytes = des.encrypt(cleartext.getBytes());
+            ciphertext = HexUtil.encodeHexStr(encryptBytes);
+        } catch (Exception e) {
+            log.error("【field-encryptor】pojo模式加密失败 cleartext:{}", cleartext, e);
+        }
+        return ciphertext;
+    }
+
+    @Override
+    public String decryption(String ciphertext) {
+        String cleartext = ciphertext;
+        try {
+            if (des == null) {
+                des = new DES(encryptorProperties.getSecretKey().getBytes());
+            }
+
+            byte[] decryptBytes = des.decrypt(HexUtil.decodeHex(ciphertext));
+            return new String(decryptBytes);
+        } catch (Exception e) {
+            log.error("【field-encryptor】pojo模式解密失败 ciphertext:{}", ciphertext, e);
+        }
+        return cleartext;
+    }
+
+}

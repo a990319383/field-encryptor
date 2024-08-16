@@ -2,8 +2,8 @@ org.springframework.boot.autoconfigure.EnableAutoConfiguration=\
     com.sangsang.cache.TableCache,\
     com.sangsang.cache.FieldEncryptorPatternCache,\
     com.sangsang.encryptor.EncryptorProperties,\
-    com.sangsang.interceptor.FieldEncryptorInterceptor,\
-    com.sangsang.encryptor.db.DefaultFieldEncryptorPattern,\
-    com.sangsang.encryptor.bean.DefaultBeanFieldEncryptorPattern,\
-    com.sangsang.interceptor.BeanEncrtptorInterceptor
+    com.sangsang.interceptor.DBFieldEncryptorInterceptor,\
+    com.sangsang.encryptor.db.DefaultDBFieldEncryptorPattern,\
+    com.sangsang.encryptor.pojo.DefaultPoJoFieldEncryptorPattern,\
+    com.sangsang.interceptor.PoJoEncrtptorInterceptor
 

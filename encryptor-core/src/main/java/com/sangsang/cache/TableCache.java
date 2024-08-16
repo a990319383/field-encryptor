@@ -69,7 +69,7 @@ public class TableCache implements BeanPostProcessor {
 
         //1.如果指定扫描路径，则从指定路径获取当前项目表的实体类结构信息
         if (!CollectionUtils.isEmpty(encryptorProperties.getScanEntityPackage())) {
-            log.info("【初始化表字段加密信息】开始扫描指定包路径 :{}", encryptorProperties.getScanEntityPackage());
+            log.info("【field-encryptor】初始化表字段加密信息，开始扫描指定包路径 :{}", encryptorProperties.getScanEntityPackage());
             tableInfoDtos = encryptorProperties.getScanEntityPackage()
                     .stream()
                     .map(m -> parseTableInfoByScanEntityPackage(m))
@@ -79,14 +79,14 @@ public class TableCache implements BeanPostProcessor {
 
         //2.如果没有指定扫描路径，则从mybatis-plus提供的工具，获取当前项目模块加载的表的实体类信息
         if (CollectionUtils.isEmpty(encryptorProperties.getScanEntityPackage())) {
-            log.info("【初始化表字段加密信息】通过mybatis-plus 加载此模块的表结构信息");
+            log.info("【field-encryptor】初始化表字段加密信息，通过mybatis-plus 加载此模块的表结构信息");
             tableInfoDtos = parseTableInfoByMybatisPlus();
         }
 
         //3.将表结构信息处理，加载到缓存的各个Map中
         fillCacheMap(tableInfoDtos);
 
-        log.info("【初始化表字段加密信息】处理完毕 耗时：{}ms", (System.currentTimeMillis() - startTime));
+        log.info("【field-encryptor】初始化表字段加密信息，处理完毕 耗时：{}ms", (System.currentTimeMillis() - startTime));
     }
 
 

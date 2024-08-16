@@ -37,7 +37,6 @@ public interface SymbolConstant {
      */
     String ESC_QUESTION_MARK = "\\?";
 
-
     /**
      * test as 取别名
      */

@@ -12,7 +12,7 @@ public interface PatternTypeConstant {
      */
     String DB = "db";
     /**
-     * 利用java的函数对入参响应的bean进行加解密
+     * 利用java的函数对入参响应进行加解密
      */
-    String BEAN = "bean";
+    String POJO = "pojo";
 }
