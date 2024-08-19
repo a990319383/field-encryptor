@@ -355,8 +355,17 @@ public class SqlTest {
             "from tb_user tu \n" +
             "where phone REGEXP ?";
 
+    //group_concat
+    String s28 = "select \n" +
+            "group_concat(tu.phone,?)\n" +
+            "from tb_user tu \n" +
+            "left join tb_menu tm \n" +
+            "on tu.id = tm.id \n" +
+            "where tu.phone = ?\n" +
+            "group by tu.id ";
+
     //json函数 (select 1.拼接成json  2.从json中根据key获取value值) todo-ltq
-    String s28 = "";
+    String s29 = "";
 
     // -----------------insert 测试语句---------------------
     String i1 = "insert into tb_user(id, user_name ,phone) \n" +
@@ -429,7 +438,7 @@ public class SqlTest {
         InitTableInfo.initTable();
 
         //需要测试的sql
-        String sql = i4;
+        String sql = s28;
         System.out.println("----------------------------------------------------------------------------");
         System.out.println(sql);
         System.out.println("----------------------------------------------------------------------------");
@@ -454,7 +463,7 @@ public class SqlTest {
         InitTableInfo.initTable();
 
         //需要测试的sql
-        String sql = i3;
+        String sql = s28;
         System.out.println("----------------------------------------------------------------------------");
         System.out.println(sql);
         System.out.println("----------------------------------------------------------------------------");

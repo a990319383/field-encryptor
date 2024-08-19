@@ -201,8 +201,13 @@ public class PoJoEncrtptorInterceptor implements Interceptor {
      * @Param [result, pair]
      **/
     private Object disposeResult(Object result, Pair<Map<String, ColumnTableDto>, List<FieldEncryptorInfoDto>> pair) throws IllegalAccessException {
+        //0.sql执行结果不是Collection直接返回(update insert语句执行时，结果不是Collection)
+        if (!(result instanceof Collection)) {
+            return result;
+        }
+
         //1.sql执行结果为空，直接返回
-        List<Object> resList = (List<Object>) result;
+        Collection<Object> resList = (Collection<Object>) result;
         if (CollectionUtils.isEmpty(resList)) {
             return resList;
         }

@@ -442,7 +442,17 @@ public class SDecryptExpressionVisitor extends BaseFieldParseTable implements Ex
 
     @Override
     public void visit(MySQLGroupConcat groupConcat) {
+        //将每一项进行解密处理
+        ExpressionList expressionList = groupConcat.getExpressionList();
+        List<Expression> newExpressions = new ArrayList<>();
+        for (Expression exp : expressionList.getExpressions()) {
+            SDecryptExpressionVisitor sDecryptExpressionVisitor = new SDecryptExpressionVisitor(null, exp, this.getLayer(), this.getLayerSelectTableFieldMap(), this.getLayerFieldTableMap());
+            exp.accept(sDecryptExpressionVisitor);
+            newExpressions.add(sDecryptExpressionVisitor.getExpression());
+        }
 
+        //替换解密后的表达式
+        expressionList.setExpressions(newExpressions);
     }
 
     @Override
