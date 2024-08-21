@@ -48,16 +48,7 @@ import java.util.stream.Collectors;
 @ConditionalOnProperty(name = "field.encryptor.patternType", havingValue = PatternTypeConstant.POJO)
 public class PoJoResultEncrtptorInterceptor implements Interceptor {
 
-    /**
-     * 将入参的字段和占位符？ 对应起来  （boundSql.getParameterMappings()获取的参数和占位符的顺序是一致的，这个结果集里面也有对应的占位符的key，这样就可以全部关联起来了）
-     * 思路： 将boundsql 中的？ 占位符替换为 XXX特殊符号防重_1  XXX特殊符号防重_2  XXX特殊符号防重_3  这种，解析时就能得到占位符合参数的对应关系
-     * 得到关系后再对请求参数进行加解密处理，因为这个时候我们已经知道该参数对应的数据库表字段是哪个了
-     * 处理完后，将我们替换后的 _XXX特殊符号防重_1  这种重新替换为？  这样就能解决这个问题，并且不会存在破坏预编译sql导致sql注入的问题了
-     *
-     * @author liutangqi
-     * @date 2024/7/18 14:45
-     * @Param [invocation]
-     **/
+
     @Override
     public Object intercept(Invocation invocation) throws Throwable {
         //1.获取核心类(@Signature 后面的args顺序和下面获取的一致)
