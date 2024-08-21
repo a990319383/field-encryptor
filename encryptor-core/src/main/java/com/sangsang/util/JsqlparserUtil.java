@@ -7,14 +7,19 @@ import com.sangsang.domain.constants.DecryptConstant;
 import com.sangsang.domain.constants.SymbolConstant;
 import com.sangsang.domain.dto.ColumnTableDto;
 import com.sangsang.domain.dto.FieldInfoDto;
+import com.sangsang.visitor.sqltype.SqlTypeStatementVisitor;
+import net.sf.jsqlparser.JSQLParserException;
 import net.sf.jsqlparser.expression.*;
 import net.sf.jsqlparser.expression.operators.relational.ExpressionList;
+import net.sf.jsqlparser.parser.CCJSqlParserUtil;
 import net.sf.jsqlparser.schema.Column;
 import net.sf.jsqlparser.schema.Table;
+import net.sf.jsqlparser.statement.Statement;
 import net.sf.jsqlparser.statement.select.AllColumns;
 import net.sf.jsqlparser.statement.select.AllTableColumns;
 import net.sf.jsqlparser.statement.select.SelectExpressionItem;
 import net.sf.jsqlparser.statement.select.SelectItem;
+import org.apache.ibatis.mapping.SqlCommandType;
 
 import java.util.*;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -372,5 +377,25 @@ public class JsqlparserUtil {
             ColumnTableDto columnTableDto = JsqlparserUtil.parseColumn((Column) rightExpression, layer, layerFieldTableMap);
             placeholderColumnTableMap.put(leftExpression.toString(), columnTableDto);
         }
+    }
+
+
+    /**
+     * 获取sql的类型
+     *
+     * @author liutangqi
+     * @date 2024/8/21 13:42
+     * @Param [sql]
+     **/
+    public static SqlCommandType getSqlType(String sql) {
+        try {
+            Statement statement = CCJSqlParserUtil.parse(sql);
+            SqlTypeStatementVisitor sqlTypeStatementVisitor = new SqlTypeStatementVisitor();
+            statement.accept(sqlTypeStatementVisitor);
+            return sqlTypeStatementVisitor.getSqlType();
+        } catch (JSQLParserException e) {
+            e.printStackTrace();
+        }
+        return SqlCommandType.UNKNOWN;
     }
 }
