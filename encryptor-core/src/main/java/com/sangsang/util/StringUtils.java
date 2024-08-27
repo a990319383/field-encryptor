@@ -121,4 +121,18 @@ public class StringUtils {
         }
         return sql;
     }
+
+    /**
+     * 忽略大小写，判断两个字符串是否相等
+     *
+     * @author liutangqi
+     * @date 2024/8/27 11:24
+     * @Param [a, b]
+     **/
+    public static boolean equalCaseInsensitive(String a, String b) {
+        if (StringUtils.isBlank(a) || StringUtils.isBlank(b)) {
+            return false;
+        }
+        return a.toLowerCase().equals(b.toLowerCase());
+    }
 }

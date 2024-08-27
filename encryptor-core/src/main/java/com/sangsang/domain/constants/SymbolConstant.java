@@ -86,4 +86,24 @@ public interface SymbolConstant {
      * 类型转换函数想要转换的类型
      */
     ColDataType COLDATATYPE_HCAR = new ColDataType("CHAR");
+
+    /**
+     * 默认的主键id的字段名
+     */
+    String ID = "id";
+
+    /**
+     * 主键字段查出来的索引类型
+     **/
+    String PRIMARY_KEY = "PRI";
+
+    /**
+     * 数据库里面的字符串类型
+     */
+    String VARCHAR = "varchar";
+
+    /**
+     * 数据库里面的文本类型
+     */
+    String TEXT = "text";
 }
