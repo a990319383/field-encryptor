@@ -1,12 +1,9 @@
 package com.sangsang.bak;
 
 import com.sangsang.cache.TableCache;
-import com.sangsang.domain.constants.PatternTypeConstant;
 import com.sangsang.domain.constants.SymbolConstant;
 import com.sangsang.domain.dto.TableFieldMsgDto;
-import com.sangsang.encryptor.EncryptorProperties;
 import com.sangsang.encryptor.db.DBFieldEncryptorPattern;
-import com.sangsang.encryptor.pojo.PoJoFieldEncryptorPattern;
 import com.sangsang.util.StringUtils;
 import net.sf.jsqlparser.schema.Column;
 

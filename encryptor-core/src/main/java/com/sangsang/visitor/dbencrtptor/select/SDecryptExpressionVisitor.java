@@ -223,7 +223,6 @@ public class SDecryptExpressionVisitor extends BaseFieldParseTable implements Ex
 
     @Override
     public void visit(InExpression inExpression) {
-        log.warn("【SDecryptExpressionVisitor】暂不支持 inExpression");
     }
 
     @Override

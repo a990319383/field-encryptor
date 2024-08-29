@@ -223,9 +223,13 @@ public class WhereDencryptExpressionVisitor extends BaseFieldParseTable implemen
 
     @Override
     public void visit(EqualsTo equalsTo) {
-        //1.如果左右侧都是 Column 类型的话，不用处理加密，都是数据库的字段，都是加密的
+        //1.如果左右侧都是 Column 类型的话，两边都需要加密或者两边都不需要加密时，不需要处理
         if ((equalsTo.getLeftExpression() instanceof Column) && (equalsTo.getRightExpression() instanceof Column)) {
-            return;
+            boolean leftNeedEncrypt = JsqlparserUtil.needEncrypt((Column) equalsTo.getLeftExpression(), this.getLayer(), this.getLayerFieldTableMap());
+            boolean rightNeedEncrypt = JsqlparserUtil.needEncrypt((Column) equalsTo.getRightExpression(), this.getLayer(), this.getLayerFieldTableMap());
+            if ((leftNeedEncrypt && rightNeedEncrypt) || (!leftNeedEncrypt && !rightNeedEncrypt)) {
+                return;
+            }
         }
 
         //2.左边是 Column 右边不是 Column ，避免索引失效，将非Column进行加密处理即可
@@ -302,50 +306,59 @@ public class WhereDencryptExpressionVisitor extends BaseFieldParseTable implemen
         greaterThanEquals.setRightExpression(rightWhereDencryptExpressionVisitor.getExpression());
     }
 
+    /**
+     * 当左边是 Column 时，针对一些场景进行优化，避免无意义的多次加解密
+     *
+     * @author liutangqi
+     * @date 2024/8/29 10:28
+     * @Param [inExpression]
+     **/
     @Override
     public void visit(InExpression inExpression) {
-        //1.当前左边表达式是Column
+        //1.当前左边表达式是Column时，针对下面两种情况做出优化，避免多次无意义的加解密
         if (inExpression.getLeftExpression() instanceof Column) {
-            //1.1 当前Column不需要加解密，则不做任何处理
-            if (!JsqlparserUtil.needEncrypt((Column) inExpression.getLeftExpression(), this.getLayer(), this.getLayerFieldTableMap())) {
+            //判断左边 Column 是否需要加解密
+            boolean columnNeedEncrypt = JsqlparserUtil.needEncrypt((Column) inExpression.getLeftExpression(), this.getLayer(), this.getLayerFieldTableMap());
+            //1.1 右边是 (?,?,?)  Column in (?,?,?) 这种 : 只对右边进行加密处理
+            if (columnNeedEncrypt && inExpression.getRightItemsList() != null) {
+                inExpression.getRightItemsList().accept(new WhereDencryptItemsListVisitor(this.getLayer(), this.getLayerSelectTableFieldMap(), this.getLayerFieldTableMap()));
                 return;
             }
-
-            //1.2 右边是(aaa,bbb,ccc)  Column in (aaa,bbb,ccc) 这种 : 只将右边的进行加密
-            Optional.ofNullable(inExpression.getRightItemsList())
-                    .ifPresent(p -> p.accept(new WhereDencryptItemsListVisitor(this.getLayer(), this.getLayerSelectTableFieldMap(), this.getLayerFieldTableMap())));
-
-            //1.3 右边是 子查询  Column in (select xxx from xxx) 这种 ：只将右边的子查询的where条件进行加解密处理，数据库里面同一字段，默认都是加密存储的
+            //1.2 右边是子查询  Column in (select xxx from xxx) 并且子查询select 全部需要加解密 && 左边的 Column也需要加解密
+            //这种情况只用处理子查询的where条件
             Expression rightExpression = inExpression.getRightExpression();
             if (rightExpression != null && (rightExpression instanceof SubSelect)) {
-                //1.3.1 拿出右边子查询的sql
+                //1.2.1 拿出右边子查询的sql
                 SelectBody selectBody = ((SubSelect) inExpression.getRightExpression()).getSelectBody();
-                //1.3.2 因为这个sql是一个完全独立的sql，所以单独解析这个sql拥有的字段信息
+                //1.2.2 因为这个sql是一个完全独立的sql，所以单独解析这个sql拥有的字段信息
                 FieldParseParseTableSelectVisitor fieldParseParseTableSelectVisitor = new FieldParseParseTableSelectVisitor(NumberConstant.ONE, null, null);
                 selectBody.accept(fieldParseParseTableSelectVisitor);
-                //1.3.3 利用解析的字段结果，对这个sql的where条件进行解析
-                SOWDecryptSelectVisitor sowDecryptSelectVisitor = new SOWDecryptSelectVisitor(fieldParseParseTableSelectVisitor.getLayer(), fieldParseParseTableSelectVisitor.getLayerSelectTableFieldMap(), fieldParseParseTableSelectVisitor.getLayerFieldTableMap());
-                selectBody.accept(sowDecryptSelectVisitor);
+                //1.2.3 select 需要加解密 && 左边的 Column也需要加解密 这种情况，左边的Column不需要处理，子查询的select也不需要处理，只需要处理where
+                if (columnNeedEncrypt && JsqlparserUtil.needEncryptAll(fieldParseParseTableSelectVisitor.getLayer(), fieldParseParseTableSelectVisitor.getLayerSelectTableFieldMap())) {
+                    SOWDecryptSelectVisitor sowDecryptSelectVisitor = new SOWDecryptSelectVisitor(fieldParseParseTableSelectVisitor.getLayer(), fieldParseParseTableSelectVisitor.getLayerSelectTableFieldMap(), fieldParseParseTableSelectVisitor.getLayerFieldTableMap());
+                    selectBody.accept(sowDecryptSelectVisitor);
+                    return;
+                }
             }
-        } else {
-            //2. 当左边的不是Column时（比如左边是列运算，就是Function，不是单纯的列）: 将左边需要加解密的进行处理，右边的子查询需要加解密的都处理，右边的(a,b,c)这种常量集合是不需要处理的
-            //2.1解析左边表达式
-            Expression leftExpression = inExpression.getLeftExpression();
-            WhereDencryptExpressionVisitor leftWhereDencryptExpressionVisitor = new WhereDencryptExpressionVisitor(leftExpression, this.getLayer(), this.getLayerSelectTableFieldMap(), this.getLayerFieldTableMap());
-            leftExpression.accept(leftWhereDencryptExpressionVisitor);
-            inExpression.setLeftExpression(leftWhereDencryptExpressionVisitor.getExpression());
-            //2.2解析右边表达式(右边是子查询)
-            Expression rightExpression = inExpression.getRightExpression();
-            if (rightExpression != null && (rightExpression instanceof SubSelect)) {
-                //备注：右边的子查询是一个完全独立的sql，所以不共用一个解析结果，需要单独解析当前sql中涉及的字段
-                FieldParseParseTableSelectVisitor fieldParseParseTableSelectVisitor = new FieldParseParseTableSelectVisitor(NumberConstant.ONE, null, null);
-                ((SubSelect) rightExpression).getSelectBody().accept(fieldParseParseTableSelectVisitor);
-                //根据上面解析出来sql拥有的字段信息，将子查询进行加解密
-                WhereDencryptExpressionVisitor rightWhereDencryptExpressionVisitor = new WhereDencryptExpressionVisitor(rightExpression, fieldParseParseTableSelectVisitor.getLayer(), fieldParseParseTableSelectVisitor.getLayerSelectTableFieldMap(), fieldParseParseTableSelectVisitor.getLayerFieldTableMap());
-                rightExpression.accept(rightWhereDencryptExpressionVisitor);
-                inExpression.setRightExpression(rightWhereDencryptExpressionVisitor.getExpression());
-            }
+        }
 
+
+        //2.其它情况，左边的表达式和右边的子查询都需要单独处理，但是右边的 Column in (?,?,?) 这种不需要处理
+        //2.1解析左边表达式
+        Expression leftExpression = inExpression.getLeftExpression();
+        WhereDencryptExpressionVisitor leftWhereDencryptExpressionVisitor = new WhereDencryptExpressionVisitor(leftExpression, this.getLayer(), this.getLayerSelectTableFieldMap(), this.getLayerFieldTableMap());
+        leftExpression.accept(leftWhereDencryptExpressionVisitor);
+        inExpression.setLeftExpression(leftWhereDencryptExpressionVisitor.getExpression());
+        //2.2解析右边表达式(右边是子查询)
+        Expression rightExpression = inExpression.getRightExpression();
+        if (rightExpression != null && (rightExpression instanceof SubSelect)) {
+            //备注：右边的子查询是一个完全独立的sql，所以不共用一个解析结果，需要单独解析当前sql中涉及的字段
+            FieldParseParseTableSelectVisitor fieldParseParseTableSelectVisitor = new FieldParseParseTableSelectVisitor(NumberConstant.ONE, null, null);
+            ((SubSelect) rightExpression).getSelectBody().accept(fieldParseParseTableSelectVisitor);
+            //根据上面解析出来sql拥有的字段信息，将子查询进行加解密
+            WhereDencryptExpressionVisitor rightWhereDencryptExpressionVisitor = new WhereDencryptExpressionVisitor(rightExpression, fieldParseParseTableSelectVisitor.getLayer(), fieldParseParseTableSelectVisitor.getLayerSelectTableFieldMap(), fieldParseParseTableSelectVisitor.getLayerFieldTableMap());
+            rightExpression.accept(rightWhereDencryptExpressionVisitor);
+            inExpression.setRightExpression(rightWhereDencryptExpressionVisitor.getExpression());
         }
 
     }
@@ -358,10 +371,6 @@ public class WhereDencryptExpressionVisitor extends BaseFieldParseTable implemen
     @Override
     public void visit(IsNullExpression isNullExpression) {
         //is null / is not null 不需要加解密
-//        Expression leftExpression = isNullExpression.getLeftExpression();
-//        WhereDencryptExpressionVisitor leftDencryptWhereFieldParseVisitor = new WhereDencryptExpressionVisitor(leftExpression, this.getLayer(), this.getLayerSelectTableFieldMap(), this.getLayerFieldTableMap());
-//        leftExpression.accept(leftDencryptWhereFieldParseVisitor);
-//        isNullExpression.setLeftExpression(leftDencryptWhereFieldParseVisitor.getExpression());
     }
 
     @Override
@@ -417,9 +426,13 @@ public class WhereDencryptExpressionVisitor extends BaseFieldParseTable implemen
 
     @Override
     public void visit(NotEqualsTo notEqualsTo) {
-        //1.如果左右侧都是 Column 类型的话，不用处理加密，都是数据库的字段，都是加密的
+        //1.如果左右侧都是 Column 类型的话，两边都需要加密或者两边都不需要加密时，不需要处理
         if ((notEqualsTo.getLeftExpression() instanceof Column) && notEqualsTo.getRightExpression() instanceof Column) {
-            return;
+            boolean leftNeedEncrypt = JsqlparserUtil.needEncrypt((Column) notEqualsTo.getLeftExpression(), this.getLayer(), this.getLayerFieldTableMap());
+            boolean rightNeedEncrypt = JsqlparserUtil.needEncrypt((Column) notEqualsTo.getRightExpression(), this.getLayer(), this.getLayerFieldTableMap());
+            if ((leftNeedEncrypt && rightNeedEncrypt) || (!leftNeedEncrypt && !rightNeedEncrypt)) {
+                return;
+            }
         }
 
         //2.左边是 Column 右边不是 Column ，避免索引失效，将非Column进行加密处理即可
@@ -693,9 +706,29 @@ public class WhereDencryptExpressionVisitor extends BaseFieldParseTable implemen
 
     }
 
+    /**
+     * 多字段 in 的时候，左边的多字段会走这里
+     * where (xxx,yyy) in ((?,?),(?,?))
+     *
+     * @author liutangqi
+     * @date 2024/8/28 13:50
+     * @Param [rowConstructor]
+     **/
     @Override
     public void visit(RowConstructor rowConstructor) {
+        ExpressionList exprList = rowConstructor.getExprList();
+        List<Expression> resExp = new ArrayList<>();
 
+        //依次处理每个表达式
+        List<Expression> expressions = exprList.getExpressions();
+        for (Expression exp : expressions) {
+            WhereDencryptExpressionVisitor wDEVisitor = new WhereDencryptExpressionVisitor(exp, this.getLayer(), this.getLayerSelectTableFieldMap(), this.getLayerFieldTableMap());
+            exp.accept(wDEVisitor);
+            resExp.add(wDEVisitor.getExpression());
+        }
+
+        //处理后的表达式赋值
+        exprList.setExpressions(resExp);
     }
 
     @Override

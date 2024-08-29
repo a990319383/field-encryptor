@@ -277,6 +277,25 @@ public class JsqlparserUtil {
     }
 
 
+    /*
+     * 判断当前层sql查询的字段是否全部都需要进行加解密
+     * @author liutangqi
+     * @date 2024/8/29 9:48
+     * @Param [layerSelectTableFieldMap]
+     **/
+    public static boolean needEncryptAll(int layer, Map<String, Map<String, Set<FieldInfoDto>>> layerSelectTableFieldMap) {
+        Map<String, Set<FieldInfoDto>> thisLayerSelectTableFieldMap = layerSelectTableFieldMap.getOrDefault(String.valueOf(layer), new HashMap<>());
+        return !thisLayerSelectTableFieldMap.values()
+                .stream()
+                .flatMap(Collection::stream)
+                .filter(f -> TableCache.getTableFieldEncryptInfo()
+                        .getOrDefault(f.getSourceTableName(), new HashMap<>())
+                        .get(f.getSourceColumn()) == null)
+                .findAny()
+                .isPresent();
+    }
+
+
     /**
      * 根据表和字段信息，判断该字段是否需要加解密
      *

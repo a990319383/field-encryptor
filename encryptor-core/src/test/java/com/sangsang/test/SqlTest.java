@@ -289,21 +289,46 @@ public class SqlTest {
             "from tb_user tu \n" +
             "WHERE tu.phone not in (?,?)";
 
-    // in (select xxx from) 子查询语法
+    // in (select xxx from) 子查询语法   字段和select的字段都是需要加密的
     String s19 = "select \n" +
-            "*\n" +
+            "tu.*\n" +
             "from tb_user tu \n" +
             "where  tu.phone in (\n" +
             "select t.phone from tb_user t \n" +
             "where t.phone = ? " +
             ")";
 
+    // in (select xxx from) 子查询语法   字段需要加密 ，select的字段不需要加密的
+    String s20 = "select \n" +
+            "tu.*\n" +
+            "from tb_user tu \n" +
+            "where  tu.phone in (\n" +
+            "select t.user_name from tb_user t \n" +
+            "where t.phone = ? " +
+            ")";
+
+    // in (select xxx from) 子查询语法   字段不需要加密 ，select的字段需要加密的
+    String s21 = "select \n" +
+            "tu.*\n" +
+            "from tb_user tu \n" +
+            "where  tu.user_name in (\n" +
+            "select t.phone from tb_user t \n" +
+            "where t.phone = ? " +
+            ")";
+
+    // 多字段in   (xxx,yyy) in ( (?,?),(?,?) )
+    String s22 = "select *\n" +
+            "from tb_user tu \n" +
+            "left join tb_menu tm \n" +
+            "on tu.id =  tm.id \n" +
+            "where (tu.phone,tm.id) in (select tu2.phone ,tu2.id from tb_user tu2 where tu2.phone = '' ) ";
+
     // in 前面不是 字段 右边是常量
-    String s20 = "select * from tb_user tu \n" +
+    String s23 = "select * from tb_user tu \n" +
             "where  concat(\"aaa\",tu.phone) in (? , ?)";
 
     // in 前面不是字段  右边是子查询
-    String s21 = "\n" +
+    String s24 = "\n" +
             "select\n" +
             "\t*\n" +
             "from\n" +
@@ -319,15 +344,15 @@ public class SqlTest {
             "            )";
 
     // 测试convert函数如何拼接的 (JsqlParse不支持 convert函数！！！)
-    String s22 = "SELECT \n" +
+    String s25 = "SELECT \n" +
             "convert(tu.phone using utf8mb4)\n" +
             "from tb_user tu";
 
     //使用 cast 函数 某些场景下平替 convert 函数 （说的场景就是 AES_DECRYPT 中文解密乱码，点名批评一下）
-    String s23 = "select cast(tu.phone as char) from tb_user tu";
+    String s26 = "select cast(tu.phone as char) from tb_user tu";
 
     //group by having
-    String s24 = "SELECT \n" +
+    String s27 = "SELECT \n" +
             "tu.phone,\n" +
             "count(1) as nums\n" +
             "from tb_user tu \n" +
@@ -335,16 +360,16 @@ public class SqlTest {
             "having count(1) > 1";
 
     //别名中有 ``
-    String s25 = "\tSELECT `phone`,user_name  from tb_user \n" +
+    String s28 = "\tSELECT `phone`,user_name  from tb_user \n" +
             "\twhere `phone` like ? \n" +
             "\tand phone = ? ";
 
     // on 后面有写死的条件筛选
-    String s26 = "select menuName, login_name, ph, a.create_time from ( select phone as ph, tu.login_name, tm.create_time, tm.menu_name as menuName from tb_user tu left join tb_menu tm on tu.id = tm.id and tu.login_name = ? and tu.phone = ?) a";
+    String s29 = "select menuName, login_name, ph, a.create_time from ( select phone as ph, tu.login_name, tm.create_time, tm.menu_name as menuName from tb_user tu left join tb_menu tm on tu.id = tm.id and tu.login_name = ? and tu.phone = ?) a";
 
 
     // 正则 （select 和 where 条件都有 case when ）
-    String s27 = " select \n" +
+    String s30 = " select \n" +
             " tu.login_name ,\n" +
             " tu.user_name regexp ?,\n" +
             " case \n" +
@@ -356,7 +381,7 @@ public class SqlTest {
             "where phone REGEXP ?";
 
     //group_concat
-    String s28 = "select \n" +
+    String s31 = "select \n" +
             "group_concat(tu.phone,?)\n" +
             "from tb_user tu \n" +
             "left join tb_menu tm \n" +
@@ -365,7 +390,8 @@ public class SqlTest {
             "group by tu.id ";
 
     //json函数 (select 1.拼接成json  2.从json中根据key获取value值) todo-ltq
-    String s29 = "";
+    String s32 = "";
+
 
     // -----------------insert 测试语句---------------------
     String i1 = "insert into tb_user(id, user_name ,phone) \n" +
@@ -438,7 +464,7 @@ public class SqlTest {
         InitTableInfo.initTable();
 
         //需要测试的sql
-        String sql = s28;
+        String sql = s21;
         System.out.println("----------------------------------------------------------------------------");
         System.out.println(sql);
         System.out.println("----------------------------------------------------------------------------");

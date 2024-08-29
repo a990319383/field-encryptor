@@ -168,7 +168,7 @@ public class DBDencryptStatementVisitor implements StatementVisitor {
             for (int i = 0; i < columns.size(); i++) {
                 Column column = columns.get(i);
                 Expression expression = expressions.get(i);
-                //两边都是来自数据库的则不处理
+                //两边都是来自数据库的则不处理 todo-ltq 兼容两边库字段加密情况不一致的情况
                 if (expression instanceof Column) {
                     continue;
                 }
