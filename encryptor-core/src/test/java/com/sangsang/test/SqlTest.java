@@ -436,8 +436,10 @@ public class SqlTest {
     String u1 = "update tb_user tu \n" +
             "join tb_menu tm \n" +
             "on tu.id = tm.id \n" +
-            "set tm.menu_name = tm.`path` ,\n" +
-            "tu.phone = ? \n" +
+            "set tm.menu_name = tm.`path` ,\n" + //左边不需要加密，右边需要
+            "tu.phone = tm.path \n" +// 左右两边都需要加密
+            " , tu.phone = tm.menu_name \n" + //左边需要加密，右边不需要
+            " , tu.phone = ? \n" +
             "where tu.phone like ? ";
 
     //update 联多张表  set的时候存在 其它表的值，也存在常量值
@@ -464,7 +466,7 @@ public class SqlTest {
         InitTableInfo.initTable();
 
         //需要测试的sql
-        String sql = s21;
+        String sql = u1;
         System.out.println("----------------------------------------------------------------------------");
         System.out.println(sql);
         System.out.println("----------------------------------------------------------------------------");

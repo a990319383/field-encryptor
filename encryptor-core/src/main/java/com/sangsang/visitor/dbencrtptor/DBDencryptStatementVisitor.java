@@ -164,14 +164,36 @@ public class DBDencryptStatementVisitor implements StatementVisitor {
         for (UpdateSet updateSet : updateSets) {
             List<Column> columns = updateSet.getColumns();
             List<Expression> expressions = updateSet.getExpressions();
-            //处理每对需要加密的字段，只处理一边是数据库字段，一边是常量的，两边都是数据库字段的，默认都是加密的，不需要处理
+            //处理每对需要加密的字段，只处理一边是数据库字段，一边是常量的，两边都是数据库字段的，根据情况处理
             for (int i = 0; i < columns.size(); i++) {
                 Column column = columns.get(i);
                 Expression expression = expressions.get(i);
-                //两边都是来自数据库的则不处理 todo-ltq 兼容两边库字段加密情况不一致的情况
+                //左边是否需要加解密
+                boolean leftNeedEncrypt = JsqlparserUtil.needEncrypt(column, fieldParseTableFromItemVisitor.getLayer(), fieldParseTableFromItemVisitor.getLayerFieldTableMap());
+
+                //4.1 两边都是来自数据库
                 if (expression instanceof Column) {
-                    continue;
+                    //右边是否需要加解密
+                    boolean rightNeedEncrypt = JsqlparserUtil.needEncrypt((Column) expression, fieldParseTableFromItemVisitor.getLayer(), fieldParseTableFromItemVisitor.getLayerFieldTableMap());
+                    //两边都需要加解密，不做处理
+                    if (leftNeedEncrypt && rightNeedEncrypt) {
+                        continue;
+                    }
+
+                    //左边需要加密，右边不需要，则将右边进行加密
+                    if (leftNeedEncrypt && !rightNeedEncrypt) {
+                        Expression encryptionExpression = FieldEncryptorPatternCache.getInstance().encryption(expression);
+                        expressions.set(i, encryptionExpression);
+                    }
+
+                    //左边不需要加密，右边需要，则将右边进行解密
+                    if (!leftNeedEncrypt && rightNeedEncrypt) {
+                        Expression decryptionExpression = FieldEncryptorPatternCache.getInstance().decryption(expression);
+                        expressions.set(i, decryptionExpression);
+                    }
                 }
+
+                //4.2 左边是数据库字段，右边不是
                 //左边的Column 字段不需要加密不做处理
                 if (!JsqlparserUtil.needEncrypt(column, fieldParseTableFromItemVisitor.getLayer(), fieldParseTableFromItemVisitor.getLayerFieldTableMap())) {
                     continue;
