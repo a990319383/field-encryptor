@@ -174,7 +174,6 @@ public class PoJoEncrtptorStatementVisitor implements StatementVisitor {
         for (UpdateSet updateSet : updateSets) {
             List<Column> columns = updateSet.getColumns();
             List<Expression> expressions = updateSet.getExpressions();
-            //处理每对需要加密的字段，只处理一边是数据库字段，一边是常量的，两边都是数据库字段的，默认都是加密的，不需要处理
             for (int i = 0; i < columns.size(); i++) {
                 Column column = columns.get(i);
                 Expression expression = expressions.get(i);

@@ -65,6 +65,13 @@ public class DBFieldEncryptorInterceptor implements Interceptor {
         return invocation.proceed();
     }
 
+    /**
+     * 低版本mybatis 这个方法不是default 方法，会报错找不到实现方法，所以这里实现默认的方法
+     *
+     * @author liutangqi
+     * @date 2024/9/9 17:38
+     * @Param [target]
+     **/
     @Override
     public Object plugin(Object target) {
         return Plugin.wrap(target, this);
