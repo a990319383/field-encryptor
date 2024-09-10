@@ -54,12 +54,6 @@
             <version>3.5.10</version>
             <scope>provided</scope>
         </dependency>
-        <!-- mybatis-plus 的注解 -->
-        <dependency>
-            <groupId>com.baomidou</groupId>
-            <artifactId>mybatis-plus-annotation</artifactId>
-            <version>3.5.3.1</version>
-        </dependency>
         <!--jsqlparser-->
         <dependency>
             <groupId>com.github.jsqlparser</groupId>

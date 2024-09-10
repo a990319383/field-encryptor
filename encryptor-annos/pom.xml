@@ -12,4 +12,14 @@
     <artifactId>encryptor-annos</artifactId>
 
     <description>加解密注解包，某些场景模块只需要注解，不需要mybatis-plus，所以将注解模块独立开来</description>
+
+    <dependencies>
+        <!-- mybatis-plus 的注解 -->
+        <dependency>
+            <groupId>com.baomidou</groupId>
+            <artifactId>mybatis-plus-annotation</artifactId>
+            <version>3.5.3.1</version>
+        </dependency>
+    </dependencies>
+
 </project>
