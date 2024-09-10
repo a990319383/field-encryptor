@@ -39,7 +39,8 @@ import java.util.stream.Collectors;
  * @date 2024/7/9 14:06
  */
 @Intercepts({
-        @Signature(type = Executor.class, method = "query", args = {MappedStatement.class, Object.class, RowBounds.class, ResultHandler.class, CacheKey.class, BoundSql.class})
+        @Signature(type = Executor.class, method = "query", args = {MappedStatement.class, Object.class, RowBounds.class, ResultHandler.class, CacheKey.class, BoundSql.class}),
+        @Signature(type = Executor.class, method = "query", args = {MappedStatement.class, Object.class, RowBounds.class, ResultHandler.class})
 })
 @ConditionalOnProperty(name = "field.encryptor.patternType", havingValue = PatternTypeConstant.POJO)
 public class PoJoResultEncrtptorInterceptor implements Interceptor {
@@ -48,7 +49,9 @@ public class PoJoResultEncrtptorInterceptor implements Interceptor {
     @Override
     public Object intercept(Invocation invocation) throws Throwable {
         //1.获取核心类(@Signature 后面的args顺序和下面获取的一致)
-        BoundSql boundSql = (BoundSql) invocation.getArgs()[5];
+        MappedStatement statement = (MappedStatement) invocation.getArgs()[0];
+        Object parameter = invocation.getArgs()[1];
+        BoundSql boundSql = statement.getBoundSql(parameter);
         String originalSql = boundSql.getSql();
 
         //2.解析sql,获取入参和响应对应的表字段关系
@@ -178,18 +181,17 @@ public class PoJoResultEncrtptorInterceptor implements Interceptor {
 
     /**
      * 根据字段名字从sql解析结果中，找到该实体类上面标准的注解信息
-     * 注意：fieldName是驼峰的，而fieldInfos 中的信息是下划线的，这里会做自动转换再做匹配
+     * 注意：fieldName是驼峰的，fieldInfos 中的别名也可能是驼峰，可能是下划线，这里做个自动转
      *
      * @author liutangqi
      * @date 2024/7/26 16:07
      * @Param [fieldName, fieldInfos]
      **/
     private FieldEncryptor getFieldEncryptorByFieldName(String fieldName, List<FieldEncryptorInfoDto> fieldInfos) {
-        //驼峰转下划线,并转小写
-        String underlineCaseFieldName = StrUtil.toUnderlineCase(fieldName).toLowerCase();
         //从所有字段中查到这个字段的信息（理论上只会存在一个）
         return fieldInfos.stream()
-                .filter(f -> Objects.equals(f.getSourceColumn(), underlineCaseFieldName))
+                .filter(f -> Objects.equals(fieldName, f.getColumnName())
+                        || Objects.equals(fieldName, StrUtil.toCamelCase(f.getColumnName())))
                 .findAny()
                 .map(FieldEncryptorInfoDto::getFieldEncryptor)
                 .orElse(null);
