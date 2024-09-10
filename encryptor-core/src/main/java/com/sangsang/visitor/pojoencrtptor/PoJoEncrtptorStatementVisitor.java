@@ -1,7 +1,7 @@
 package com.sangsang.visitor.pojoencrtptor;
 
 import cn.hutool.core.map.MapUtil;
-import com.baomidou.mybatisplus.core.toolkit.CollectionUtils;
+import com.sangsang.util.CollectionUtils;
 import com.sangsang.cache.TableCache;
 import com.sangsang.domain.constants.NumberConstant;
 import com.sangsang.domain.dto.ColumnTableDto;

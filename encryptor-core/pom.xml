@@ -10,6 +10,10 @@
     <modelVersion>4.0.0</modelVersion>
 
     <artifactId>encryptor-core</artifactId>
+    <properties>
+        <spring-boot.version>2.5.3</spring-boot.version>
+    </properties>
+
     <dependencies>
         <!--加解密注解包-->
         <dependency>
@@ -21,20 +25,46 @@
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot</artifactId>
-            <version>2.5.3</version>
+            <version>${spring-boot.version}</version>
+            <scope>provided</scope>
         </dependency>
-        <!--spring-boot-test-->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-autoconfigure</artifactId>
+            <version>${spring-boot.version}</version>
+            <scope>provided</scope>
+        </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>
-            <version>2.5.3</version>
+            <version>${spring-boot.version}</version>
             <scope>test</scope>
         </dependency>
-        <!-- mybatis-plus -->
+        <!-- log -->
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-api</artifactId>
+            <version>1.7.30</version>
+            <scope>provided</scope>
+        </dependency>
+        <!-- mybatis -->
+        <dependency>
+            <groupId>org.mybatis</groupId>
+            <artifactId>mybatis</artifactId>
+            <version>3.5.10</version>
+            <scope>provided</scope>
+        </dependency>
+        <!-- mybatis-plus 的注解 -->
         <dependency>
             <groupId>com.baomidou</groupId>
-            <artifactId>mybatis-plus-boot-starter</artifactId>
+            <artifactId>mybatis-plus-annotation</artifactId>
             <version>3.5.3.1</version>
+        </dependency>
+        <!--jsqlparser-->
+        <dependency>
+            <groupId>com.github.jsqlparser</groupId>
+            <artifactId>jsqlparser</artifactId>
+            <version>4.4</version>
         </dependency>
         <!--hutool-->
         <dependency>

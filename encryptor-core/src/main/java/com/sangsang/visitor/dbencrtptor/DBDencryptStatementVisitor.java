@@ -1,6 +1,6 @@
 package com.sangsang.visitor.dbencrtptor;
 
-import com.baomidou.mybatisplus.core.toolkit.CollectionUtils;
+import com.sangsang.util.CollectionUtils;
 import com.sangsang.cache.FieldEncryptorPatternCache;
 import com.sangsang.cache.TableCache;
 import com.sangsang.domain.annos.FieldEncryptor;

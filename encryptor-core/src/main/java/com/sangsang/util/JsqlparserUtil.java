@@ -1,6 +1,5 @@
 package com.sangsang.util;
 
-import com.baomidou.mybatisplus.core.toolkit.CollectionUtils;
 import com.sangsang.cache.TableCache;
 import com.sangsang.domain.annos.FieldEncryptor;
 import com.sangsang.domain.constants.DecryptConstant;
@@ -33,7 +32,6 @@ import java.util.stream.Collectors;
  * @date 2024/2/1 14:14
  */
 public class JsqlparserUtil {
-
 
     /**
      * 将 column 变成function转换为查询项

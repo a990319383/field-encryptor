@@ -1,6 +1,6 @@
 package com.sangsang.visitor.fieldparse;
 
-import com.baomidou.mybatisplus.core.toolkit.CollectionUtils;
+import com.sangsang.util.CollectionUtils;
 import com.sangsang.domain.dto.BaseFieldParseTable;
 import com.sangsang.domain.dto.FieldInfoDto;
 import net.sf.jsqlparser.statement.select.*;

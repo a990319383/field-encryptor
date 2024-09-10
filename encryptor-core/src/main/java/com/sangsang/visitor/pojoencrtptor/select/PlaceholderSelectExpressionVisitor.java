@@ -1,6 +1,6 @@
 package com.sangsang.visitor.pojoencrtptor.select;
 
-import com.baomidou.mybatisplus.core.toolkit.CollectionUtils;
+import com.sangsang.util.CollectionUtils;
 import com.sangsang.domain.constants.DecryptConstant;
 import com.sangsang.domain.dto.BaseFieldParseTable;
 import com.sangsang.domain.dto.ColumnTableDto;

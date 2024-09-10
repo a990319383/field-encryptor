@@ -1,6 +1,6 @@
 package com.sangsang.visitor.dbencrtptor.select;
 
-import com.baomidou.mybatisplus.core.toolkit.CollectionUtils;
+import com.sangsang.util.CollectionUtils;
 import com.sangsang.domain.constants.NumberConstant;
 import com.sangsang.domain.dto.BaseFieldParseTable;
 import com.sangsang.domain.dto.FieldInfoDto;

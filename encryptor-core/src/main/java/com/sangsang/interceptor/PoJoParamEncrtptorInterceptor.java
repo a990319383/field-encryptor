@@ -1,17 +1,13 @@
 package com.sangsang.interceptor;
 
 import cn.hutool.core.lang.Pair;
-import cn.hutool.core.util.StrUtil;
-import com.baomidou.mybatisplus.core.toolkit.CollectionUtils;
 import com.sangsang.cache.FieldEncryptorPatternCache;
-import com.sangsang.domain.annos.FieldEncryptor;
 import com.sangsang.domain.constants.DecryptConstant;
 import com.sangsang.domain.constants.PatternTypeConstant;
 import com.sangsang.domain.constants.SymbolConstant;
 import com.sangsang.domain.dto.ColumnTableDto;
 import com.sangsang.domain.dto.FieldEncryptorInfoDto;
 import com.sangsang.util.JsqlparserUtil;
-import com.sangsang.util.ReflectUtils;
 import com.sangsang.util.StringUtils;
 import com.sangsang.visitor.pojoencrtptor.PoJoEncrtptorStatementVisitor;
 import net.sf.jsqlparser.JSQLParserException;

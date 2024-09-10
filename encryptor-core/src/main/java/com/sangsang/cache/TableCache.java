@@ -3,16 +3,13 @@ package com.sangsang.cache;
 import cn.hutool.core.util.StrUtil;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableName;
-import com.baomidou.mybatisplus.core.metadata.TableFieldInfo;
-import com.baomidou.mybatisplus.core.metadata.TableInfo;
-import com.baomidou.mybatisplus.core.metadata.TableInfoHelper;
-import com.baomidou.mybatisplus.core.toolkit.StringUtils;
 import com.sangsang.domain.annos.FieldEncryptor;
 import com.sangsang.domain.dto.TableFieldDto;
 import com.sangsang.domain.dto.TableInfoDto;
 import com.sangsang.encryptor.EncryptorProperties;
 import com.sangsang.util.ClassScanerUtil;
 import com.sangsang.util.ReflectUtils;
+import com.sangsang.util.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -77,58 +74,16 @@ public class TableCache implements BeanPostProcessor {
                     .collect(Collectors.toList());
         }
 
-        //2.如果没有指定扫描路径，则从mybatis-plus提供的工具，获取当前项目模块加载的表的实体类信息
+        //2.如果没有指定扫描路径，则从mybatis-plus提供的工具，获取当前项目模块加载的表的实体类信息 （目前已经剥离mybatis-plus）
         if (CollectionUtils.isEmpty(encryptorProperties.getScanEntityPackage())) {
-            log.info("【field-encryptor】初始化表字段加密信息，通过mybatis-plus 加载此模块的表结构信息");
-            tableInfoDtos = parseTableInfoByMybatisPlus();
+            log.info("【field-encryptor】初始化表字段加密信息，未指定实体类扫描路径");
+            throw new RuntimeException("【field-encryptor】未指定实体类扫描路径");
         }
 
         //3.将表结构信息处理，加载到缓存的各个Map中
         fillCacheMap(tableInfoDtos);
 
         log.info("【field-encryptor】初始化表字段加密信息，处理完毕 耗时：{}ms", (System.currentTimeMillis() - startTime));
-    }
-
-
-    /**
-     * 通过mybatis-plus 解析当前项目拥有的表结构信息
-     *
-     * @author liutangqi
-     * @date 2024/5/17 11:10
-     * @Param []
-     **/
-    private List<TableInfoDto> parseTableInfoByMybatisPlus() {
-        List<TableInfoDto> result = new ArrayList<>();
-
-        //获通过mybatis-plus 取所有的表结构信息
-        List<TableInfo> tableInfos = TableInfoHelper.getTableInfos();
-
-        for (TableInfo tableInfo : tableInfos) {
-            //获取所有的字段（主键外）
-            List<TableFieldInfo> tableFieldInfos = tableInfo.getFieldList();
-
-            //维护每个字段上的@FieldEncryptor 的结果集
-            Set<TableFieldDto> fieldEncryptSet = new HashSet<>();
-
-            //维护主键字段上的@FieldEncryptor （主键上面不能用这个，直接写死是null）
-            Optional.ofNullable(tableInfo.getKeyColumn())
-                    .map(String::toLowerCase)
-                    .ifPresent(id -> fieldEncryptSet.add(TableFieldDto.builder().fieldName(id).fieldEncryptor(null).build()));
-
-            for (TableFieldInfo tableFieldInfo : tableFieldInfos) {
-                FieldEncryptor fieldEncryptor = tableFieldInfo.getField().getAnnotation(FieldEncryptor.class);
-                fieldEncryptSet.add(TableFieldDto.builder()
-                        .fieldName(tableFieldInfo.getColumn().toLowerCase())
-                        .fieldEncryptor(fieldEncryptor)
-                        .build());
-            }
-
-            result.add(TableInfoDto.builder()
-                    .tableName(tableInfo.getTableName().toLowerCase())
-                    .tableFields(fieldEncryptSet)
-                    .build());
-        }
-        return result;
     }
 
 
