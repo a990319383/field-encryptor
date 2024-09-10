@@ -5,6 +5,7 @@ import com.sangsang.encryptor.pojo.PoJoFieldEncryptorPattern;
 import com.sangsang.encryptor.db.DefaultDBFieldEncryptorPattern;
 import com.sangsang.encryptor.EncryptorProperties;
 import com.sangsang.encryptor.db.DBFieldEncryptorPattern;
+import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.config.BeanPostProcessor;
 import org.springframework.context.ApplicationContext;
@@ -77,5 +78,29 @@ public class FieldEncryptorPatternCache implements BeanPostProcessor {
      **/
     public static PoJoFieldEncryptorPattern getBeanInstance() {
         return pojoFieldEncryptorPattern;
+    }
+
+    /**
+     * 实现父类default方法，避免低版本不兼容，找不到实现类
+     *
+     * @author liutangqi
+     * @date 2024/9/10 11:36
+     * @Param [bean, beanName]
+     **/
+    @Override
+    public Object postProcessBeforeInitialization(Object bean, String beanName) throws BeansException {
+        return bean;
+    }
+
+    /**
+     * 实现父类default方法，避免低版本不兼容，找不到实现类
+     *
+     * @author liutangqi
+     * @date 2024/9/10 11:36
+     * @Param [bean, beanName]
+     **/
+    @Override
+    public Object postProcessAfterInitialization(Object bean, String beanName) throws BeansException {
+        return bean;
     }
 }

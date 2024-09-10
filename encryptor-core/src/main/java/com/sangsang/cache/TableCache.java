@@ -12,6 +12,7 @@ import com.sangsang.util.ReflectUtils;
 import com.sangsang.util.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.config.BeanPostProcessor;
 import org.springframework.context.annotation.Configuration;
@@ -207,5 +208,29 @@ public class TableCache implements BeanPostProcessor {
      **/
     public static Map<String, Set<String>> getTableFieldMap() {
         return TABLE_FIELD_MAP;
+    }
+
+    /**
+     * 实现父类default方法，避免低版本不兼容，找不到实现类
+     *
+     * @author liutangqi
+     * @date 2024/9/10 11:36
+     * @Param [bean, beanName]
+     **/
+    @Override
+    public Object postProcessBeforeInitialization(Object bean, String beanName) throws BeansException {
+        return bean;
+    }
+
+    /**
+     * 实现父类default方法，避免低版本不兼容，找不到实现类
+     *
+     * @author liutangqi
+     * @date 2024/9/10 11:36
+     * @Param [bean, beanName]
+     **/
+    @Override
+    public Object postProcessAfterInitialization(Object bean, String beanName) throws BeansException {
+        return bean;
     }
 }
