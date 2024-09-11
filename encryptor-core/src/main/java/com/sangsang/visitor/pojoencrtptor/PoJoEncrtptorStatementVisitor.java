@@ -126,10 +126,10 @@ public class PoJoEncrtptorStatementVisitor implements StatementVisitor {
             rightItem.accept(fieldParseTableFromItemVisitor);
         }
 
-        //3.当前sql涉及到的表不需要加密的不做处理
-        if (!JsqlparserUtil.needEncrypt(fieldParseTableFromItemVisitor.getLayerSelectTableFieldMap(), fieldParseTableFromItemVisitor.getLayerFieldTableMap())) {
-            return;
-        }
+//        //3.当前sql涉及到的表不需要加密的不做处理 pojo模式不需要此处理
+//        if (!JsqlparserUtil.needEncrypt(fieldParseTableFromItemVisitor.getLayerSelectTableFieldMap(), fieldParseTableFromItemVisitor.getLayerFieldTableMap())) {
+//            return;
+//        }
 
         //4.将where 条件进行加密
         PlaceholderWhereExpressionVisitor placeholderWhereExpressionVisitor = new PlaceholderWhereExpressionVisitor(fieldParseTableFromItemVisitor, this.placeholderColumnTableMap);
@@ -154,15 +154,10 @@ public class PoJoEncrtptorStatementVisitor implements StatementVisitor {
             join.getRightItem().accept(fieldParseTableFromItemVisitor);
         }
 
-        //2.当前sql涉及到的表不需要加密的不做处理
-        if (!JsqlparserUtil.needEncrypt(fieldParseTableFromItemVisitor.getLayerSelectTableFieldMap(), fieldParseTableFromItemVisitor.getLayerFieldTableMap())) {
-            return;
-        }
-
-        //3.初始化占位符解析的结果集
+        //2.初始化占位符解析的结果集
         this.placeholderColumnTableMap = new HashMap<>();
 
-        //4.加密where 条件的数据
+        //3.加密where 条件的数据
         Expression where = update.getWhere();
         if (where != null) {
             PlaceholderWhereExpressionVisitor dencryptWhereFieldVisitor = new PlaceholderWhereExpressionVisitor(fieldParseTableFromItemVisitor, this.getPlaceholderColumnTableMap());
@@ -192,10 +187,10 @@ public class PoJoEncrtptorStatementVisitor implements StatementVisitor {
     public void visit(Insert insert) {
         //insert 的表
         Table table = insert.getTable();
-        //1.当前表不需要加密，直接返回，不处理
-        if (!TableCache.getFieldEncryptTable().contains(table.getName().toLowerCase())) {
-            return;
-        }
+        //1.当前表不需要加密，直接返回，不处理  pojo模式必须需要，不能跳过
+//        if (!TableCache.getFieldEncryptTable().contains(table.getName().toLowerCase())) {
+//            return;
+//        }
 
         //2.解析当前insert字段所属的表结构信息
         //2.1 获取当前insert语句中的所有字段

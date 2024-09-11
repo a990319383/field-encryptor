@@ -458,6 +458,14 @@ public class SqlTest {
             "\tphone = ?\n" +
             "\twhere phone = ?";
 
+    String u4 = "UPDATE sys_user\n" +
+            "        SET\n" +
+            "        last_login_date = ?,\n" +
+            "        update_by = ?,\n" +
+            "        update_date = ?\n" +
+            "        WHERE\n" +
+            "        id = ?";
+
     @Test
     public void testSql() throws JSQLParserException, NoSuchFieldException {
         //初始化加解密函数
@@ -491,7 +499,7 @@ public class SqlTest {
         InitTableInfo.initTable();
 
         //需要测试的sql
-        String sql = s28;
+        String sql = u4;
         System.out.println("----------------------------------------------------------------------------");
         System.out.println(sql);
         System.out.println("----------------------------------------------------------------------------");
