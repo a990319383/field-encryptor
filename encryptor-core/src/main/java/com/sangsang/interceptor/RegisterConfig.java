@@ -6,6 +6,7 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
+
 /**
  * 注册拦截器
  *
@@ -25,11 +26,9 @@ public class RegisterConfig {
      **/
     @Bean
     @ConditionalOnProperty(name = "field.encryptor.patternType", havingValue = PatternTypeConstant.POJO)
-    public String MyBatisInterceptor(SqlSessionFactory sqlSessionFactory,
-                                     PoJoParamEncrtptorInterceptor poJoParamEncrtptorInterceptor,
-                                     PoJoResultEncrtptorInterceptor poJoResultEncrtptorInterceptor) {
-        sqlSessionFactory.getConfiguration().addInterceptor(poJoParamEncrtptorInterceptor);
-        sqlSessionFactory.getConfiguration().addInterceptor(poJoResultEncrtptorInterceptor);
+    public String pojoInterceptor(SqlSessionFactory sqlSessionFactory) {
+        sqlSessionFactory.getConfiguration().addInterceptor(new PoJoParamEncrtptorInterceptor());
+        sqlSessionFactory.getConfiguration().addInterceptor(new PoJoResultEncrtptorInterceptor());
         return "interceptor";
     }
 
@@ -42,9 +41,8 @@ public class RegisterConfig {
      **/
     @Bean
     @ConditionalOnProperty(name = "field.encryptor.patternType", havingValue = PatternTypeConstant.DB)
-    public String MyBatisInterceptor(SqlSessionFactory sqlSessionFactory,
-                                     DBFieldEncryptorInterceptor dbFieldEncryptorInterceptor) {
-        sqlSessionFactory.getConfiguration().addInterceptor(dbFieldEncryptorInterceptor);
+    public String dbInterceptor(SqlSessionFactory sqlSessionFactory) {
+        sqlSessionFactory.getConfiguration().addInterceptor(new DBFieldEncryptorInterceptor());
         return "interceptor";
     }
 }

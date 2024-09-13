@@ -1,6 +1,5 @@
 package com.sangsang.interceptor;
 
-import com.sangsang.domain.constants.PatternTypeConstant;
 import com.sangsang.util.StringUtils;
 import com.sangsang.visitor.dbencrtptor.DBDencryptStatementVisitor;
 import net.sf.jsqlparser.parser.CCJSqlParserUtil;
@@ -10,8 +9,6 @@ import org.apache.ibatis.mapping.BoundSql;
 import org.apache.ibatis.plugin.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
-import org.springframework.stereotype.Component;
 
 import java.lang.reflect.Field;
 import java.sql.Connection;
@@ -24,8 +21,6 @@ import java.util.Properties;
  * @author liutangqi
  * @date 2023/11/9 19:03
  */
-@Component
-@ConditionalOnProperty(name = "field.encryptor.patternType", havingValue = PatternTypeConstant.DB)
 @Intercepts({@Signature(type = StatementHandler.class, method = "prepare", args = {Connection.class, Integer.class})})
 public class DBFieldEncryptorInterceptor implements Interceptor {
 

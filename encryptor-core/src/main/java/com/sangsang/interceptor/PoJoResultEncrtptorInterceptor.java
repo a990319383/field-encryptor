@@ -6,7 +6,6 @@ import com.sangsang.util.CollectionUtils;
 import com.sangsang.cache.FieldEncryptorPatternCache;
 import com.sangsang.domain.annos.FieldEncryptor;
 import com.sangsang.domain.constants.DecryptConstant;
-import com.sangsang.domain.constants.PatternTypeConstant;
 import com.sangsang.domain.dto.ColumnTableDto;
 import com.sangsang.domain.dto.FieldEncryptorInfoDto;
 import com.sangsang.util.JsqlparserUtil;
@@ -22,10 +21,8 @@ import org.apache.ibatis.mapping.BoundSql;
 import org.apache.ibatis.mapping.MappedStatement;
 import org.apache.ibatis.mapping.ParameterMapping;
 import org.apache.ibatis.plugin.*;
-import org.apache.ibatis.session.Configuration;
 import org.apache.ibatis.session.ResultHandler;
 import org.apache.ibatis.session.RowBounds;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 
 import java.lang.reflect.Field;
 import java.util.*;
@@ -42,7 +39,6 @@ import java.util.stream.Collectors;
         @Signature(type = Executor.class, method = "query", args = {MappedStatement.class, Object.class, RowBounds.class, ResultHandler.class, CacheKey.class, BoundSql.class}),
         @Signature(type = Executor.class, method = "query", args = {MappedStatement.class, Object.class, RowBounds.class, ResultHandler.class})
 })
-@ConditionalOnProperty(name = "field.encryptor.patternType", havingValue = PatternTypeConstant.POJO)
 public class PoJoResultEncrtptorInterceptor implements Interceptor {
 
 

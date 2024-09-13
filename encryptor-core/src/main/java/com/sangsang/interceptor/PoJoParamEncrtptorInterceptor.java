@@ -24,7 +24,6 @@ import org.apache.ibatis.reflection.factory.DefaultObjectFactory;
 import org.apache.ibatis.reflection.factory.ObjectFactory;
 import org.apache.ibatis.reflection.wrapper.DefaultObjectWrapperFactory;
 import org.apache.ibatis.reflection.wrapper.ObjectWrapperFactory;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 
 import java.sql.Connection;
 import java.util.*;
@@ -40,7 +39,6 @@ import java.util.stream.Collectors;
 @Intercepts({
         @Signature(type = StatementHandler.class, method = "prepare", args = {Connection.class, Integer.class})
 })
-@ConditionalOnProperty(name = "field.encryptor.patternType", havingValue = PatternTypeConstant.POJO)
 public class PoJoParamEncrtptorInterceptor implements Interceptor {
 
     private ReflectorFactory reflectorFactory = new DefaultReflectorFactory();
