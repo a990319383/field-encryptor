@@ -2,6 +2,7 @@ package com.sangsang.interceptor;
 
 import cn.hutool.core.lang.Pair;
 import cn.hutool.core.util.StrUtil;
+import com.sangsang.domain.constants.SymbolConstant;
 import com.sangsang.util.CollectionUtils;
 import com.sangsang.cache.FieldEncryptorPatternCache;
 import com.sangsang.domain.annos.FieldEncryptor;
@@ -187,7 +188,8 @@ public class PoJoResultEncrtptorInterceptor implements Interceptor {
         //从所有字段中查到这个字段的信息（理论上只会存在一个）
         return fieldInfos.stream()
                 .filter(f -> Objects.equals(fieldName, f.getColumnName())
-                        || Objects.equals(fieldName, StrUtil.toCamelCase(f.getColumnName())))
+                        || Objects.equals(fieldName, StrUtil.toCamelCase(f.getColumnName()))
+                        || Objects.equals(fieldName, f.getColumnName().replaceAll(SymbolConstant.DOUBLE_QUOTES, SymbolConstant.BLANK)))
                 .findAny()
                 .map(FieldEncryptorInfoDto::getFieldEncryptor)
                 .orElse(null);
