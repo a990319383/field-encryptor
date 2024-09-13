@@ -189,7 +189,8 @@ public class PoJoResultEncrtptorInterceptor implements Interceptor {
         return fieldInfos.stream()
                 .filter(f -> Objects.equals(fieldName, f.getColumnName())
                         || Objects.equals(fieldName, StrUtil.toCamelCase(f.getColumnName()))
-                        || Objects.equals(fieldName, f.getColumnName().replaceAll(SymbolConstant.DOUBLE_QUOTES, SymbolConstant.BLANK)))
+                        || Objects.equals(fieldName, f.getColumnName().replaceAll(SymbolConstant.DOUBLE_QUOTES, SymbolConstant.BLANK))
+                        || Objects.equals(fieldName, f.getColumnName().replaceAll(SymbolConstant.FLOAT, SymbolConstant.BLANK)))
                 .findAny()
                 .map(FieldEncryptorInfoDto::getFieldEncryptor)
                 .orElse(null);
