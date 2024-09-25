@@ -35,8 +35,8 @@ public class ColumnTableDto {
         return false;
     }
 
-    public static ColumnTableDto.ColumnTableDtoBuilder builder() {
-        return new ColumnTableDto.ColumnTableDtoBuilder();
+    public static ColumnTableDtoBuilder builder() {
+        return new ColumnTableDtoBuilder();
     }
 
     public String getTableAliasName() {
@@ -117,22 +117,22 @@ public class ColumnTableDto {
         ColumnTableDtoBuilder() {
         }
 
-        public ColumnTableDto.ColumnTableDtoBuilder tableAliasName(String tableAliasName) {
+        public ColumnTableDtoBuilder tableAliasName(String tableAliasName) {
             this.tableAliasName = tableAliasName;
             return this;
         }
 
-        public ColumnTableDto.ColumnTableDtoBuilder sourceTableName(String sourceTableName) {
+        public ColumnTableDtoBuilder sourceTableName(String sourceTableName) {
             this.sourceTableName = sourceTableName;
             return this;
         }
 
-        public ColumnTableDto.ColumnTableDtoBuilder sourceColumn(String sourceColumn) {
+        public ColumnTableDtoBuilder sourceColumn(String sourceColumn) {
             this.sourceColumn = sourceColumn;
             return this;
         }
 
-        public ColumnTableDto.ColumnTableDtoBuilder fromSourceTable(boolean fromSourceTable) {
+        public ColumnTableDtoBuilder fromSourceTable(boolean fromSourceTable) {
             this.fromSourceTable$value = fromSourceTable;
             this.fromSourceTable$set = true;
             return this;

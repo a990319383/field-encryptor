@@ -18,8 +18,8 @@ public class NameAliasDto {
     private String alias;
 
     //------------------------lombok分割线（尽量少引依赖的原则，项目不引入lombok，下面拷贝lombok编译后的结果）---------------------------------------------------------
-    public static NameAliasDto.NameAliasDtoBuilder builder() {
-        return new NameAliasDto.NameAliasDtoBuilder();
+    public static NameAliasDtoBuilder builder() {
+        return new NameAliasDtoBuilder();
     }
 
     public String getName() {
@@ -103,12 +103,12 @@ public class NameAliasDto {
         NameAliasDtoBuilder() {
         }
 
-        public NameAliasDto.NameAliasDtoBuilder name(String name) {
+        public NameAliasDtoBuilder name(String name) {
             this.name = name;
             return this;
         }
 
-        public NameAliasDto.NameAliasDtoBuilder alias(String alias) {
+        public NameAliasDtoBuilder alias(String alias) {
             this.alias = alias;
             return this;
         }

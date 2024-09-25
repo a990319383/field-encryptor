@@ -11,7 +11,6 @@ import java.util.List;
  * @author liutangqi
  * @date 2024/4/8 15:22
  */
-@Component
 @ConfigurationProperties(prefix = "field.encryptor")
 public class EncryptorProperties {
     /**
@@ -31,6 +30,14 @@ public class EncryptorProperties {
      * @see PatternTypeConstant
      */
     private String patternType;
+
+    /**
+     * pojo模式下，是否支持同一#{}入参，拥有不同的值
+     * 栗子： select * from tb_user where phone = #{ph} and encrypt_phone = #{ph} 其中 phone 和 encrypt_phone 两个字段加密算法不同，或者一个加密，一个不加密
+     * 如果需要兼容上述场景的话，则将此配置设置为true
+     * 注意：设置为true会在拦截器中将parameterMappings 里面的字段名进行修改，如果其它拦截器有对这个进行应用的话，可能会导致不兼容
+     */
+    private boolean pojoReplaceParameterMapping = false;
 
 
     public List<String> getScanEntityPackage() {
@@ -55,5 +62,13 @@ public class EncryptorProperties {
 
     public void setPatternType(String patternType) {
         this.patternType = patternType;
+    }
+
+    public boolean isPojoReplaceParameterMapping() {
+        return pojoReplaceParameterMapping;
+    }
+
+    public void setPojoReplaceParameterMapping(boolean pojoReplaceParameterMapping) {
+        this.pojoReplaceParameterMapping = pojoReplaceParameterMapping;
     }
 }

@@ -23,8 +23,8 @@ public class TableFieldDto {
     //------------------------lombok分割线（尽量少引依赖的原则，项目不引入lombok，下面拷贝lombok编译后的结果）---------------------------------------------------------
 
 
-    public static TableFieldDto.TableFieldDtoBuilder builder() {
-        return new TableFieldDto.TableFieldDtoBuilder();
+    public static TableFieldDtoBuilder builder() {
+        return new TableFieldDtoBuilder();
     }
 
     public String getFieldName() {
@@ -81,12 +81,12 @@ public class TableFieldDto {
         TableFieldDtoBuilder() {
         }
 
-        public TableFieldDto.TableFieldDtoBuilder fieldName(String fieldName) {
+        public TableFieldDtoBuilder fieldName(String fieldName) {
             this.fieldName = fieldName;
             return this;
         }
 
-        public TableFieldDto.TableFieldDtoBuilder fieldEncryptor(FieldEncryptor fieldEncryptor) {
+        public TableFieldDtoBuilder fieldEncryptor(FieldEncryptor fieldEncryptor) {
             this.fieldEncryptor = fieldEncryptor;
             return this;
         }

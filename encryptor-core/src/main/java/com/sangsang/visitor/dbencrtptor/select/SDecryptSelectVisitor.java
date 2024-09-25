@@ -1,9 +1,9 @@
 package com.sangsang.visitor.dbencrtptor.select;
 
-import com.sangsang.util.CollectionUtils;
 import com.sangsang.domain.constants.NumberConstant;
 import com.sangsang.domain.dto.BaseFieldParseTable;
 import com.sangsang.domain.dto.FieldInfoDto;
+import com.sangsang.util.CollectionUtils;
 import com.sangsang.util.JsqlparserUtil;
 import com.sangsang.visitor.dbencrtptor.where.WhereDencryptExpressionVisitor;
 import com.sangsang.visitor.fieldparse.FieldParseParseTableSelectVisitor;

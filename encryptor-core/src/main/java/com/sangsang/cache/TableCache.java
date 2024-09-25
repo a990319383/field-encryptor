@@ -6,6 +6,7 @@ import com.baomidou.mybatisplus.annotation.TableName;
 import com.sangsang.domain.annos.FieldEncryptor;
 import com.sangsang.domain.dto.TableFieldDto;
 import com.sangsang.domain.dto.TableInfoDto;
+import com.sangsang.domain.exception.FieldEncryptorException;
 import com.sangsang.encryptor.EncryptorProperties;
 import com.sangsang.util.ClassScanerUtil;
 import com.sangsang.util.ReflectUtils;
@@ -13,12 +14,9 @@ import com.sangsang.util.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.BeansException;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.config.BeanPostProcessor;
-import org.springframework.context.annotation.Configuration;
 import org.springframework.util.CollectionUtils;
 
-import javax.annotation.PostConstruct;
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 import java.util.*;
@@ -30,12 +28,14 @@ import java.util.stream.Collectors;
  * @author liutangqi
  * @date 2024/2/1 13:27
  */
-@Configuration
 public class TableCache implements BeanPostProcessor {
     private static final Logger log = LoggerFactory.getLogger(TableCache.class);
 
-    @Autowired
     private EncryptorProperties encryptorProperties;
+
+    public TableCache(EncryptorProperties encryptorProperties) {
+        this.encryptorProperties = encryptorProperties;
+    }
 
     /**
      * key: 表名小写  value: (key:字段名小写  value: 实体类上标注的@FieldEncryptor注解)
@@ -60,7 +60,6 @@ public class TableCache implements BeanPostProcessor {
      * @date 2024/2/1 13:27
      * @Param []
      **/
-    @PostConstruct
     public void init() {
         long startTime = System.currentTimeMillis();
         List<TableInfoDto> tableInfoDtos = null;
@@ -75,10 +74,11 @@ public class TableCache implements BeanPostProcessor {
                     .collect(Collectors.toList());
         }
 
-        //2.如果没有指定扫描路径，则从mybatis-plus提供的工具，获取当前项目模块加载的表的实体类信息 （目前已经剥离mybatis-plus）
+        //2.如果没有指定扫描路径，则从mybatis-plus提供的工具，获取当前项目模块加载的表的实体类信息
         if (CollectionUtils.isEmpty(encryptorProperties.getScanEntityPackage())) {
             log.info("【field-encryptor】初始化表字段加密信息，未指定实体类扫描路径");
-            throw new RuntimeException("【field-encryptor】未指定实体类扫描路径");
+            //tableInfoDtos = parseTableInfoByMybatisPlus();  设计中剥离mybatis-plus
+            throw new FieldEncryptorException("未指定实体类扫描路径");
         }
 
         //3.将表结构信息处理，加载到缓存的各个Map中
@@ -175,6 +175,30 @@ public class TableCache implements BeanPostProcessor {
     }
 
 
+    /**
+     * 实现父类default方法，避免低版本不兼容，找不到实现类
+     *
+     * @author liutangqi
+     * @date 2024/9/10 11:36
+     * @Param [bean, beanName]
+     **/
+    @Override
+    public Object postProcessBeforeInitialization(Object bean, String beanName) throws BeansException {
+        return bean;
+    }
+
+    /**
+     * 实现父类default方法，避免低版本不兼容，找不到实现类
+     *
+     * @author liutangqi
+     * @date 2024/9/10 11:36
+     * @Param [bean, beanName]
+     **/
+    @Override
+    public Object postProcessAfterInitialization(Object bean, String beanName) throws BeansException {
+        return bean;
+    }
+
     //--------------------------------------------下面是对外提供的方法---------------------------------------------------------------
 
     /**
@@ -210,27 +234,4 @@ public class TableCache implements BeanPostProcessor {
         return TABLE_FIELD_MAP;
     }
 
-    /**
-     * 实现父类default方法，避免低版本不兼容，找不到实现类
-     *
-     * @author liutangqi
-     * @date 2024/9/10 11:36
-     * @Param [bean, beanName]
-     **/
-    @Override
-    public Object postProcessBeforeInitialization(Object bean, String beanName) throws BeansException {
-        return bean;
-    }
-
-    /**
-     * 实现父类default方法，避免低版本不兼容，找不到实现类
-     *
-     * @author liutangqi
-     * @date 2024/9/10 11:36
-     * @Param [bean, beanName]
-     **/
-    @Override
-    public Object postProcessAfterInitialization(Object bean, String beanName) throws BeansException {
-        return bean;
-    }
 }

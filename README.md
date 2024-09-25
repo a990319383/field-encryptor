@@ -1,116 +1,216 @@
-# field-encryptor
+# 数据库加解密组件使用文档
 
-#### 介绍
-​	基于mybatis-plus 的数据库自动加解密插件
+## 技术支持
 
-#### 软件架构
-​	 基于jsqlparse解析执行sql,利用mysql自己的加解密库函数对执行的sql中需要加解密的字段进行自动加解密
+- 990319383@qq.com
 
-​	由mybatis拦截器，替换原sql，达到无侵入的效果
+## 版本迭代记录
 
-​	操作简单，只用在实体类指定需要加解密的字段，对业务代码0侵入
+| 版本号 |                主要内容                |  日期  |
+| :----: | :------------------------------------: | :----: |
+|  1.0   |         支持db模式的自动加解密         | 2024/5 |
+| 1.0  | 增加pojo模式，pojo同时支持多种算法共存 | 2024/9 |
+
+## 使用场景
+
+> 解决等保，数据安全等场景下，数据库需要进行加密存储的问题
+
+## 简介
+
+> 本组件基于mybatis拦截器 + jsqlparser ，解析执行sql，动态替换加解密字段，实现字段自动加解密
+>
+> 仅需标注实体类密文字段，无需每个接口进行标注，实现业务代码0侵入
+
+## 详细介绍
+
+### 1.加解密模式
+
+- db模式
+  - 基本实现原理
+    - 通过直接改写原sql，利用数据库本身的加解密库函数对字段进行加解密
+  - 多算法支持
+    - 项目仅支持一种加解密算法
+  - 优点
+    - 加解密场景适配性强，支持列运算的字符加解密
+    - 历史数据清洗方便
+    - 支持模糊查询
+  - 缺点
+    - 数据库本身支持的加解密算法较少，加密算法扩展性弱，低版本缺失加解密算法
+    - 增加额外数据库计算开销
+- pojo模式
+  - 基本实现
+    - 通过java库在拦截器层对sql的入参，响应进行加解密
+  - 多算法支持
+    - 项目针对不同字段可配置多种加解密算法
+  - 优点
+    - 加解密算法可选择性强，java能实现的算法都支持
+  - 缺点
+    - 加解密场景适配弱，仅对sql入参响应进行加解密，无法针对列运算做处理
+    - 历史数据清洗麻烦
+    - 一般情况下不支持模糊查询，如果以牺牲存储空间的方式选择特定算法，可以支持模糊搜索
+
+### 2.大致处理逻辑
+
+> - 项目启动时，将指定包路径下面的所有@TableName标注的实体类及其字段加载到本地缓存中
+> - sql执行的时候，通过jsqlparser 解析语法树，得到每个字段所属的表关系，从而知道这个字段是否需要进行加解密
+> - 通过拦截器，动态替换sql或者修改入参响应，达到不修改业务代码，实现加解密的效果
+
+### 3.效果示例
+
+```sql
+-- 建表语句 其中phone字段存的是密文
+CREATE TABLE `tb_user` (
+  `id` bigint(20) NOT NULL AUTO_INCREMENT,
+  `user_name` varchar(100) DEFAULT NULL COMMENT '用户名',
+  `login_name` varchar(100) DEFAULT NULL COMMENT '登录名',
+  `login_pwd` varchar(100) DEFAULT NULL COMMENT '登录密码',
+  `phone` varchar(50) DEFAULT NULL COMMENT '电话号码',
+  `role_id` bigint(20) DEFAULT NULL COMMENT '角色id',
+  `create_time` datetime DEFAULT NULL,
+  `update_time` datetime DEFAULT NULL,
+  PRIMARY KEY (`id`)
+) COMMENT='用户'
+-- 查询语句
+select phone,user_name from tb_user where phone = ?
+```
+
+- db模式
+
+  拦截器会自动把sql替换成下面的
+
+  ```sql
+  -- select查询的会进行解密转换  where条件的会进行加密转换
+  SELECT 
+  CAST(AES_DECRYPT(FROM_BASE64(phone), '7uq?q8g3@q') AS CHAR) AS phone,
+  user_name 
+  FROM tb_user 
+  WHERE phone = TO_BASE64(AES_ENCRYPT(?, '7uq?q8g3@q'))
+  ```
+
+- pojo模式
+
+  原sql不做变更，在拦截器这层，对入参进行加密，拿到sql结果集后，对响应进行解密
+
+## 快速接入
+
+### 1.引入依赖
+
+- 实体类抽离成单独的模块，业务sql的mapper在单独的模块
+
+  - 实体类模块
+
+    ```
+    <dependency>
+        <groupId>com.sinoiov</groupId>
+        <artifactId>encryptor-annos</artifactId>
+        <version>对应版本</version>
+    </dependency>
+    ```
+
+  - 业务sql模块   
+
+    ```
+    <dependency>
+        <groupId>com.sinoiov</groupId>
+        <artifactId>encryptor-core</artifactId>
+        <version>对应版本</version>
+    </dependency>
+    ```
+
+- 实体类和业务sql都在一起（<font color='orange'>大多数场景 </font>）
+
+  ```
+  <dependency>
+      <groupId>com.sinoiov</groupId>
+      <artifactId>encryptor-core</artifactId>
+      <version>对应版本</version>
+  </dependency>
+  ```
+
+### 2.增加配置
+
+```
+#自定义秘钥，当不自定义加解密算法时，这个值建议自定义
+field.encryptor.secretKey=7uq?q8g3@q
+#加密模式，目前支持pojo/db两种模式
+field.encryptor.patternType=pojo
+#指定实体类包路径（项目启动时会扫描指定路径下的实体类，加载到本地缓存中）
+field.encryptor.scanEntityPackage[0]=com.sinoiov.model
+```
+
+### 3.标注需要加解密的字段
+
+找到实体类(<font color='red'>@TableName标注的</font>)，在其中需要加解密的字段上面标注<font color='red'>@FieldEncryptor</font>
+
+```java
+@TableName("ts_basic_ticket")
+public class BasicTicketEntity extends SupperEntity {
+    /**
+     * 物料名称
+     */
+    @FieldEncryptor
+    private String materialName;
+}
+```
+
+<font color='red'>**注意**</font>
+
+​	有些项目没有使用mybatis-plus，使用的是mybatis的老项目，项目中可能没有“实体类”这个概念
+
+​	这种情况下可以用第三方工具，把项目数据库中的表都导出标注好@TableName的实体类，扔到项目的一个指定包下面即可
+
+## 个性化配置
+
+### 1.自定义秘钥
+
+配置文件中增加下面参数，默认的加解密算法会使用此秘钥进行加解密处理
+
+```
+#自定义秘钥，当不自定义加解密算法时，这个值建议自定义
+field.encryptor.secretKey=7uq?q8g3@q
+```
+
+- db模式
+
+  默认采用AES加密
+
+- pojo模式
+
+  默认采用DES加密
+
+### 2.自定义加解密函数
+
+当默认的加解密算法不能适配项目场景，可以选择下面的自定义加解密函数
+
+- db模式
+  - 实现DBFieldEncryptorPattern接口，实现其中的加解密方法
+  - 将自定义实现的方法交给spring容器管理（下面两种方法均可）
+    - 类上标注@Component
+    - 使用@Bean的方式
+  - 栗子
+
+```java
+参考 com.sangsang.encryptor.db.DefaultDBFieldEncryptorPattern 默认实现类
+```
+
+- pojo模式
+  - 实现PoJoFieldEncryptorPattern接口，实现其中的加解密方法，和额外的枚举PoJoAlgorithmEnum
+  - 可定义多个加解密算法
+    - 每种算法的encryptorAlgorithm()方法中，返回的枚举PoJoAlgorithmEnum必须不同
+    - 要求其中必须有 PoJoAlgorithmEnum.ALGORITHM_DEFAULT 
+  - 将自定义实现的方法交给spring管理（方法同db模式，这里略）
+  - 实体类上面标注字段时可以自己选择加解密算法
+    - @FieldEncryptor(pojoAlgorithm = PoJoAlgorithmEnum.ALGORITHM_1)
+    - @FieldEncryptor 不填的，默认是PoJoAlgorithmEnum.ALGORITHM_DEFAULT 对应的算法
+
+## 版本后续规划
+
+- 规划1
+
+  出于性能考虑，从数据库到数据库的对比，修改，插入，默认都是密文，所以对此类场景是没有做加解密处理的，后续迭代中会针对此场景做出优化，当两者一个加密一个不加密时，会选择合适的字段进行加解密
+
+- 规划2
+
+  当前jsqlparser 使用版本为4.4，还存在部分语法不兼容的问题（特别是ck），后续考虑出高版本的分支	
 
 
-#### 安装教程
-
-1. 使用
-
-   - 引入pom依赖
-
-     - 如果数据库实体类和引入mybatis-plus 的不在一个模块的话，实体类的模块只引入encryptor-annos
-
-       之前有mybatis-plus依赖的业务模块再引入encryptor-core
-
-     - 如果实体类和引入mybatis-plus的业务模块在一起的话，直接引入encryptor-core即可
-
-   - 需要加解密的表的**实体类**的对应字段上面标注 @FieldEncryptor
-
-     - 注意：只需要在@TableName的实体类上标注加密字段，不需要每个接口请求响应去标注
-
-   - 将项目表结构信息加载入缓存
-
-     - 多模块项目，所有的实体类不在同一个JVM的时候需要手动指定扫描实体类的路径
-
-       ```
-       field.encryptor.scanEntityPackage[0]=com..*.model
-       ```
-
-     - 所有实体类都在一个JVM时，不需要额外配置，默认加载当前模块mybatis-plus加载的实体类
-
-   - 自定义加密秘钥
-
-     ```
-     field.encryptor.secretKey=xxxx自定义秘钥
-     ```
-
-2. 个性化配置
-
-   - 自定义秘钥 
-
-     配置文件中加入 field.encryptor.secretKey = 自己的秘钥
-
-     没有配置的话，采用插件默认的秘钥
-
-   - 自定义加解密算法
-
-     默认加密算法是AES加密
-
-     自定义的话，实现FieldEncryptorPattern 接口，实现其中的加解密方法，并加上@Component即可
-
-#### 使用说明
-
-1. 此插件是对原字段进行加解密处理，所以支持 like 模糊匹配
-
-2. 由于有列运算，会造成索引失效，当加密字段有作为索引的需求的话，建议在其他条件比如时间上加上索引
-
-3. 如果数据很大，必须采用此字段作为索引的话，建议做出如下改造
-
-   栗子：
-
-   - 表结构
-
-   ```sql
-   CREATE TABLE `tb_user` (
-     `id` bigint(20) NOT NULL AUTO_INCREMENT,
-     `user_name` varchar(100) DEFAULT NULL COMMENT '用户名',
-     `phone` varchar(50) DEFAULT NULL COMMENT '电话号码',
-     `create_time` datetime DEFAULT NULL,
-     `update_time` datetime DEFAULT NULL,
-     PRIMARY KEY (`id`),
-     KEY `tb_user_phone_IDX` (`phone`) USING BTREE
-   ) COMMENT='用户'
-   ```
-
-   - 需求
-
-     上述表结构下，需要对phone进行加解密，但是业务有对phone很强的索引需求
-
-   - 建议改造
-
-     这种情况下，建议对原有sql进行改造，先利用覆盖索引，让phone索引生效，再根据id去检索这条数据
-
-   - 具体sql
-
-     - 原sql
-
-       select * from tb_user where phone like "18%"
-
-     - 改造后
-
-       select id from tb_user where phone like "18%"
-
-       select * from tb_user where id in (上面sql的结果集)
-
-#### 注意场景
-
--  为了性能考虑，表到表之间的insert，update 是没有进行加解密解析的，也就是说某个字段在A表中是加密的，则在B表中的这个字段，也必须是加密的。这也是符合数据安全的需求场景的
-
-#### 不兼容语法
-
--  不支持 convert() 函数的解析（jsqlparse最新版本仍不支持此语法的解析）
-
-#### 参与贡献
-
-gitee地址：
-
-​	[field-encryptor: 基于mybatis-plus 的数据库自动加解密插件 (gitee.com)](https://gitee.com/tired_of_the_water/field-encryptor)

@@ -13,6 +13,7 @@ public interface PatternTypeConstant {
     String DB = "db";
     /**
      * 利用java的函数对入参响应进行加解密
+     * 这种模式支持多种加解密算法
      */
     String POJO = "pojo";
 }

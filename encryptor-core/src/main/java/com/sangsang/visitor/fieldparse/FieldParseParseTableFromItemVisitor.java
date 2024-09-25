@@ -91,9 +91,21 @@ public class FieldParseParseTableFromItemVisitor extends BaseFieldParseTable imp
         System.out.println("当前语法未适配");
     }
 
+    /**
+     * 某些语法构建出一张虚拟表时会走这个
+     * 此场景一般不会有加解密的需求
+     * 栗子：ck 中的 numbers()函数就会走这里
+     * SELECT
+     * toDate(addDays(fromUnixTimestamp64Milli(#{startTime}, 'UTC'),number)) as statTime
+     * from numbers(1,dateDiff('day', fromUnixTimestamp64Milli(#{startTime}, 'UTC') , fromUnixTimestamp64Milli( #{endTime}, 'UTC')))
+     *
+     * @author liutangqi
+     * @date 2024/9/24 9:57
+     * @Param [tableFunction]
+     **/
     @Override
     public void visit(TableFunction tableFunction) {
-        System.out.println("当前语法未适配");
+//        System.out.println("当前语法未适配");
     }
 
     @Override

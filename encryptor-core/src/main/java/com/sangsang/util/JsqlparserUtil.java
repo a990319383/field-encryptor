@@ -33,6 +33,7 @@ import java.util.stream.Collectors;
  */
 public class JsqlparserUtil {
 
+
     /**
      * 将 column 变成function转换为查询项
      * 备注：暂未使用此方法，此方法只为记录转换拼接的语法
@@ -295,16 +296,16 @@ public class JsqlparserUtil {
 
 
     /**
-     * 根据表和字段信息，判断该字段是否需要加解密
+     * 根据表和字段信息，从缓存中找到对应字段上面标注的注解
      *
      * @author liutangqi
      * @date 2024/7/24 15:24
      * @Param [dto]
      **/
-    public static boolean needEncrypt(ColumnTableDto dto) {
+    public static FieldEncryptor parseFieldEncryptor(ColumnTableDto dto) {
         return TableCache.getTableFieldEncryptInfo()
                 .getOrDefault(dto.getSourceTableName(), new HashMap<>())
-                .get(dto.getSourceColumn()) != null;
+                .get(dto.getSourceColumn());
     }
 
 

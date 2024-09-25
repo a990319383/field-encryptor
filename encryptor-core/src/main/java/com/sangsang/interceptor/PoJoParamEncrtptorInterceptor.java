@@ -2,12 +2,14 @@ package com.sangsang.interceptor;
 
 import cn.hutool.core.lang.Pair;
 import com.sangsang.cache.FieldEncryptorPatternCache;
+import com.sangsang.domain.annos.FieldEncryptor;
 import com.sangsang.domain.constants.DecryptConstant;
-import com.sangsang.domain.constants.PatternTypeConstant;
 import com.sangsang.domain.constants.SymbolConstant;
 import com.sangsang.domain.dto.ColumnTableDto;
 import com.sangsang.domain.dto.FieldEncryptorInfoDto;
+import com.sangsang.encryptor.EncryptorProperties;
 import com.sangsang.util.JsqlparserUtil;
+import com.sangsang.util.ReflectUtils;
 import com.sangsang.util.StringUtils;
 import com.sangsang.visitor.pojoencrtptor.PoJoEncrtptorStatementVisitor;
 import net.sf.jsqlparser.JSQLParserException;
@@ -24,6 +26,11 @@ import org.apache.ibatis.reflection.factory.DefaultObjectFactory;
 import org.apache.ibatis.reflection.factory.ObjectFactory;
 import org.apache.ibatis.reflection.wrapper.DefaultObjectWrapperFactory;
 import org.apache.ibatis.reflection.wrapper.ObjectWrapperFactory;
+import org.apache.ibatis.session.SqlSessionFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.BeansException;
+import org.springframework.beans.factory.config.BeanPostProcessor;
 
 import java.sql.Connection;
 import java.util.*;
@@ -39,11 +46,17 @@ import java.util.stream.Collectors;
 @Intercepts({
         @Signature(type = StatementHandler.class, method = "prepare", args = {Connection.class, Integer.class})
 })
-public class PoJoParamEncrtptorInterceptor implements Interceptor {
+public class PoJoParamEncrtptorInterceptor implements Interceptor, BeanPostProcessor {
 
     private ReflectorFactory reflectorFactory = new DefaultReflectorFactory();
     private ObjectFactory objectFactory = new DefaultObjectFactory();
     private ObjectWrapperFactory objectWrapperFactory = new DefaultObjectWrapperFactory();
+    private EncryptorProperties encryptorProperties;
+    private static final Logger log = LoggerFactory.getLogger(PoJoParamEncrtptorInterceptor.class);
+
+    public PoJoParamEncrtptorInterceptor(EncryptorProperties encryptorProperties) {
+        this.encryptorProperties = encryptorProperties;
+    }
 
     /**
      * 将入参的字段和占位符？ 对应起来  （boundSql.getParameterMappings()获取的参数和占位符的顺序是一致的，这个结果集里面也有对应的占位符的key，这样就可以全部关联起来了）
@@ -62,14 +75,47 @@ public class PoJoParamEncrtptorInterceptor implements Interceptor {
         BoundSql boundSql = statementHandler.getBoundSql();
         String originalSql = boundSql.getSql();
 
-        //2.解析sql,获取入参和响应对应的表字段关系
+        //2.当前sql如果肯定不需要加解密，则不解析sql，直接返回
+        if (StringUtils.notExistEncryptor(originalSql)) {
+            return invocation.proceed();
+        }
+
+        //3.解析sql,获取入参和响应对应的表字段关系
         Pair<Map<String, ColumnTableDto>, List<FieldEncryptorInfoDto>> pair = parseSql(originalSql);
 
-        //3.处理入参
-        disposeParam(boundSql, pair);
+        //4.处理入参
+        Map<String, String> propertyMap = disposeParam(boundSql, pair);
 
-        //4.执行返回
-        return invocation.proceed();
+        //5.执行sql
+        Object proceed = invocation.proceed();
+
+        //6.将反射修改了property的给改回去，避免一级缓存导致找不到getter方法报错
+        revivificationParam(propertyMap, boundSql);
+
+        //7.返回结果
+        return proceed;
+    }
+
+    /**
+     * 将反射修改了property的给改回去，避免一级缓存导致找不到getter方法报错
+     *
+     * @author liutangqi
+     * @date 2024/9/23 19:30
+     * @Param [propertyMap, boundSql]
+     **/
+    private void revivificationParam(Map<String, String> propertyMap, BoundSql boundSql) {
+        if (propertyMap == null || propertyMap.isEmpty()) {
+            return;
+        }
+
+        for (ParameterMapping parameterMapping : boundSql.getParameterMappings()) {
+            String originalValue = propertyMap.get(parameterMapping.getProperty());
+            if (StringUtils.isNotBlank(originalValue)) {
+                //反射修改property为原值
+                ReflectUtils.setFieldValue(parameterMapping, "property", originalValue);
+            }
+        }
+
     }
 
 
@@ -98,59 +144,70 @@ public class PoJoParamEncrtptorInterceptor implements Interceptor {
     /**
      * 将入参中需要加密的进行加密处理
      *
+     * @return 反射替换过的property；key:替换后的值 value:替换前的值
      * @author liutangqi
      * @date 2024/7/18 15:18
      * @Param [parameterObject, pair]
      **/
-    private void disposeParam(BoundSql boundSql, Pair<Map<String, ColumnTableDto>, List<FieldEncryptorInfoDto>> pair) {
-        //1.解析入参和我们自定义占位符的对应关系
-        Map<String, ParameterMapping> objectObjectHashMap = new HashMap<>();
+    private Map<String, String> disposeParam(BoundSql boundSql, Pair<Map<String, ColumnTableDto>, List<FieldEncryptorInfoDto>> pair) {
+        Map<String, String> propertyMap = new HashMap<>();
+        //1.获取所有入参（这个的顺序和占位符顺序一致）
         List<ParameterMapping> parameterMappings = boundSql.getParameterMappings();
-        for (int i = 0; i < parameterMappings.size(); i++) {
-            objectObjectHashMap.put(DecryptConstant.PLACEHOLDER + i, parameterMappings.get(i));
-        }
 
         //2.将其中需要加密的字段进行加密(注意：这里只返回key value对应关系，不能现在就boundSql.setAdditionalParameter ，否则会导致 parseObj()方法中 hasAdditionalParameter()结果出错 aaa.bbb.ccc 这种方法只判断里面是否有aaa)
-        Map<String, Object> propertyMap = new HashMap<>();
-        for (ParameterMapping parameterMapping : parameterMappings) {
+        Map<String, Object> parameterValue = new HashMap<>();
+        for (int i = 0; i < parameterMappings.size(); i++) {
+            ParameterMapping parameterMapping = parameterMappings.get(i);
+            //sql关系中，占位符被统一替换成了这个
+            String placeholderKey = DecryptConstant.PLACEHOLDER + i;
             //获取当前映射字段的入参值
             Object propertyValue = parseObj(boundSql, parameterMapping);
 
             //如果需要加密的话，将加密后的值，替换原有入参
-            if (propertyValue instanceof String && encrytor(parameterMapping, objectObjectHashMap, pair.getKey())) {
-                String ciphertext = FieldEncryptorPatternCache.getBeanInstance().encryption((String) propertyValue);
-                propertyMap.put(parameterMapping.getProperty(), ciphertext);
+            FieldEncryptor fieldEncryptor = parseFieldEncryptor(placeholderKey, pair.getKey());
+            if (propertyValue instanceof String && fieldEncryptor != null) {
+                String ciphertext = FieldEncryptorPatternCache.getPoJoInstance(fieldEncryptor.pojoAlgorithm()).encryption((String) propertyValue);
+                parameterValue.put(String.valueOf(i), ciphertext);
             } else {
                 //不需要加密的话，则入参还是使用旧值
-                propertyMap.put(parameterMapping.getProperty(), propertyValue);
+                parameterValue.put(String.valueOf(i), propertyValue);
             }
         }
 
         //3.将处理好的结果集进行设置值
-        for (Map.Entry<String, Object> entry : propertyMap.entrySet()) {
-            boundSql.setAdditionalParameter(entry.getKey(), entry.getValue());
+        //3.1 配置了允许替换parameterMappings的变量名 并且sql中一个占位符出现多次，则将入参变量名进行替换
+        if (this.encryptorProperties.isPojoReplaceParameterMapping()
+                && parameterMappings.size() != parameterMappings.stream().map(ParameterMapping::getProperty).distinct().count()) {
+            for (int i = 0; i < parameterMappings.size(); i++) {
+                //设置的新变量名的名字
+                String newParamPlaceholder = DecryptConstant.NEW_PARAM_PLACEHOLDER + i;
+                //记录修改的property 新旧值对应关系
+                propertyMap.put(newParamPlaceholder, parameterMappings.get(i).getProperty());
+                //反射修改property
+                ReflectUtils.setFieldValue(parameterMappings.get(i), "property", newParamPlaceholder);
+                //给新的字段名设置值
+                boundSql.setAdditionalParameter(newParamPlaceholder, parameterValue.get(String.valueOf(i)));
+            }
+        } else {
+            //3.2 没有开启配置，或者sql中一个入参只出现了一次，则不修改原parameterMappings的变量名
+            for (int i = 0; i < parameterMappings.size(); i++) {
+                boundSql.setAdditionalParameter(parameterMappings.get(i).getProperty(), parameterValue.get(String.valueOf(i)));
+            }
         }
+        return propertyMap;
     }
 
 
     /**
-     * 根据占位符名字，判断当前字段是否需要加解密
+     * 根据占位符名字获取sql解析结果集中字段上的注解
      *
      * @author liutangqi
-     * @date 2024/7/24 17:23
-     * @Param [propertyMapping:当前占位符映射对象 , objectObjectHashMap 占位符映射对象和自定义占位符对应关系, placeholderColumnTableMap 自定义占位单映射关系]
+     * @date 2024/9/20 17:19
+     * @Param [placeholderKey, placeholderColumnTableMap]
      **/
-    private boolean encrytor(ParameterMapping propertyMapping, Map<String, ParameterMapping> objectObjectHashMap, Map<String, ColumnTableDto> placeholderColumnTableMap) {
-        //1.过滤出当前入参对应的所有的自定义占位符（正常情况，一个入参，即使对应多个表字段，这些表字段是否需要加密都是统一的）
-        List<String> placeholders = objectObjectHashMap.entrySet()
-                .stream()
-                .filter(f -> Objects.equals(f.getValue().getProperty(), propertyMapping.getProperty()))
-                .map(Map.Entry::getKey)
-                .collect(Collectors.toList());
-        //2.这些入参只要有一个需要加密，则需要进行加密处理
-        return placeholders.stream()
-                .filter(f -> placeholderColumnTableMap.get(f) != null && JsqlparserUtil.needEncrypt(placeholderColumnTableMap.get(f)))
-                .count() > 0;
+    private FieldEncryptor parseFieldEncryptor(String placeholderKey, Map<String, ColumnTableDto> placeholderColumnTableMap) {
+        ColumnTableDto columnTableDto = placeholderColumnTableMap.getOrDefault(placeholderKey, new ColumnTableDto());
+        return JsqlparserUtil.parseFieldEncryptor(columnTableDto);
     }
 
     /**
@@ -200,4 +257,43 @@ public class PoJoParamEncrtptorInterceptor implements Interceptor {
     @Override
     public void setProperties(Properties properties) {
     }
+
+
+    /**
+     * 实现父类default方法，避免低版本不兼容，找不到实现类
+     *
+     * @author liutangqi
+     * @date 2024/9/10 11:36
+     * @Param [bean, beanName]
+     **/
+    @Override
+    public Object postProcessBeforeInitialization(Object bean, String beanName) throws BeansException {
+        return bean;
+    }
+
+    /**
+     * 实现父类default方法，避免低版本不兼容，找不到实现类
+     *
+     * @author liutangqi
+     * @date 2024/9/10 11:36
+     * @Param [bean, beanName]
+     **/
+    @Override
+    public Object postProcessAfterInitialization(Object bean, String beanName) throws BeansException {
+        //当前没有注册此拦截器，则手动注册，避免有些项目自定义了SqlSessionFactory 导致拦截器漏注册
+        //使用@Bean的方式注册，可能会导致某些项目的@PostContruct先于拦截器执行，导致拦截器业务代码失效
+        if (SqlSessionFactory.class.isAssignableFrom(bean.getClass())) {
+            SqlSessionFactory sessionFactory = (SqlSessionFactory) bean;
+            if (sessionFactory.getConfiguration().getInterceptors()
+                    .stream()
+                    .filter(f -> PoJoParamEncrtptorInterceptor.class.isAssignableFrom(f.getClass()))
+                    .findAny()
+                    .orElse(null) == null) {
+                sessionFactory.getConfiguration().addInterceptor(new PoJoParamEncrtptorInterceptor(this.encryptorProperties));
+                log.info("【field-encryptor】手动注册拦截器 PoJoParamEncrtptorInterceptor");
+            }
+        }
+        return bean;
+    }
+
 }

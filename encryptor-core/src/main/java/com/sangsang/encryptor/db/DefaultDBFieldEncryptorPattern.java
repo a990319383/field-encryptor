@@ -18,12 +18,9 @@ import org.springframework.stereotype.Component;
  * @author liutangqi
  * @date 2024/4/8 14:13
  */
-@Component
-@ConditionalOnMissingBean(DBFieldEncryptorPattern.class)
 public class DefaultDBFieldEncryptorPattern implements DBFieldEncryptorPattern {
 
     //加密秘钥
-    @Autowired
     private EncryptorProperties encryptorProperties;
 
     public DefaultDBFieldEncryptorPattern(EncryptorProperties encryptorProperties) {

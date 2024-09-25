@@ -2,14 +2,12 @@ package com.sangsang.interceptor;
 
 import cn.hutool.core.lang.Pair;
 import cn.hutool.core.util.StrUtil;
-import com.sangsang.domain.constants.SymbolConstant;
-import com.sangsang.util.CollectionUtils;
 import com.sangsang.cache.FieldEncryptorPatternCache;
 import com.sangsang.domain.annos.FieldEncryptor;
 import com.sangsang.domain.constants.DecryptConstant;
+import com.sangsang.domain.constants.SymbolConstant;
 import com.sangsang.domain.dto.ColumnTableDto;
 import com.sangsang.domain.dto.FieldEncryptorInfoDto;
-import com.sangsang.util.JsqlparserUtil;
 import com.sangsang.util.ReflectUtils;
 import com.sangsang.util.StringUtils;
 import com.sangsang.visitor.pojoencrtptor.PoJoEncrtptorStatementVisitor;
@@ -20,14 +18,18 @@ import org.apache.ibatis.cache.CacheKey;
 import org.apache.ibatis.executor.Executor;
 import org.apache.ibatis.mapping.BoundSql;
 import org.apache.ibatis.mapping.MappedStatement;
-import org.apache.ibatis.mapping.ParameterMapping;
 import org.apache.ibatis.plugin.*;
 import org.apache.ibatis.session.ResultHandler;
 import org.apache.ibatis.session.RowBounds;
+import org.apache.ibatis.session.SqlSessionFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.BeansException;
+import org.springframework.beans.factory.config.BeanPostProcessor;
+import org.springframework.util.CollectionUtils;
 
 import java.lang.reflect.Field;
 import java.util.*;
-import java.util.stream.Collectors;
 
 /**
  * 采用java 函数对pojo处理的加解密模式
@@ -40,8 +42,8 @@ import java.util.stream.Collectors;
         @Signature(type = Executor.class, method = "query", args = {MappedStatement.class, Object.class, RowBounds.class, ResultHandler.class, CacheKey.class, BoundSql.class}),
         @Signature(type = Executor.class, method = "query", args = {MappedStatement.class, Object.class, RowBounds.class, ResultHandler.class})
 })
-public class PoJoResultEncrtptorInterceptor implements Interceptor {
-
+public class PoJoResultEncrtptorInterceptor implements Interceptor, BeanPostProcessor {
+    private static final Logger log = LoggerFactory.getLogger(PoJoResultEncrtptorInterceptor.class);
 
     @Override
     public Object intercept(Invocation invocation) throws Throwable {
@@ -51,13 +53,18 @@ public class PoJoResultEncrtptorInterceptor implements Interceptor {
         BoundSql boundSql = statement.getBoundSql(parameter);
         String originalSql = boundSql.getSql();
 
-        //2.解析sql,获取入参和响应对应的表字段关系
+        //2.当前sql如果肯定不需要加解密，则不解析sql，直接返回
+        if (StringUtils.notExistEncryptor(originalSql)) {
+            return invocation.proceed();
+        }
+
+        //3.解析sql,获取入参和响应对应的表字段关系
         Pair<Map<String, ColumnTableDto>, List<FieldEncryptorInfoDto>> pair = parseSql(originalSql);
 
-        //3.执行sql
+        //4.执行sql
         Object result = invocation.proceed();
 
-        //4.处理响应
+        //5.处理响应
         return disposeResult(result, pair);
     }
 
@@ -82,27 +89,6 @@ public class PoJoResultEncrtptorInterceptor implements Interceptor {
         Map<String, ColumnTableDto> placeholderColumnTableMap = poJoEncrtptorStatementVisitor.getPlaceholderColumnTableMap();
         List<FieldEncryptorInfoDto> fieldEncryptorInfos = poJoEncrtptorStatementVisitor.getFieldEncryptorInfos();
         return Pair.of(placeholderColumnTableMap, fieldEncryptorInfos);
-    }
-
-
-    /**
-     * 根据占位符名字，判断当前字段是否需要加解密
-     *
-     * @author liutangqi
-     * @date 2024/7/24 17:23
-     * @Param [propertyMapping:当前占位符映射对象 , objectObjectHashMap 占位符映射对象和自定义占位符对应关系, placeholderColumnTableMap 自定义占位单映射关系]
-     **/
-    private boolean encrytor(ParameterMapping propertyMapping, Map<String, ParameterMapping> objectObjectHashMap, Map<String, ColumnTableDto> placeholderColumnTableMap) {
-        //1.过滤出当前入参对应的所有的自定义占位符（正常情况，一个入参，即使对应多个表字段，这些表字段是否需要加密都是统一的）
-        List<String> placeholders = objectObjectHashMap.entrySet()
-                .stream()
-                .filter(f -> Objects.equals(f.getValue().getProperty(), propertyMapping.getProperty()))
-                .map(Map.Entry::getKey)
-                .collect(Collectors.toList());
-        //2.这些入参只要有一个需要加密，则需要进行加密处理
-        return placeholders.stream()
-                .filter(f -> placeholderColumnTableMap.get(f) != null && JsqlparserUtil.needEncrypt(placeholderColumnTableMap.get(f)))
-                .count() > 0;
     }
 
 
@@ -148,8 +134,9 @@ public class PoJoResultEncrtptorInterceptor implements Interceptor {
         if (DecryptConstant.FUNDAMENTAL.contains(res.getClass())) {
             //1.1 响应类型是字符串，并且该sql 查询结果只有一个字段
             if (res instanceof String && fieldInfos.size() == 1) {
-                if (fieldInfos.get(0).getFieldEncryptor() != null) {
-                    res = FieldEncryptorPatternCache.getBeanInstance().decryption((String) res);
+                FieldEncryptor fieldEncryptor = fieldInfos.get(0).getFieldEncryptor();
+                if (fieldEncryptor != null) {
+                    res = FieldEncryptorPatternCache.getPoJoInstance(fieldEncryptor.pojoAlgorithm()).decryption((String) res);
                     return res;
                 }
             }
@@ -158,8 +145,9 @@ public class PoJoResultEncrtptorInterceptor implements Interceptor {
         } else if (res instanceof Map) {
             Map resMap = (Map) res;
             for (Map.Entry<String, Object> entry : (Set<Map.Entry<String, Object>>) resMap.entrySet()) {
-                if (getFieldEncryptorByFieldName(entry.getKey(), fieldInfos) != null) {
-                    entry.setValue(FieldEncryptorPatternCache.getBeanInstance().decryption((String) entry.getValue()));
+                FieldEncryptor fieldEncryptor = getFieldEncryptorByFieldName(entry.getKey(), fieldInfos);
+                if (fieldEncryptor != null) {
+                    entry.setValue(FieldEncryptorPatternCache.getPoJoInstance(fieldEncryptor.pojoAlgorithm()).decryption((String) entry.getValue()));
                 }
             }
 
@@ -167,9 +155,10 @@ public class PoJoResultEncrtptorInterceptor implements Interceptor {
         } else {
             List<Field> allFields = ReflectUtils.getNotStaticFinalFields(res.getClass());
             for (Field field : allFields) {
-                if (getFieldEncryptorByFieldName(field.getName(), fieldInfos) != null) {
+                FieldEncryptor fieldEncryptor = getFieldEncryptorByFieldName(field.getName(), fieldInfos);
+                if (fieldEncryptor != null) {
                     field.setAccessible(true);
-                    field.set(res, FieldEncryptorPatternCache.getBeanInstance().decryption((String) field.get(res)));
+                    field.set(res, FieldEncryptorPatternCache.getPoJoInstance(fieldEncryptor.pojoAlgorithm()).decryption((String) field.get(res)));
                 }
             }
         }
@@ -196,7 +185,6 @@ public class PoJoResultEncrtptorInterceptor implements Interceptor {
                 .orElse(null);
     }
 
-
     /**
      * 低版本mybatis 这个方法不是default 方法，会报错找不到实现方法，所以这里实现默认的方法
      *
@@ -212,4 +200,43 @@ public class PoJoResultEncrtptorInterceptor implements Interceptor {
     @Override
     public void setProperties(Properties properties) {
     }
+
+
+    /**
+     * 实现父类default方法，避免低版本不兼容，找不到实现类
+     *
+     * @author liutangqi
+     * @date 2024/9/10 11:36
+     * @Param [bean, beanName]
+     **/
+    @Override
+    public Object postProcessBeforeInitialization(Object bean, String beanName) throws BeansException {
+        return bean;
+    }
+
+    /**
+     * 实现父类default方法，避免低版本不兼容，找不到实现类
+     *
+     * @author liutangqi
+     * @date 2024/9/10 11:36
+     * @Param [bean, beanName]
+     **/
+    @Override
+    public Object postProcessAfterInitialization(Object bean, String beanName) throws BeansException {
+        //当前没有注册此拦截器，则手动注册，避免有些项目自定义了SqlSessionFactory 导致拦截器漏注册
+        //使用@Bean的方式注册，可能会导致某些项目的@PostContruct先于拦截器执行，导致拦截器业务代码失效
+        if (SqlSessionFactory.class.isAssignableFrom(bean.getClass())) {
+            SqlSessionFactory sessionFactory = (SqlSessionFactory) bean;
+            if (sessionFactory.getConfiguration().getInterceptors()
+                    .stream()
+                    .filter(f -> PoJoResultEncrtptorInterceptor.class.isAssignableFrom(f.getClass()))
+                    .findAny()
+                    .orElse(null) == null) {
+                sessionFactory.getConfiguration().addInterceptor(new PoJoResultEncrtptorInterceptor());
+                log.info("【field-encryptor】手动注册拦截器 PoJoResultEncrtptorInterceptor");
+            }
+        }
+        return bean;
+    }
+
 }

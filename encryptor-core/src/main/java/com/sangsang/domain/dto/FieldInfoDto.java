@@ -39,8 +39,8 @@ public class FieldInfoDto implements Serializable {
         return false;
     }
 
-    public static FieldInfoDto.FieldInfoDtoBuilder builder() {
-        return new FieldInfoDto.FieldInfoDtoBuilder();
+    public static FieldInfoDtoBuilder builder() {
+        return new FieldInfoDtoBuilder();
     }
 
     public FieldInfoDto(String columnName, String sourceColumn, String sourceTableName, boolean fromSourceTable) {
@@ -163,22 +163,22 @@ public class FieldInfoDto implements Serializable {
         FieldInfoDtoBuilder() {
         }
 
-        public FieldInfoDto.FieldInfoDtoBuilder columnName(String columnName) {
+        public FieldInfoDtoBuilder columnName(String columnName) {
             this.columnName = columnName;
             return this;
         }
 
-        public FieldInfoDto.FieldInfoDtoBuilder sourceColumn(String sourceColumn) {
+        public FieldInfoDtoBuilder sourceColumn(String sourceColumn) {
             this.sourceColumn = sourceColumn;
             return this;
         }
 
-        public FieldInfoDto.FieldInfoDtoBuilder sourceTableName(String sourceTableName) {
+        public FieldInfoDtoBuilder sourceTableName(String sourceTableName) {
             this.sourceTableName = sourceTableName;
             return this;
         }
 
-        public FieldInfoDto.FieldInfoDtoBuilder fromSourceTable(boolean fromSourceTable) {
+        public FieldInfoDtoBuilder fromSourceTable(boolean fromSourceTable) {
             this.fromSourceTable$value = fromSourceTable;
             this.fromSourceTable$set = true;
             return this;

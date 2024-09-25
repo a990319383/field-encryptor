@@ -1,7 +1,10 @@
 package com.sangsang.util;
 
+import com.sangsang.cache.TableCache;
 import com.sangsang.domain.constants.DecryptConstant;
 import com.sangsang.domain.constants.SymbolConstant;
+
+import java.util.Set;
 
 /**
  * 避免引入多余的包，这里将commons.lang3的工具类给拷贝过来
@@ -134,5 +137,32 @@ public class StringUtils {
             return false;
         }
         return a.toLowerCase().equals(b.toLowerCase());
+    }
+
+    /**
+     * 判断sql中是否一定不存在加解密的字段
+     *
+     * @return true:一定不存在 false: 可能存在
+     * @author liutangqi
+     * @date 2024/9/18 22:02
+     * @Param [sql]
+     **/
+    public static boolean notExistEncryptor(String sql) {
+        if (StringUtils.isBlank(sql)) {
+            return true;
+        }
+        //sql转小写
+        String lowerCaseSql = sql.toLowerCase();
+
+        //获取当前需要加解密的表
+        Set<String> fieldEncryptTable = TableCache.getFieldEncryptTable();
+        for (String table : fieldEncryptTable) {
+            if (lowerCaseSql.contains(table)) {
+                return false;
+            }
+        }
+
+        //都不含需要加解密的表，则当前sql一定不需要加解密
+        return true;
     }
 }

@@ -2,6 +2,7 @@ package com.sangsang.encryptor.pojo;
 
 import cn.hutool.core.util.HexUtil;
 import cn.hutool.crypto.symmetric.DES;
+import com.sangsang.domain.enums.PoJoAlgorithmEnum;
 import com.sangsang.encryptor.EncryptorProperties;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -16,15 +17,21 @@ import org.springframework.stereotype.Component;
  * @author liutangqi
  * @date 2024/7/24 17:41
  */
-@Component
-@ConditionalOnMissingBean(PoJoFieldEncryptorPattern.class)
 public class DefaultPoJoFieldEncryptorPattern implements PoJoFieldEncryptorPattern {
     private static final Logger log = LoggerFactory.getLogger(DefaultPoJoFieldEncryptorPattern.class);
 
-    @Autowired
     private EncryptorProperties encryptorProperties;
 
+    public DefaultPoJoFieldEncryptorPattern(EncryptorProperties encryptorProperties) {
+        this.encryptorProperties = encryptorProperties;
+    }
+
     private DES des;
+
+    @Override
+    public PoJoAlgorithmEnum encryptorAlgorithm() {
+        return PoJoAlgorithmEnum.ALGORITHM_DEFAULT;
+    }
 
     @Override
     public String encryption(String cleartext) {

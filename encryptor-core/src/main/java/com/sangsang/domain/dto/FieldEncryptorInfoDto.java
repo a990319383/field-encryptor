@@ -32,8 +32,8 @@ public class FieldEncryptorInfoDto {
      */
     private FieldEncryptor fieldEncryptor;
 
-    public static FieldEncryptorInfoDto.FieldEncryptorInfoDtoBuilder builder() {
-        return new FieldEncryptorInfoDto.FieldEncryptorInfoDtoBuilder();
+    public static FieldEncryptorInfoDtoBuilder builder() {
+        return new FieldEncryptorInfoDtoBuilder();
     }
 
     public String getColumnName() {
@@ -161,22 +161,22 @@ public class FieldEncryptorInfoDto {
         FieldEncryptorInfoDtoBuilder() {
         }
 
-        public FieldEncryptorInfoDto.FieldEncryptorInfoDtoBuilder columnName(String columnName) {
+        public FieldEncryptorInfoDtoBuilder columnName(String columnName) {
             this.columnName = columnName;
             return this;
         }
 
-        public FieldEncryptorInfoDto.FieldEncryptorInfoDtoBuilder sourceColumn(String sourceColumn) {
+        public FieldEncryptorInfoDtoBuilder sourceColumn(String sourceColumn) {
             this.sourceColumn = sourceColumn;
             return this;
         }
 
-        public FieldEncryptorInfoDto.FieldEncryptorInfoDtoBuilder sourceTableName(String sourceTableName) {
+        public FieldEncryptorInfoDtoBuilder sourceTableName(String sourceTableName) {
             this.sourceTableName = sourceTableName;
             return this;
         }
 
-        public FieldEncryptorInfoDto.FieldEncryptorInfoDtoBuilder fieldEncryptor(FieldEncryptor fieldEncryptor) {
+        public FieldEncryptorInfoDtoBuilder fieldEncryptor(FieldEncryptor fieldEncryptor) {
             this.fieldEncryptor = fieldEncryptor;
             return this;
         }

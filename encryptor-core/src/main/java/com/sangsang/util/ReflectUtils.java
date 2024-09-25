@@ -69,14 +69,14 @@ public class ReflectUtils {
         //筛选判断是否存在
         allFields.stream()
                 .filter(f -> f.getName().equals(filedName) && f.getType().getTypeName().equals(t.getClass().getTypeName()))
-                .peek(p -> {
+                .forEach(f -> {
                     try {
-                        p.setAccessible(true);
-                        p.set(obj, t);
+                        f.setAccessible(true);
+                        f.set(obj, t);
                     } catch (IllegalAccessException e) {
                         e.printStackTrace();
                     }
-                }).collect(Collectors.toList());
+                });
     }
 
     /**
@@ -111,5 +111,38 @@ public class ReflectUtils {
             e.printStackTrace();
         }
         return res;
+    }
+
+    /**
+     * 给obj对象的 fieldName字段 设置值为value
+     *
+     * @author liutangqi
+     * @date 2024/9/22 14:03
+     * @Param [obj, fieldName, value]
+     **/
+    public static void setFieldValue(Object obj, String fieldName, Object value) {
+        //当前类查找
+        Field field = Stream.of(obj.getClass().getDeclaredFields()).filter(f -> f.getName().equals(fieldName)).findAny().orElse(null);
+
+        //当前类找不不到，去父类找
+        Class superClass = obj.getClass().getSuperclass();
+        while (field == null && superClass != null) {
+            field = Stream.of(superClass.getDeclaredFields()).filter(f -> f.getName().equals(fieldName)).findAny().orElse(null);
+            superClass = superClass.getSuperclass();
+        }
+
+        //没有此字段，则返回空
+        if (field == null) {
+            return;
+        }
+
+        //设置可访问private的字段
+        field.setAccessible(true);
+        Object res = null;
+        try {
+            field.set(obj, value);
+        } catch (IllegalAccessException e) {
+            e.printStackTrace();
+        }
     }
 }

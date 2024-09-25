@@ -21,8 +21,8 @@ public class TableInfoDto {
 
     //------------------------lombok分割线（尽量少引依赖的原则，项目不引入lombok，下面拷贝lombok编译后的结果）---------------------------------------------------------
 
-    public static TableInfoDto.TableInfoDtoBuilder builder() {
-        return new TableInfoDto.TableInfoDtoBuilder();
+    public static TableInfoDtoBuilder builder() {
+        return new TableInfoDtoBuilder();
     }
 
     public String getTableName() {
@@ -79,12 +79,12 @@ public class TableInfoDto {
         TableInfoDtoBuilder() {
         }
 
-        public TableInfoDto.TableInfoDtoBuilder tableName(String tableName) {
+        public TableInfoDtoBuilder tableName(String tableName) {
             this.tableName = tableName;
             return this;
         }
 
-        public TableInfoDto.TableInfoDtoBuilder tableFields(Set<TableFieldDto> tableFields) {
+        public TableInfoDtoBuilder tableFields(Set<TableFieldDto> tableFields) {
             this.tableFields = tableFields;
             return this;
         }
