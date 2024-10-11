@@ -4,6 +4,7 @@ import cn.hutool.core.util.StrUtil;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableName;
 import com.sangsang.domain.annos.FieldEncryptor;
+import com.sangsang.domain.annos.ShardingTableEncryptor;
 import com.sangsang.domain.dto.TableFieldDto;
 import com.sangsang.domain.dto.TableInfoDto;
 import com.sangsang.domain.exception.FieldEncryptorException;
@@ -134,6 +135,22 @@ public class TableCache implements BeanPostProcessor {
                     .tableName(tableName.value())
                     .tableFields(tableFieldDtos)
                     .build());
+
+            //7.如果当前类是分表的类的话(标注了@ShardingTableEncryptor)，将此表的所有分表信息也一起添加
+            ShardingTableEncryptor shardingTableEncryptor = (ShardingTableEncryptor) entityClass.getAnnotation(ShardingTableEncryptor.class);
+            if (shardingTableEncryptor != null) {
+                try {
+                    List<String> shardingTableName = shardingTableEncryptor.value().newInstance().getShardingTableName(tableName.value());
+                    shardingTableName.stream().forEach(f ->
+                            result.add(TableInfoDto.builder()
+                                    .tableName(f)
+                                    .tableFields(tableFieldDtos)
+                                    .build())
+                    );
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            }
         }
         return result;
 

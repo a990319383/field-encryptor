@@ -4,10 +4,12 @@ import cn.hutool.core.lang.Pair;
 import cn.hutool.core.util.StrUtil;
 import com.sangsang.cache.FieldEncryptorPatternCache;
 import com.sangsang.domain.annos.FieldEncryptor;
+import com.sangsang.domain.annos.PoJoResultEncryptor;
 import com.sangsang.domain.constants.DecryptConstant;
 import com.sangsang.domain.constants.SymbolConstant;
 import com.sangsang.domain.dto.ColumnTableDto;
 import com.sangsang.domain.dto.FieldEncryptorInfoDto;
+import com.sangsang.domain.enums.PoJoAlgorithmEnum;
 import com.sangsang.util.ReflectUtils;
 import com.sangsang.util.StringUtils;
 import com.sangsang.visitor.pojoencrtptor.PoJoEncrtptorStatementVisitor;
@@ -155,10 +157,15 @@ public class PoJoResultEncrtptorInterceptor implements Interceptor, BeanPostProc
         } else {
             List<Field> allFields = ReflectUtils.getNotStaticFinalFields(res.getClass());
             for (Field field : allFields) {
+                //优先取响应实体类上面的@PoJoResultEncryptor 的信息 ，取不到再根据实体类上面标注的信息取
+                PoJoResultEncryptor poJoResultEncryptor = field.getAnnotation(PoJoResultEncryptor.class);
                 FieldEncryptor fieldEncryptor = getFieldEncryptorByFieldName(field.getName(), fieldInfos);
-                if (fieldEncryptor != null) {
+                PoJoAlgorithmEnum poJoAlgorithmEnum = Optional.ofNullable(poJoResultEncryptor)
+                        .map(PoJoResultEncryptor::pojoAlgorithm)
+                        .orElse(Optional.ofNullable(fieldEncryptor).map(FieldEncryptor::pojoAlgorithm).orElse(null));
+                if (poJoResultEncryptor != null || fieldEncryptor != null) {
                     field.setAccessible(true);
-                    field.set(res, FieldEncryptorPatternCache.getPoJoInstance(fieldEncryptor.pojoAlgorithm()).decryption((String) field.get(res)));
+                    field.set(res, FieldEncryptorPatternCache.getPoJoInstance(poJoAlgorithmEnum).decryption((String) field.get(res)));
                 }
             }
         }
