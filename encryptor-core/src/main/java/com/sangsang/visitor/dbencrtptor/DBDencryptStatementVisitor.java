@@ -255,7 +255,7 @@ public class DBDencryptStatementVisitor implements StatementVisitor {
             select.getSelectBody().accept(fieldParseTableSelectVisitor);
 
             //将这个查询语句where 条件后面的进行加解密处理
-            IDecryptSelectVisitor iDecryptSelectVisitor = new IDecryptSelectVisitor(fieldParseTableSelectVisitor.getLayer(), fieldParseTableSelectVisitor.getLayerSelectTableFieldMap(), fieldParseTableSelectVisitor.getLayerFieldTableMap());
+            IDecryptSelectVisitor iDecryptSelectVisitor = new IDecryptSelectVisitor(needEncryptIndex, fieldParseTableSelectVisitor.getLayer(), fieldParseTableSelectVisitor.getLayerSelectTableFieldMap(), fieldParseTableSelectVisitor.getLayerFieldTableMap());
             select.getSelectBody().accept(iDecryptSelectVisitor);
         }
 
