@@ -50,10 +50,12 @@ public class PlaceholderSelectVisitor extends PlaceholderFieldParseTable impleme
                     }
                 });
 
-
         //2.解析from 后面的 #{}占位符
-        PlaceholderSelectFromItemVisitor placeholderSelectFromItemVisitor = new PlaceholderSelectFromItemVisitor(this);
-        plainSelect.getFromItem().accept(placeholderSelectFromItemVisitor);
+        FromItem fromItem = plainSelect.getFromItem();
+        if (fromItem != null) {
+            PlaceholderSelectFromItemVisitor placeholderSelectFromItemVisitor = new PlaceholderSelectFromItemVisitor(this);
+            fromItem.accept(placeholderSelectFromItemVisitor);
+        }
 
         //3.将where 条件中的#{} 占位符进行解析
         Expression where = plainSelect.getWhere();

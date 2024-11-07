@@ -45,8 +45,10 @@ public class SDecryptSelectVisitor extends BaseFieldParseTable implements Select
     public void visit(PlainSelect plainSelect) {
         //1.解密 from 的表 （解密所有内层的语句）
         FromItem fromItem = plainSelect.getFromItem();
-        SDecryptFromItemVisitor sDecryptFromItemVisitor = new SDecryptFromItemVisitor(this.getLayer(), this.getLayerSelectTableFieldMap(), this.getLayerFieldTableMap());
-        fromItem.accept(sDecryptFromItemVisitor);
+        if (fromItem != null) {
+            SDecryptFromItemVisitor sDecryptFromItemVisitor = new SDecryptFromItemVisitor(this.getLayer(), this.getLayerSelectTableFieldMap(), this.getLayerFieldTableMap());
+            fromItem.accept(sDecryptFromItemVisitor);
+        }
 
         //2.将 select *  select 别名.* 转换为select 字段
         List<SelectItem> selectItems = plainSelect.getSelectItems().stream()

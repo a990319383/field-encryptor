@@ -25,8 +25,11 @@ public class FieldParseParseTableSelectVisitor extends BaseFieldParseTable imple
     public void visit(PlainSelect plainSelect) {
         // from 的表
         FromItem fromItem = plainSelect.getFromItem();
-        FieldParseParseTableFromItemVisitor fieldParseTableFromItemVisitor = new FieldParseParseTableFromItemVisitor(this.getLayer(), this.getLayerSelectTableFieldMap(), this.getLayerFieldTableMap());
-        fromItem.accept(fieldParseTableFromItemVisitor);
+        if (fromItem != null) {
+            FieldParseParseTableFromItemVisitor fieldParseTableFromItemVisitor = new FieldParseParseTableFromItemVisitor(this.getLayer(), this.getLayerSelectTableFieldMap(), this.getLayerFieldTableMap());
+            fromItem.accept(fieldParseTableFromItemVisitor);
+        }
+
 
         //join 的表
         List<Join> joins = Optional.ofNullable(plainSelect.getJoins()).orElse(new ArrayList<>());
