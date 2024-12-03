@@ -203,6 +203,10 @@ field.encryptor.secretKey=7uq?q8g3@q
     - @FieldEncryptor(pojoAlgorithm = PoJoAlgorithmEnum.ALGORITHM_1)
     - @FieldEncryptor 不填的，默认是PoJoAlgorithmEnum.ALGORITHM_DEFAULT 对应的算法
 
+## 不兼容场景
+
+
+
 ## 版本后续规划
 
 - 规划1
