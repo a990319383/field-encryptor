@@ -9,17 +9,17 @@
 | 版本号 |                主要内容                |  日期  |
 | :----: | :------------------------------------: | :----: |
 |  1.0   |         支持db模式的自动加解密         | 2024/5 |
-| 1.0  | 增加pojo模式，pojo同时支持多种算法共存 | 2024/9 |
+| 2.0.0 | 增加pojo模式，pojo同时支持多种算法共存 | 2024/9 |
 
 ## 使用场景
 
-> 解决等保，数据安全等场景下，数据库需要进行加密存储的问题
+> 解决等保，数据安全等场景下，数据库需要进行加密存储，但是项目已经存在，改造复杂的问题
 
 ## 简介
 
-> 本组件基于mybatis拦截器 + jsqlparser ，解析执行sql，动态替换加解密字段，实现字段自动加解密
+> 基于mybatis拦截器 + jsqlparser ，解析执行sql，动态替换加解密字段，实现字段自动加解密
 >
-> 仅需标注实体类密文字段，无需每个接口进行标注，实现业务代码0侵入
+> 仅需标注实体类密文字段，无需每个接口进行标注，实现快速改造，业务代码0侵入
 
 ## 详细介绍
 
@@ -28,14 +28,15 @@
 - db模式
   - 基本实现原理
     - 通过直接改写原sql，利用数据库本身的加解密库函数对字段进行加解密
-  - 多算法支持
+  - 多算法支持（数据库中不同字段存储算法不一致）
     - 项目仅支持一种加解密算法
+    - 多算法支持，后续版本可能会考虑
   - 优点
     - 加解密场景适配性强，支持列运算的字符加解密
     - 历史数据清洗方便
     - 支持模糊查询
   - 缺点
-    - 数据库本身支持的加解密算法较少，加密算法扩展性弱，低版本缺失加解密算法
+    - 数据库本身支持的加解密算法较少，加密算法扩展性弱，低版本缺失加解密算法（可通过udf解决）
     - 增加额外数据库计算开销
 - pojo模式
   - 基本实现
@@ -95,34 +96,22 @@ select phone,user_name from tb_user where phone = ?
 
 ### 1.引入依赖
 
-- 实体类抽离成单独的模块，业务sql的mapper在单独的模块
-
-  - 实体类模块
-
-    ```
-    <dependency>
-        <groupId>com.sinoiov</groupId>
-        <artifactId>encryptor-annos</artifactId>
-        <version>对应版本</version>
-    </dependency>
-    ```
-
-  - 业务sql模块   
-
-    ```
-    <dependency>
-        <groupId>com.sinoiov</groupId>
-        <artifactId>encryptor-core</artifactId>
-        <version>对应版本</version>
-    </dependency>
-    ```
-
-- 实体类和业务sql都在一起（<font color='orange'>大多数场景 </font>）
+- 一般情况，仅需引入下面依赖即可
 
   ```
   <dependency>
-      <groupId>com.sinoiov</groupId>
+      <groupId>io.gitee.tired-of-the-water</groupId>
       <artifactId>encryptor-core</artifactId>
+      <version>对应版本</version>
+  </dependency>
+  ```
+
+- 当实体类模块没有mybatis依赖时，可以在实体类模块单独引入注解模块，用于使用框架注解
+
+  ```
+  <dependency>
+      <groupId>io.gitee.tired-of-the-water</groupId>
+      <artifactId>encryptor-annos</artifactId>
       <version>对应版本</version>
   </dependency>
   ```
@@ -203,18 +192,56 @@ field.encryptor.secretKey=7uq?q8g3@q
     - @FieldEncryptor(pojoAlgorithm = PoJoAlgorithmEnum.ALGORITHM_1)
     - @FieldEncryptor 不填的，默认是PoJoAlgorithmEnum.ALGORITHM_DEFAULT 对应的算法
 
+### 3.简化分表写法
+
+- 当项目中进行了分表时，默认需要在每个分表的表名上面标注上述注解，如果分了100张表需要重复写100次
+
+- 想要简化配置的话，只需要在原表名的实体类上面标注@ShardingTableEncryptor，在其后实现主表表名后分表后表名的规则
+
+  ```
+  //原表实体类
+  @ShardingTableEncryptor(value = ShardingTableByDay.class)
+  @TableName("stat_vehicle_alarm")
+  public class StatVehicleAlarmEntity {}
+  
+  //分表表名规则
+  public class ShardingTableByDay implements ShardingTableInterface {
+      private static final LocalDate BASE_DATE = LocalDate.parse("2000-01-01");
+      private static final DateTimeFormatter DATE_FMT = DatePattern.createFormatter("MMdd");
+      private static final List<String> SUFFIX;
+      static {
+          SUFFIX = new ArrayList<>();
+          for (int i = 0; i < 366; i++) {
+              SUFFIX.add(LocalDateTimeUtil.format(BASE_DATE.plusDays(i), DATE_FMT));
+          }
+      }
+  
+      @Override
+      public List<String> getShardingTableName(String prefix) {
+          return SUFFIX.stream().map(suffix -> prefix + suffix).collect(Collectors.toList());
+      }
+  }
+  ```
+
+  
+
 ## 不兼容场景
 
+### 1.全模式均不兼容场景
 
+- 目前jsqlparse仅支持4.4版本，其余版本并未开发，所以此版本不支持的sql语法，无法兼容
+- INSERT INTO 表名 VALUES (所有字段);   表名后面没有跟具体字段的，无法兼容
 
-## 版本后续规划
+### 2.db模式不兼容场景
 
-- 规划1
+### 3.pojo模式不兼容场景
 
-  出于性能考虑，从数据库到数据库的对比，修改，插入，默认都是密文，所以对此类场景是没有做加解密处理的，后续迭代中会针对此场景做出优化，当两者一个加密一个不加密时，会选择合适的字段进行加解密
+- mybatis-plus  service层自带的saveBatch()方法不支持
 
-- 规划2
+## 其它扩展
 
-  当前jsqlparser 使用版本为4.4，还存在部分语法不兼容的问题（特别是ck），后续考虑出高版本的分支	
+建议使用db模式，支持大部分场景，如果数据库不支持此加解密算法，可以自己扩展mysql的 udf
 
+下面链接是使用rust扩展sm4 加解密的一个栗子
 
+[encryptor-udf: rust扩展mysql的udf ，本项目简单扩展了sm4的加解密支持](https://gitee.com/tired-of-the-water/encryptor-udf)
