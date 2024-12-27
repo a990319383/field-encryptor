@@ -61,12 +61,12 @@
 ```sql
 -- 建表语句 其中phone字段存的是密文
 CREATE TABLE `tb_user` (
-  `id` bigint(20) NOT NULL AUTO_INCREMENT,
+  `id` bigint NOT NULL AUTO_INCREMENT,
   `user_name` varchar(100) DEFAULT NULL COMMENT '用户名',
   `login_name` varchar(100) DEFAULT NULL COMMENT '登录名',
   `login_pwd` varchar(100) DEFAULT NULL COMMENT '登录密码',
   `phone` varchar(50) DEFAULT NULL COMMENT '电话号码',
-  `role_id` bigint(20) DEFAULT NULL COMMENT '角色id',
+  `role_id` bigint DEFAULT NULL COMMENT '角色id',
   `create_time` datetime DEFAULT NULL,
   `update_time` datetime DEFAULT NULL,
   PRIMARY KEY (`id`)
