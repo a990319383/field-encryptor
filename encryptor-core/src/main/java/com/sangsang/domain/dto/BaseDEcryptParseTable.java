@@ -1,5 +1,6 @@
 package com.sangsang.domain.dto;
 
+import com.sangsang.domain.enums.EncryptorFunctionEnum;
 import com.sangsang.domain.function.EncryptorFunction;
 
 import java.util.Map;
@@ -19,17 +20,17 @@ public class BaseDEcryptParseTable extends BaseFieldParseTable {
      * @date 2025/2/28 23:12
      * @Param
      **/
-    private EncryptorFunction encryptorFunction;
+    private EncryptorFunctionEnum encryptorFunctionEnum;
 
     public BaseDEcryptParseTable(int layer,
-                                 EncryptorFunction encryptorFunction,
+                                 EncryptorFunctionEnum encryptorFunctionEnum,
                                  Map<String, Map<String, Set<FieldInfoDto>>> layerSelectTableFieldMap,
                                  Map<String, Map<String, Set<FieldInfoDto>>> layerFieldTableMap) {
         super(layer, layerSelectTableFieldMap, layerFieldTableMap);
-        this.encryptorFunction = encryptorFunction;
+        this.encryptorFunctionEnum = encryptorFunctionEnum;
     }
 
-    public EncryptorFunction getEncryptorFunction() {
-        return encryptorFunction;
+    public EncryptorFunctionEnum getEncryptorFunctionEnum() {
+        return encryptorFunctionEnum;
     }
 }

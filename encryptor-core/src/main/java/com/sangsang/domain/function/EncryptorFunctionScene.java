@@ -38,6 +38,7 @@ public class EncryptorFunctionScene {
 
 
     /**
+     * 根据上游字段的加解密情况不同做出处理，比如
      * insert(select) 语句中insert需要密文存储的情况
      * select的语句中：
      * - 密文存储 ：不需要处理
@@ -47,11 +48,12 @@ public class EncryptorFunctionScene {
      * @date 2025/2/28 22:52
      * @Param []
      **/
-    public static final EncryptorFunction insertSecret() {
+    public static final EncryptorFunction upstreamSecret() {
         return i -> i ? EncryptorEnum.WITHOUT : EncryptorEnum.ENCRYPTION;
     }
 
     /**
+     * 根据上游字段的加解密情况不同做出处理，比如
      * insert(select) 语句中insert不需要密文存储的情况
      * select的语句中：
      * - 密文存储 ：解密处理
@@ -61,7 +63,7 @@ public class EncryptorFunctionScene {
      * @date 2025/2/28 22:58
      * @Param []
      **/
-    public static final EncryptorFunction insertPlaintext() {
+    public static final EncryptorFunction upstreamPlaintext() {
         return i -> i ? EncryptorEnum.DECRYPTION : EncryptorEnum.WITHOUT;
     }
 }

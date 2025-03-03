@@ -2,6 +2,7 @@ package com.sangsang.visitor.dbencrtptor.insert;
 
 import com.sangsang.domain.dto.BaseFieldParseTable;
 import com.sangsang.domain.dto.FieldInfoDto;
+import com.sangsang.domain.enums.EncryptorFunctionEnum;
 import com.sangsang.domain.function.EncryptorFunctionScene;
 import com.sangsang.visitor.dbencrtptor.select.SDecryptExpressionVisitor;
 import net.sf.jsqlparser.expression.Expression;
@@ -56,7 +57,7 @@ public class IDecryptSelectVisitor extends BaseFieldParseTable implements Select
         }
 
         //where 条件的相应字段进行解密处理
-        SDecryptExpressionVisitor sDecryptExpressionVisitor = SDecryptExpressionVisitor.newInstanceCurLayer(this, EncryptorFunctionScene.defaultDecryption(), where);
+        SDecryptExpressionVisitor sDecryptExpressionVisitor = SDecryptExpressionVisitor.newInstanceCurLayer(this, EncryptorFunctionEnum.DEFAULT_DECRYPTION, where);
         where.accept(sDecryptExpressionVisitor);
 
         //替换原表达式

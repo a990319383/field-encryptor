@@ -4,6 +4,7 @@ import com.sangsang.domain.constants.NumberConstant;
 import com.sangsang.domain.dto.BaseDEcryptParseTable;
 import com.sangsang.domain.dto.BaseFieldParseTable;
 import com.sangsang.domain.dto.FieldInfoDto;
+import com.sangsang.domain.enums.EncryptorFunctionEnum;
 import com.sangsang.domain.function.EncryptorFunction;
 import com.sangsang.domain.function.EncryptorFunctionScene;
 import com.sangsang.util.CollectionUtils;
@@ -37,9 +38,9 @@ public class SDecryptSelectVisitor extends BaseDEcryptParseTable implements Sele
      * @Param [baseFieldParseTable, encryptorFunction]
      **/
     public static SDecryptSelectVisitor newInstanceCurLayer(BaseFieldParseTable baseFieldParseTable,
-                                                            EncryptorFunction encryptorFunction) {
+                                                            EncryptorFunctionEnum encryptorFunctionEnum) {
         return new SDecryptSelectVisitor(baseFieldParseTable.getLayer(),
-                encryptorFunction,
+                encryptorFunctionEnum,
                 baseFieldParseTable.getLayerSelectTableFieldMap(),
                 baseFieldParseTable.getLayerFieldTableMap());
 
@@ -53,9 +54,9 @@ public class SDecryptSelectVisitor extends BaseDEcryptParseTable implements Sele
      * @Param [baseFieldParseTable, encryptorFunction]
      **/
     public static SDecryptSelectVisitor newInstanceNextLayer(BaseFieldParseTable baseFieldParseTable,
-                                                             EncryptorFunction encryptorFunction) {
+                                                             EncryptorFunctionEnum encryptorFunctionEnum) {
         return new SDecryptSelectVisitor((baseFieldParseTable.getLayer() + 1),
-                encryptorFunction,
+                encryptorFunctionEnum,
                 baseFieldParseTable.getLayerSelectTableFieldMap(),
                 baseFieldParseTable.getLayerFieldTableMap());
 
@@ -63,10 +64,10 @@ public class SDecryptSelectVisitor extends BaseDEcryptParseTable implements Sele
 
 
     private SDecryptSelectVisitor(int layer,
-                                  EncryptorFunction encryptorFunction,
+                                  EncryptorFunctionEnum encryptorFunctionEnum,
                                   Map<String, Map<String, Set<FieldInfoDto>>> layerSelectTableFieldMap,
                                   Map<String, Map<String, Set<FieldInfoDto>>> layerFieldTableMap) {
-        super(layer, encryptorFunction, layerSelectTableFieldMap, layerFieldTableMap);
+        super(layer, encryptorFunctionEnum, layerSelectTableFieldMap, layerFieldTableMap);
     }
 
     public String getResultSql() {
@@ -160,7 +161,7 @@ public class SDecryptSelectVisitor extends BaseDEcryptParseTable implements Sele
             select.accept(fieldParseTableSelectVisitor);
 
             //需要加密的字段进行加密处理
-            SDecryptSelectVisitor sDecryptSelectVisitor = SDecryptSelectVisitor.newInstanceCurLayer(fieldParseTableSelectVisitor, EncryptorFunctionScene.defaultDecryption());
+            SDecryptSelectVisitor sDecryptSelectVisitor = SDecryptSelectVisitor.newInstanceCurLayer(fieldParseTableSelectVisitor, EncryptorFunctionEnum.DEFAULT_DECRYPTION);
             select.accept(sDecryptSelectVisitor);
 
             //维护加解密之后的语句

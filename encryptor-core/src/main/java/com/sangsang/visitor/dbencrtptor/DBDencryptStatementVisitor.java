@@ -1,5 +1,6 @@
 package com.sangsang.visitor.dbencrtptor;
 
+import com.sangsang.domain.enums.EncryptorFunctionEnum;
 import com.sangsang.domain.function.EncryptorFunctionScene;
 import com.sangsang.util.CollectionUtils;
 import com.sangsang.cache.FieldEncryptorPatternCache;
@@ -122,7 +123,7 @@ public class DBDencryptStatementVisitor implements StatementVisitor {
         }
 
         //4.将where 条件进行解密
-        SDecryptExpressionVisitor sDecryptExpressionVisitor = SDecryptExpressionVisitor.newInstanceCurLayer(fieldParseTableFromItemVisitor, EncryptorFunctionScene.defaultDecryption(), where);
+        SDecryptExpressionVisitor sDecryptExpressionVisitor = SDecryptExpressionVisitor.newInstanceCurLayer(fieldParseTableFromItemVisitor, EncryptorFunctionEnum.DEFAULT_DECRYPTION, where);
         where.accept(sDecryptExpressionVisitor);
 
         //5.结果赋值
@@ -154,7 +155,7 @@ public class DBDencryptStatementVisitor implements StatementVisitor {
         //3.解密where 条件的数据
         Expression where = update.getWhere();
         if (where != null) {
-            SDecryptExpressionVisitor expressionVisitor = SDecryptExpressionVisitor.newInstanceCurLayer(fieldParseTableFromItemVisitor, EncryptorFunctionScene.defaultDecryption(), where);
+            SDecryptExpressionVisitor expressionVisitor = SDecryptExpressionVisitor.newInstanceCurLayer(fieldParseTableFromItemVisitor, EncryptorFunctionEnum.DEFAULT_DECRYPTION, where);
             where.accept(expressionVisitor);
             //修改后的where赋值
             update.setWhere(expressionVisitor.getExpression());
@@ -370,7 +371,7 @@ public class DBDencryptStatementVisitor implements StatementVisitor {
         }
 
         //3.将需要加密的字段进行加密处理
-        SDecryptSelectVisitor sDecryptSelectVisitor = SDecryptSelectVisitor.newInstanceCurLayer(fieldParseTableSelectVisitor, EncryptorFunctionScene.defaultDecryption());
+        SDecryptSelectVisitor sDecryptSelectVisitor = SDecryptSelectVisitor.newInstanceCurLayer(fieldParseTableSelectVisitor, EncryptorFunctionEnum.DEFAULT_DECRYPTION);
         select.getSelectBody().accept(sDecryptSelectVisitor);
 
         //4.处理后的结果赋值

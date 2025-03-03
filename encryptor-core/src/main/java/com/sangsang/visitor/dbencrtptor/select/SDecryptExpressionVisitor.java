@@ -7,6 +7,7 @@ import com.sangsang.domain.dto.BaseDEcryptParseTable;
 import com.sangsang.domain.dto.BaseFieldParseTable;
 import com.sangsang.domain.dto.FieldInfoDto;
 import com.sangsang.domain.enums.EncryptorEnum;
+import com.sangsang.domain.enums.EncryptorFunctionEnum;
 import com.sangsang.domain.function.EncryptorFunction;
 import com.sangsang.domain.function.EncryptorFunctionScene;
 import com.sangsang.util.JsqlparserUtil;
@@ -58,11 +59,11 @@ public class SDecryptExpressionVisitor extends BaseDEcryptParseTable implements 
      * @Param [baseFieldParseTable, alias, expression]
      **/
     public static SDecryptExpressionVisitor newInstanceCurLayer(BaseFieldParseTable baseFieldParseTable,
-                                                                EncryptorFunction encryptorFunction,
+                                                                EncryptorFunctionEnum encryptorFunctionEnum,
                                                                 Expression expression) {
         return new SDecryptExpressionVisitor(expression,
                 baseFieldParseTable.getLayer(),
-                encryptorFunction,
+                encryptorFunctionEnum,
                 baseFieldParseTable.getLayerSelectTableFieldMap(),
                 baseFieldParseTable.getLayerFieldTableMap());
     }
@@ -80,17 +81,17 @@ public class SDecryptExpressionVisitor extends BaseDEcryptParseTable implements 
         return new SDecryptExpressionVisitor(
                 expression,
                 baseDEcryptParseTable.getLayer(),
-                baseDEcryptParseTable.getEncryptorFunction(),
+                baseDEcryptParseTable.getEncryptorFunctionEnum(),
                 baseDEcryptParseTable.getLayerSelectTableFieldMap(),
                 baseDEcryptParseTable.getLayerFieldTableMap());
     }
 
     private SDecryptExpressionVisitor(Expression expression,
                                       int layer,
-                                      EncryptorFunction encryptorFunction,
+                                      EncryptorFunctionEnum encryptorFunctionEnum,
                                       Map<String, Map<String, Set<FieldInfoDto>>> layerSelectTableFieldMap,
                                       Map<String, Map<String, Set<FieldInfoDto>>> layerFieldTableMap) {
-        super(layer, encryptorFunction, layerSelectTableFieldMap, layerFieldTableMap);
+        super(layer, encryptorFunctionEnum, layerSelectTableFieldMap, layerFieldTableMap);
         this.expression = expression;
     }
 
@@ -525,7 +526,7 @@ public class SDecryptExpressionVisitor extends BaseDEcryptParseTable implements 
         boolean curNeedEncrypt = JsqlparserUtil.needEncrypt(column, this.getLayer(), this.getLayerFieldTableMap());
 
         //2.判断当前需要调用哪个方法
-        EncryptorEnum encryptorEnum = this.getEncryptorFunction().dispose(curNeedEncrypt);
+        EncryptorEnum encryptorEnum = this.getEncryptorFunctionEnum().getFun().dispose(curNeedEncrypt);
 
         //3.将该字段进行加/解密处理
         Expression decryptFunction = encryptorEnum.getdEncryptorFunction().dEcryp(column);
@@ -558,8 +559,8 @@ public class SDecryptExpressionVisitor extends BaseDEcryptParseTable implements 
         FieldParseParseTableSelectVisitor sFieldSelectItemVisitor = new FieldParseParseTableSelectVisitor(this.getLayer(), cloneLayerSelectTableFieldMap, cloneLayerFieldTableMap);
         subSelect.getSelectBody().accept(sFieldSelectItemVisitor);
 
-        //3.利用解析后的表结构Map进行子查询解密处理 todo-ltq 验证一下这个子查询是否有问题
-        SDecryptSelectVisitor sDecryptSelectVisitor = SDecryptSelectVisitor.newInstanceCurLayer(sFieldSelectItemVisitor, EncryptorFunctionScene.defaultDecryption());
+        //3.利用解析后的表结构Map进行子查询解密处理
+        SDecryptSelectVisitor sDecryptSelectVisitor = SDecryptSelectVisitor.newInstanceCurLayer(sFieldSelectItemVisitor, EncryptorFunctionEnum.DEFAULT_DECRYPTION);
         subSelect.getSelectBody().accept(sDecryptSelectVisitor);
     }
 

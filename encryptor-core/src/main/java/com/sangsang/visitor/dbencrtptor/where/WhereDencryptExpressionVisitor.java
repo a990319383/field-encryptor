@@ -7,6 +7,7 @@ import com.sangsang.domain.constants.NumberConstant;
 import com.sangsang.domain.dto.BaseFieldParseTable;
 import com.sangsang.domain.dto.ColumnTableDto;
 import com.sangsang.domain.dto.FieldInfoDto;
+import com.sangsang.domain.enums.EncryptorFunctionEnum;
 import com.sangsang.domain.function.EncryptorFunctionScene;
 import com.sangsang.util.JsqlparserUtil;
 import com.sangsang.util.StringUtils;
@@ -528,7 +529,7 @@ public class WhereDencryptExpressionVisitor extends BaseFieldParseTable implemen
 
         //3.利用解析后的表结构Map进行子查询解密处理
 //        SDecryptSelectVisitor SDecryptSelectVisitor = new SDecryptSelectVisitor(this.getLayer(), sFieldSelectItemVisitor.getLayerSelectTableFieldMap(), sFieldSelectItemVisitor.getLayerFieldTableMap());
-        SDecryptSelectVisitor sDecryptSelectVisitor = SDecryptSelectVisitor.newInstanceCurLayer(this, EncryptorFunctionScene.defaultDecryption());
+        SDecryptSelectVisitor sDecryptSelectVisitor = SDecryptSelectVisitor.newInstanceCurLayer(this, EncryptorFunctionEnum.DEFAULT_DECRYPTION);
         subSelect.getSelectBody().accept(sDecryptSelectVisitor);
 /*
         //注意：exist这种情况，层数不需要加1，这里使用的字段和上级是同一层的
