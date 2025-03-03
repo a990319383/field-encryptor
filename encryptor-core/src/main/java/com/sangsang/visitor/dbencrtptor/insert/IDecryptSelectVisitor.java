@@ -2,7 +2,8 @@ package com.sangsang.visitor.dbencrtptor.insert;
 
 import com.sangsang.domain.dto.BaseFieldParseTable;
 import com.sangsang.domain.dto.FieldInfoDto;
-import com.sangsang.visitor.dbencrtptor.where.WhereDencryptExpressionVisitor;
+import com.sangsang.domain.function.EncryptorFunctionScene;
+import com.sangsang.visitor.dbencrtptor.select.SDecryptExpressionVisitor;
 import net.sf.jsqlparser.expression.Expression;
 import net.sf.jsqlparser.statement.select.*;
 import net.sf.jsqlparser.statement.values.ValuesStatement;
@@ -14,6 +15,7 @@ import java.util.Set;
 /**
  * insert 语句中的select语句的where条件进行解密处理
  * 备注：select 里面的字段没有必要加解密，因为库里查出来直接插入的，原样查出来插入就行了
+ * todo-ltq 后面改造来和select用同一个
  *
  * @author liutangqi
  * @date 2024/3/8 16:27
@@ -54,11 +56,11 @@ public class IDecryptSelectVisitor extends BaseFieldParseTable implements Select
         }
 
         //where 条件的相应字段进行解密处理
-        WhereDencryptExpressionVisitor dencryptWhereFieldVisitor = new WhereDencryptExpressionVisitor(where, this.getLayer(), this.getLayerSelectTableFieldMap(), this.getLayerFieldTableMap());
-        where.accept(dencryptWhereFieldVisitor);
+        SDecryptExpressionVisitor sDecryptExpressionVisitor = SDecryptExpressionVisitor.newInstanceCurLayer(this, EncryptorFunctionScene.defaultDecryption(), where);
+        where.accept(sDecryptExpressionVisitor);
 
         //替换原表达式
-        plainSelect.setWhere(dencryptWhereFieldVisitor.getExpression());
+        plainSelect.setWhere(sDecryptExpressionVisitor.getExpression());
     }
 
     @Override

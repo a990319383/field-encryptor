@@ -1,11 +1,13 @@
 package com.sangsang.visitor.dbencrtptor.where;
 
+import cn.hutool.core.util.ObjectUtil;
 import com.sangsang.cache.FieldEncryptorPatternCache;
 import com.sangsang.cache.TableCache;
 import com.sangsang.domain.constants.NumberConstant;
 import com.sangsang.domain.dto.BaseFieldParseTable;
 import com.sangsang.domain.dto.ColumnTableDto;
 import com.sangsang.domain.dto.FieldInfoDto;
+import com.sangsang.domain.function.EncryptorFunctionScene;
 import com.sangsang.util.JsqlparserUtil;
 import com.sangsang.util.StringUtils;
 import com.sangsang.visitor.fieldparse.FieldParseParseTableSelectVisitor;
@@ -34,6 +36,7 @@ import java.util.stream.Collectors;
  * @author liutangqi
  * @date 2024/2/20 14:47
  */
+@Deprecated
 public class WhereDencryptExpressionVisitor extends BaseFieldParseTable implements ExpressionVisitor {
 
     /**
@@ -42,7 +45,7 @@ public class WhereDencryptExpressionVisitor extends BaseFieldParseTable implemen
      */
     private Expression expression;
 
-    public WhereDencryptExpressionVisitor(Expression expression, int layer, Map<String, Map<String, Set<FieldInfoDto>>> layerSelectTableFieldMap, Map<String, Map<String, Set<FieldInfoDto>>> layerFieldTableMap) {
+    private WhereDencryptExpressionVisitor(Expression expression, int layer, Map<String, Map<String, Set<FieldInfoDto>>> layerSelectTableFieldMap, Map<String, Map<String, Set<FieldInfoDto>>> layerFieldTableMap) {
         super(layer, layerSelectTableFieldMap, layerFieldTableMap);
         this.expression = expression;
     }
@@ -139,6 +142,7 @@ public class WhereDencryptExpressionVisitor extends BaseFieldParseTable implemen
 
     /**
      * 括号括起来的一堆条件
+     * todo-ltq 待处理YYY
      *
      * @author liutangqi
      * @date 2024/2/28 18:39
@@ -185,6 +189,7 @@ public class WhereDencryptExpressionVisitor extends BaseFieldParseTable implemen
 
     @Override
     public void visit(AndExpression andExpression) {
+        //todo-ltq 待处理YYY
         Expression leftExpression = andExpression.getLeftExpression();
         WhereDencryptExpressionVisitor leftWhereDencryptExpressionVisitor = new WhereDencryptExpressionVisitor(leftExpression, this.getLayer(), this.getLayerSelectTableFieldMap(), this.getLayerFieldTableMap());
         leftExpression.accept(leftWhereDencryptExpressionVisitor);
@@ -196,7 +201,7 @@ public class WhereDencryptExpressionVisitor extends BaseFieldParseTable implemen
         andExpression.setRightExpression(rightWhereDencryptExpressionVisitor.getExpression());
     }
 
-    @Override
+    @Override//todo-ltq 待处理YYY
     public void visit(OrExpression orExpression) {
         //解析左右表达式
         Expression leftExpression = orExpression.getLeftExpression();
@@ -221,7 +226,7 @@ public class WhereDencryptExpressionVisitor extends BaseFieldParseTable implemen
         System.out.println(between);
     }
 
-    @Override
+    @Override//todo-ltq 待处理YYY
     public void visit(EqualsTo equalsTo) {
         //1.如果左右侧都是 Column 类型的话，两边都需要加密或者两边都不需要加密时，不需要处理
         if ((equalsTo.getLeftExpression() instanceof Column) && (equalsTo.getRightExpression() instanceof Column)) {
@@ -271,7 +276,7 @@ public class WhereDencryptExpressionVisitor extends BaseFieldParseTable implemen
      * @date 2024/3/6 15:53
      * @Param [greaterThan]
      **/
-    @Override
+    @Override//todo-ltq 待处理YYY
     public void visit(GreaterThan greaterThan) {
         //解析左右表达式
         Expression leftExpression = greaterThan.getLeftExpression();
@@ -292,7 +297,7 @@ public class WhereDencryptExpressionVisitor extends BaseFieldParseTable implemen
      * @date 2024/3/6 15:54
      * @Param [greaterThanEquals]
      **/
-    @Override
+    @Override//todo-ltq 待处理YYY
     public void visit(GreaterThanEquals greaterThanEquals) {
         //解析左右表达式
         Expression leftExpression = greaterThanEquals.getLeftExpression();
@@ -313,7 +318,7 @@ public class WhereDencryptExpressionVisitor extends BaseFieldParseTable implemen
      * @date 2024/8/29 10:28
      * @Param [inExpression]
      **/
-    @Override
+    @Override//todo-ltq 待处理YYY
     public void visit(InExpression inExpression) {
         //1.当前左边表达式是Column时，针对下面两种情况做出优化，避免多次无意义的加解密
         if (inExpression.getLeftExpression() instanceof Column) {
@@ -382,7 +387,7 @@ public class WhereDencryptExpressionVisitor extends BaseFieldParseTable implemen
         isBooleanExpression.setLeftExpression(leftWhereDencryptExpressionVisitor.getExpression());
     }
 
-    @Override
+    @Override//todo-ltq 待处理YYY
     public void visit(LikeExpression likeExpression) {
         //解析左右表达式
         Expression leftExpression = likeExpression.getLeftExpression();
@@ -396,7 +401,7 @@ public class WhereDencryptExpressionVisitor extends BaseFieldParseTable implemen
         likeExpression.setRightExpression(rightWhereDencryptExpressionVisitor.getExpression());
     }
 
-    @Override
+    @Override//todo-ltq 待处理YYY
     public void visit(MinorThan minorThan) {
         //解析左右表达式
         Expression leftExpression = minorThan.getLeftExpression();
@@ -410,7 +415,7 @@ public class WhereDencryptExpressionVisitor extends BaseFieldParseTable implemen
         minorThan.setRightExpression(rightWhereDencryptExpressionVisitor.getExpression());
     }
 
-    @Override
+    @Override//todo-ltq 待处理YYY
     public void visit(MinorThanEquals minorThanEquals) {
         //解析左右表达式
         Expression leftExpression = minorThanEquals.getLeftExpression();
@@ -424,7 +429,7 @@ public class WhereDencryptExpressionVisitor extends BaseFieldParseTable implemen
         minorThanEquals.setRightExpression(rightWhereDencryptExpressionVisitor.getExpression());
     }
 
-    @Override
+    @Override//todo-ltq 待处理YYY
     public void visit(NotEqualsTo notEqualsTo) {
         //1.如果左右侧都是 Column 类型的话，两边都需要加密或者两边都不需要加密时，不需要处理
         if ((notEqualsTo.getLeftExpression() instanceof Column) && notEqualsTo.getRightExpression() instanceof Column) {
@@ -504,6 +509,7 @@ public class WhereDencryptExpressionVisitor extends BaseFieldParseTable implemen
     /**
      * 子查询
      * 当exist时会走子查询的逻辑
+     * todo-ltq 待处理YYY  这个采用和Select语句一样的处理方式，这里原处理方式其实就是调用的select的逻辑
      *
      * @author liutangqi
      * @date 2024/3/6 15:55
@@ -511,6 +517,20 @@ public class WhereDencryptExpressionVisitor extends BaseFieldParseTable implemen
      **/
     @Override
     public void visit(SubSelect subSelect) {
+        //这种语法的里面都是单独的语句，所以这里将里层的语句单独解析一次
+        //1.将现在的两个存储解析结果的map深克隆拷贝一份，用这两份数据去解析子查询的结果，避免这个子查询也拥有子查询，导致影响当前解析结果的map的下一层结果出错
+        Map<String, Map<String, Set<FieldInfoDto>>> cloneLayerSelectTableFieldMap = ObjectUtil.cloneByStream(this.getLayerSelectTableFieldMap());
+        Map<String, Map<String, Set<FieldInfoDto>>> cloneLayerFieldTableMap = ObjectUtil.cloneByStream(this.getLayerFieldTableMap());
+
+        //2.单独解析当前子查询的语法 （单独解析是为了好提取，因为解析的两个Map值的别名需要单独修改）
+        FieldParseParseTableSelectVisitor sFieldSelectItemVisitor = new FieldParseParseTableSelectVisitor(this.getLayer(), cloneLayerSelectTableFieldMap, cloneLayerFieldTableMap);
+        subSelect.getSelectBody().accept(sFieldSelectItemVisitor);
+
+        //3.利用解析后的表结构Map进行子查询解密处理
+//        SDecryptSelectVisitor SDecryptSelectVisitor = new SDecryptSelectVisitor(this.getLayer(), sFieldSelectItemVisitor.getLayerSelectTableFieldMap(), sFieldSelectItemVisitor.getLayerFieldTableMap());
+        SDecryptSelectVisitor sDecryptSelectVisitor = SDecryptSelectVisitor.newInstanceCurLayer(this, EncryptorFunctionScene.defaultDecryption());
+        subSelect.getSelectBody().accept(sDecryptSelectVisitor);
+/*
         //注意：exist这种情况，层数不需要加1，这里使用的字段和上级是同一层的
         SDecryptSelectVisitor sDecryptSelectVisitor = new SDecryptSelectVisitor(this.getLayer(), this.getLayerSelectTableFieldMap(), this.getLayerFieldTableMap());
 
@@ -518,10 +538,10 @@ public class WhereDencryptExpressionVisitor extends BaseFieldParseTable implemen
         selectBody.accept(sDecryptSelectVisitor);
 
         //设置解密后的语句
-        subSelect.setSelectBody(selectBody);
+        subSelect.setSelectBody(selectBody);*/
     }
 
-    @Override
+    @Override//todo-ltq 待处理YYY
     public void visit(CaseExpression caseExpression) {
         //处理case的条件
         Expression switchExpression = caseExpression.getSwitchExpression();
@@ -552,7 +572,7 @@ public class WhereDencryptExpressionVisitor extends BaseFieldParseTable implemen
         }
     }
 
-    @Override
+    @Override//todo-ltq 待处理YYY
     public void visit(WhenClause whenClause) {
         Expression thenExpression = whenClause.getThenExpression();
         if (thenExpression != null) {
@@ -566,7 +586,6 @@ public class WhereDencryptExpressionVisitor extends BaseFieldParseTable implemen
             WhereDencryptExpressionVisitor expressionVisitor = new WhereDencryptExpressionVisitor(whenExpression, this.getLayer(), this.getLayerSelectTableFieldMap(), this.getLayerFieldTableMap());
             whenExpression.accept(expressionVisitor);
             whenClause.setWhenExpression(expressionVisitor.getExpression());
-            whenExpression.accept(expressionVisitor);
         }
     }
 
@@ -577,7 +596,7 @@ public class WhereDencryptExpressionVisitor extends BaseFieldParseTable implemen
      * @date 2024/3/8 11:32
      * @Param [existsExpression]
      **/
-    @Override
+    @Override//todo-ltq 待处理
     public void visit(ExistsExpression existsExpression) {
         //解析表达式
         Expression rightExpression = existsExpression.getRightExpression();
@@ -667,7 +686,7 @@ public class WhereDencryptExpressionVisitor extends BaseFieldParseTable implemen
 
     }
 
-    @Override
+    @Override//todo-ltq 待处理YYY
     public void visit(RegExpMySQLOperator regExpMySQLOperator) {
         //解析左右表达式
         Expression leftExpression = regExpMySQLOperator.getLeftExpression();
@@ -714,7 +733,7 @@ public class WhereDencryptExpressionVisitor extends BaseFieldParseTable implemen
      * @date 2024/8/28 13:50
      * @Param [rowConstructor]
      **/
-    @Override
+    @Override//todo-ltq 待处理YYY
     public void visit(RowConstructor rowConstructor) {
         ExpressionList exprList = rowConstructor.getExprList();
         List<Expression> resExp = new ArrayList<>();

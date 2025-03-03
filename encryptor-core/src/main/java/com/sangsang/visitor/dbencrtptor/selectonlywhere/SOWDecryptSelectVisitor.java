@@ -3,8 +3,9 @@ package com.sangsang.visitor.dbencrtptor.selectonlywhere;
 import com.sangsang.domain.constants.NumberConstant;
 import com.sangsang.domain.dto.BaseFieldParseTable;
 import com.sangsang.domain.dto.FieldInfoDto;
+import com.sangsang.domain.function.EncryptorFunctionScene;
+import com.sangsang.visitor.dbencrtptor.select.SDecryptExpressionVisitor;
 import com.sangsang.visitor.fieldparse.FieldParseParseTableSelectVisitor;
-import com.sangsang.visitor.dbencrtptor.where.WhereDencryptExpressionVisitor;
 import net.sf.jsqlparser.expression.Expression;
 import net.sf.jsqlparser.statement.select.*;
 import net.sf.jsqlparser.statement.values.ValuesStatement;
@@ -38,10 +39,10 @@ public class SOWDecryptSelectVisitor extends BaseFieldParseTable implements Sele
     public void visit(PlainSelect plainSelect) {
         if (plainSelect.getWhere() != null) {
             Expression where = plainSelect.getWhere();
-            WhereDencryptExpressionVisitor whereDencryptExpressionVisitor = new WhereDencryptExpressionVisitor(where, this.getLayer(), this.getLayerSelectTableFieldMap(), this.getLayerFieldTableMap());
-            where.accept(whereDencryptExpressionVisitor);
+            SDecryptExpressionVisitor sDecryptExpressionVisitor = SDecryptExpressionVisitor.newInstanceCurLayer(this, EncryptorFunctionScene.defaultDecryption(), where);
+            where.accept(sDecryptExpressionVisitor);
             //处理后的条件赋值
-            plainSelect.setWhere(whereDencryptExpressionVisitor.getExpression());
+            plainSelect.setWhere(sDecryptExpressionVisitor.getExpression());
         }
     }
 

@@ -2,6 +2,7 @@ package com.sangsang.visitor.dbencrtptor.select;
 
 import com.sangsang.domain.dto.BaseFieldParseTable;
 import com.sangsang.domain.dto.FieldInfoDto;
+import com.sangsang.domain.function.EncryptorFunctionScene;
 import net.sf.jsqlparser.schema.Table;
 import net.sf.jsqlparser.statement.select.*;
 
@@ -36,7 +37,8 @@ public class SDecryptFromItemVisitor extends BaseFieldParseTable implements From
     public void visit(SubSelect subSelect) {
         SelectBody selectBody = subSelect.getSelectBody();
         //解密子查询内容
-        selectBody.accept(new SDecryptSelectVisitor(this.getLayer() + 1, this.getLayerSelectTableFieldMap(), this.getLayerFieldTableMap()));
+        SDecryptSelectVisitor sDecryptSelectVisitor = SDecryptSelectVisitor.newInstanceNextLayer(this, EncryptorFunctionScene.defaultDecryption());
+        selectBody.accept(sDecryptSelectVisitor);
     }
 
     @Override

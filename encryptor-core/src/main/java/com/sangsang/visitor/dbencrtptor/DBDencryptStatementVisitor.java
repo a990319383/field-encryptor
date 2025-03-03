@@ -1,5 +1,6 @@
 package com.sangsang.visitor.dbencrtptor;
 
+import com.sangsang.domain.function.EncryptorFunctionScene;
 import com.sangsang.util.CollectionUtils;
 import com.sangsang.cache.FieldEncryptorPatternCache;
 import com.sangsang.cache.TableCache;
@@ -7,12 +8,12 @@ import com.sangsang.domain.annos.FieldEncryptor;
 import com.sangsang.domain.constants.NumberConstant;
 import com.sangsang.domain.constants.SymbolConstant;
 import com.sangsang.util.JsqlparserUtil;
+import com.sangsang.visitor.dbencrtptor.select.SDecryptExpressionVisitor;
 import com.sangsang.visitor.fieldparse.FieldParseParseTableFromItemVisitor;
 import com.sangsang.visitor.fieldparse.FieldParseParseTableSelectVisitor;
 import com.sangsang.visitor.dbencrtptor.insert.IDecryptItemsListVisitor;
 import com.sangsang.visitor.dbencrtptor.insert.IDecryptSelectVisitor;
 import com.sangsang.visitor.dbencrtptor.select.SDecryptSelectVisitor;
-import com.sangsang.visitor.dbencrtptor.where.WhereDencryptExpressionVisitor;
 import net.sf.jsqlparser.expression.Expression;
 import net.sf.jsqlparser.expression.operators.relational.ItemsList;
 import net.sf.jsqlparser.schema.Column;
@@ -120,12 +121,12 @@ public class DBDencryptStatementVisitor implements StatementVisitor {
             return;
         }
 
-        //4.将where 条件进行加密
-        WhereDencryptExpressionVisitor dencryptWhereFieldVisitor = new WhereDencryptExpressionVisitor(where, fieldParseTableFromItemVisitor.getLayer(), fieldParseTableFromItemVisitor.getLayerSelectTableFieldMap(), fieldParseTableFromItemVisitor.getLayerFieldTableMap());
-        where.accept(dencryptWhereFieldVisitor);
+        //4.将where 条件进行解密
+        SDecryptExpressionVisitor sDecryptExpressionVisitor = SDecryptExpressionVisitor.newInstanceCurLayer(fieldParseTableFromItemVisitor, EncryptorFunctionScene.defaultDecryption(), where);
+        where.accept(sDecryptExpressionVisitor);
 
         //5.结果赋值
-        delete.setWhere(dencryptWhereFieldVisitor.getExpression());
+        delete.setWhere(sDecryptExpressionVisitor.getExpression());
         this.resultSql = delete.toString();
     }
 
@@ -150,13 +151,13 @@ public class DBDencryptStatementVisitor implements StatementVisitor {
             return;
         }
 
-        //3.加密where 条件的数据
+        //3.解密where 条件的数据
         Expression where = update.getWhere();
         if (where != null) {
-            WhereDencryptExpressionVisitor dencryptWhereFieldVisitor = new WhereDencryptExpressionVisitor(where, fieldParseTableFromItemVisitor.getLayer(), fieldParseTableFromItemVisitor.getLayerSelectTableFieldMap(), fieldParseTableFromItemVisitor.getLayerFieldTableMap());
-            where.accept(dencryptWhereFieldVisitor);
+            SDecryptExpressionVisitor expressionVisitor = SDecryptExpressionVisitor.newInstanceCurLayer(fieldParseTableFromItemVisitor, EncryptorFunctionScene.defaultDecryption(), where);
+            where.accept(expressionVisitor);
             //修改后的where赋值
-            update.setWhere(dencryptWhereFieldVisitor.getExpression());
+            update.setWhere(expressionVisitor.getExpression());
         }
 
         //4.加密处理set的数据
@@ -369,11 +370,11 @@ public class DBDencryptStatementVisitor implements StatementVisitor {
         }
 
         //3.将需要加密的字段进行加密处理
-        SDecryptSelectVisitor SDecryptSelectVisitor = new SDecryptSelectVisitor(NumberConstant.ONE, fieldParseTableSelectVisitor.getLayerSelectTableFieldMap(), fieldParseTableSelectVisitor.getLayerFieldTableMap());
-        select.getSelectBody().accept(SDecryptSelectVisitor);
+        SDecryptSelectVisitor sDecryptSelectVisitor = SDecryptSelectVisitor.newInstanceCurLayer(fieldParseTableSelectVisitor, EncryptorFunctionScene.defaultDecryption());
+        select.getSelectBody().accept(sDecryptSelectVisitor);
 
         //4.处理后的结果赋值
-        this.resultSql = SDecryptSelectVisitor.getResultSql();
+        this.resultSql = sDecryptSelectVisitor.getResultSql();
     }
 
     @Override
