@@ -38,7 +38,7 @@ public class SDecryptFromItemVisitor extends BaseFieldParseTable implements From
     public void visit(SubSelect subSelect) {
         SelectBody selectBody = subSelect.getSelectBody();
         //解密子查询内容
-        SDecryptSelectVisitor sDecryptSelectVisitor = SDecryptSelectVisitor.newInstanceNextLayer(this, EncryptorFunctionEnum.DEFAULT_DECRYPTION);
+        SDecryptSelectVisitor sDecryptSelectVisitor = SDecryptSelectVisitor.newInstanceNextLayer(this);
         selectBody.accept(sDecryptSelectVisitor);
     }
 

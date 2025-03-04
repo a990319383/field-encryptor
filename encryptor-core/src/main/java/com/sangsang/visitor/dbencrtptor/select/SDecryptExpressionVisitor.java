@@ -8,10 +8,7 @@ import com.sangsang.domain.dto.BaseFieldParseTable;
 import com.sangsang.domain.dto.FieldInfoDto;
 import com.sangsang.domain.enums.EncryptorEnum;
 import com.sangsang.domain.enums.EncryptorFunctionEnum;
-import com.sangsang.domain.function.EncryptorFunction;
-import com.sangsang.domain.function.EncryptorFunctionScene;
 import com.sangsang.util.JsqlparserUtil;
-import com.sangsang.visitor.dbencrtptor.selectonlywhere.SOWDecryptSelectVisitor;
 import com.sangsang.visitor.dbencrtptor.where.WhereDencryptItemsListVisitor;
 import com.sangsang.visitor.fieldparse.FieldParseParseTableSelectVisitor;
 import net.sf.jsqlparser.expression.*;
@@ -46,7 +43,7 @@ public class SDecryptExpressionVisitor extends BaseDEcryptParseTable implements 
 
     /**
      * 加解密处理好后的表达式
-     * 如果不需要处理，则这个值就是构造函数传入的旧表达式
+     * 当字段经过加解密函数处理后，这个值就会被赋值
      */
     private Expression expression;
 
@@ -59,10 +56,8 @@ public class SDecryptExpressionVisitor extends BaseDEcryptParseTable implements 
      * @Param [baseFieldParseTable, alias, expression]
      **/
     public static SDecryptExpressionVisitor newInstanceCurLayer(BaseFieldParseTable baseFieldParseTable,
-                                                                EncryptorFunctionEnum encryptorFunctionEnum,
-                                                                Expression expression) {
-        return new SDecryptExpressionVisitor(expression,
-                baseFieldParseTable.getLayer(),
+                                                                EncryptorFunctionEnum encryptorFunctionEnum) {
+        return new SDecryptExpressionVisitor(baseFieldParseTable.getLayer(),
                 encryptorFunctionEnum,
                 baseFieldParseTable.getLayerSelectTableFieldMap(),
                 baseFieldParseTable.getLayerFieldTableMap());
@@ -76,23 +71,19 @@ public class SDecryptExpressionVisitor extends BaseDEcryptParseTable implements 
      * @date 2025/2/28 23:09
      * @Param [baseFieldParseTable, expression]
      **/
-    public static SDecryptExpressionVisitor newInstanceCurLayer(BaseDEcryptParseTable baseDEcryptParseTable,
-                                                                Expression expression) {
+    public static SDecryptExpressionVisitor newInstanceCurLayer(BaseDEcryptParseTable baseDEcryptParseTable) {
         return new SDecryptExpressionVisitor(
-                expression,
                 baseDEcryptParseTable.getLayer(),
                 baseDEcryptParseTable.getEncryptorFunctionEnum(),
                 baseDEcryptParseTable.getLayerSelectTableFieldMap(),
                 baseDEcryptParseTable.getLayerFieldTableMap());
     }
 
-    private SDecryptExpressionVisitor(Expression expression,
-                                      int layer,
+    private SDecryptExpressionVisitor(int layer,
                                       EncryptorFunctionEnum encryptorFunctionEnum,
                                       Map<String, Map<String, Set<FieldInfoDto>>> layerSelectTableFieldMap,
                                       Map<String, Map<String, Set<FieldInfoDto>>> layerFieldTableMap) {
         super(layer, encryptorFunctionEnum, layerSelectTableFieldMap, layerFieldTableMap);
-        this.expression = expression;
     }
 
     //处理之后的别名，如果别名不需要额外处理，则这里是原有的别名
@@ -133,9 +124,9 @@ public class SDecryptExpressionVisitor extends BaseDEcryptParseTable implements 
                 .orElse(new ArrayList<>())
                 .stream()
                 .map(m -> {
-                    SDecryptExpressionVisitor sDecryptExpressionVisitor = SDecryptExpressionVisitor.newInstanceCurLayer(this, m);
+                    SDecryptExpressionVisitor sDecryptExpressionVisitor = SDecryptExpressionVisitor.newInstanceCurLayer(this);
                     m.accept(sDecryptExpressionVisitor);
-                    return sDecryptExpressionVisitor.getExpression();
+                    return Optional.ofNullable(sDecryptExpressionVisitor.getExpression()).orElse(m);
                 }).collect(Collectors.toList());
 
         if (function.getParameters() != null) {
@@ -199,9 +190,9 @@ public class SDecryptExpressionVisitor extends BaseDEcryptParseTable implements 
     public void visit(Parenthesis parenthesis) {
         //解析括号括起来的表达式
         Expression exp = parenthesis.getExpression();
-        SDecryptExpressionVisitor sDecryptExpressionVisitor = SDecryptExpressionVisitor.newInstanceCurLayer(this, exp);
+        SDecryptExpressionVisitor sDecryptExpressionVisitor = SDecryptExpressionVisitor.newInstanceCurLayer(this);
         exp.accept(sDecryptExpressionVisitor);
-        parenthesis.setExpression(sDecryptExpressionVisitor.getExpression());
+        parenthesis.setExpression(Optional.ofNullable(sDecryptExpressionVisitor.getExpression()).orElse(exp));
     }
 
     @Override
@@ -237,28 +228,28 @@ public class SDecryptExpressionVisitor extends BaseDEcryptParseTable implements 
     @Override
     public void visit(AndExpression andExpression) {
         Expression leftExpression = andExpression.getLeftExpression();
-        SDecryptExpressionVisitor leftExpressionVisitor = SDecryptExpressionVisitor.newInstanceCurLayer(this, leftExpression);
+        SDecryptExpressionVisitor leftExpressionVisitor = SDecryptExpressionVisitor.newInstanceCurLayer(this);
         leftExpression.accept(leftExpressionVisitor);
-        andExpression.setLeftExpression(leftExpressionVisitor.getExpression());
+        andExpression.setLeftExpression(Optional.ofNullable(leftExpressionVisitor.getExpression()).orElse(leftExpression));
 
         Expression rightExpression = andExpression.getRightExpression();
-        SDecryptExpressionVisitor rightExpressionVisitor = SDecryptExpressionVisitor.newInstanceCurLayer(this, rightExpression);
+        SDecryptExpressionVisitor rightExpressionVisitor = SDecryptExpressionVisitor.newInstanceCurLayer(this);
         rightExpression.accept(rightExpressionVisitor);
-        andExpression.setRightExpression(rightExpressionVisitor.getExpression());
+        andExpression.setRightExpression(Optional.ofNullable(rightExpressionVisitor.getExpression()).orElse(rightExpression));
     }
 
     @Override
     public void visit(OrExpression orExpression) {
         //解析左右表达式
         Expression leftExpression = orExpression.getLeftExpression();
-        SDecryptExpressionVisitor leftExpressionVisitor = SDecryptExpressionVisitor.newInstanceCurLayer(this, leftExpression);
+        SDecryptExpressionVisitor leftExpressionVisitor = SDecryptExpressionVisitor.newInstanceCurLayer(this);
         leftExpression.accept(leftExpressionVisitor);
-        orExpression.setLeftExpression(leftExpressionVisitor.getExpression());
+        orExpression.setLeftExpression(Optional.ofNullable(leftExpressionVisitor.getExpression()).orElse(leftExpression));
 
         Expression rightExpression = orExpression.getRightExpression();
-        SDecryptExpressionVisitor rightExpressionVisitor = SDecryptExpressionVisitor.newInstanceCurLayer(this, rightExpression);
+        SDecryptExpressionVisitor rightExpressionVisitor = SDecryptExpressionVisitor.newInstanceCurLayer(this);
         rightExpression.accept(rightExpressionVisitor);
-        orExpression.setRightExpression(rightExpressionVisitor.getExpression());
+        orExpression.setRightExpression(Optional.ofNullable(rightExpressionVisitor.getExpression()).orElse(rightExpression));
     }
 
     @Override
@@ -312,42 +303,42 @@ public class SDecryptExpressionVisitor extends BaseDEcryptParseTable implements 
 
         //4.其它情况（两边都不是Column） 解析左右两边的表达式
         Expression leftExpression = equalsTo.getLeftExpression();
-        SDecryptExpressionVisitor leftExpressionVisitor = SDecryptExpressionVisitor.newInstanceCurLayer(this, leftExpression);
+        SDecryptExpressionVisitor leftExpressionVisitor = SDecryptExpressionVisitor.newInstanceCurLayer(this);
         leftExpression.accept(leftExpressionVisitor);
-        equalsTo.setLeftExpression(leftExpressionVisitor.getExpression());
+        equalsTo.setLeftExpression(Optional.ofNullable(leftExpressionVisitor.getExpression()).orElse(leftExpression));
 
         Expression rightExpression = equalsTo.getRightExpression();
-        SDecryptExpressionVisitor rightExpressionVisitor = SDecryptExpressionVisitor.newInstanceCurLayer(this, rightExpression);
+        SDecryptExpressionVisitor rightExpressionVisitor = SDecryptExpressionVisitor.newInstanceCurLayer(this);
         rightExpression.accept(rightExpressionVisitor);
-        equalsTo.setRightExpression(rightExpressionVisitor.getExpression());
+        equalsTo.setRightExpression(Optional.ofNullable(rightExpressionVisitor.getExpression()).orElse(rightExpression));
     }
 
     @Override
     public void visit(GreaterThan greaterThan) {
         //解析左右表达式
         Expression leftExpression = greaterThan.getLeftExpression();
-        SDecryptExpressionVisitor leftExpressionVisitor = SDecryptExpressionVisitor.newInstanceCurLayer(this, leftExpression);
+        SDecryptExpressionVisitor leftExpressionVisitor = SDecryptExpressionVisitor.newInstanceCurLayer(this);
         leftExpression.accept(leftExpressionVisitor);
-        greaterThan.setLeftExpression(leftExpressionVisitor.getExpression());
+        greaterThan.setLeftExpression(Optional.ofNullable(leftExpressionVisitor.getExpression()).orElse(leftExpression));
 
         Expression rightExpression = greaterThan.getRightExpression();
-        SDecryptExpressionVisitor rightExpressionVisitor = SDecryptExpressionVisitor.newInstanceCurLayer(this, rightExpression);
+        SDecryptExpressionVisitor rightExpressionVisitor = SDecryptExpressionVisitor.newInstanceCurLayer(this);
         rightExpression.accept(rightExpressionVisitor);
-        greaterThan.setRightExpression(rightExpressionVisitor.getExpression());
+        greaterThan.setRightExpression(Optional.ofNullable(rightExpressionVisitor.getExpression()).orElse(rightExpression));
     }
 
     @Override
     public void visit(GreaterThanEquals greaterThanEquals) {
         //解析左右表达式
         Expression leftExpression = greaterThanEquals.getLeftExpression();
-        SDecryptExpressionVisitor leftExpressionVisitor = SDecryptExpressionVisitor.newInstanceCurLayer(this, leftExpression);
+        SDecryptExpressionVisitor leftExpressionVisitor = SDecryptExpressionVisitor.newInstanceCurLayer(this);
         leftExpression.accept(leftExpressionVisitor);
-        greaterThanEquals.setLeftExpression(leftExpressionVisitor.getExpression());
+        greaterThanEquals.setLeftExpression(Optional.ofNullable(leftExpressionVisitor.getExpression()).orElse(leftExpression));
 
         Expression rightExpression = greaterThanEquals.getRightExpression();
-        SDecryptExpressionVisitor rightExpressionVisitor = SDecryptExpressionVisitor.newInstanceCurLayer(this, rightExpression);
+        SDecryptExpressionVisitor rightExpressionVisitor = SDecryptExpressionVisitor.newInstanceCurLayer(this);
         rightExpression.accept(rightExpressionVisitor);
-        greaterThanEquals.setRightExpression(rightExpressionVisitor.getExpression());
+        greaterThanEquals.setRightExpression(Optional.ofNullable(rightExpressionVisitor.getExpression()).orElse(rightExpression));
     }
 
     /**
@@ -361,7 +352,7 @@ public class SDecryptExpressionVisitor extends BaseDEcryptParseTable implements 
     public void visit(InExpression inExpression) {
         //1.当前左边表达式是Column时，针对下面两种情况做出优化，避免多次无意义的加解密
         if (inExpression.getLeftExpression() instanceof Column) {
-            //判断左边 Column 是否需要加解密
+            //判断左边 Column 是否需要密文存储
             boolean columnNeedEncrypt = JsqlparserUtil.needEncrypt((Column) inExpression.getLeftExpression(), this.getLayer(), this.getLayerFieldTableMap());
             //1.1 右边是 (?,?,?)  Column in (?,?,?) 这种 : 只对右边进行加密处理
             if (columnNeedEncrypt && inExpression.getRightItemsList() != null) {
@@ -377,22 +368,23 @@ public class SDecryptExpressionVisitor extends BaseDEcryptParseTable implements 
                 //1.2.2 因为这个sql是一个完全独立的sql，所以单独解析这个sql拥有的字段信息
                 FieldParseParseTableSelectVisitor fieldParseParseTableSelectVisitor = new FieldParseParseTableSelectVisitor(NumberConstant.ONE, null, null);
                 selectBody.accept(fieldParseParseTableSelectVisitor);
-                //1.2.3 select 需要加解密 && 左边的 Column也需要加解密 这种情况，左边的Column不需要处理，子查询的select也不需要处理，只需要处理where
-                if (columnNeedEncrypt && JsqlparserUtil.needEncryptAll(fieldParseParseTableSelectVisitor.getLayer(), fieldParseParseTableSelectVisitor.getLayerSelectTableFieldMap())) {
-                    SOWDecryptSelectVisitor sowDecryptSelectVisitor = new SOWDecryptSelectVisitor(fieldParseParseTableSelectVisitor.getLayer(), fieldParseParseTableSelectVisitor.getLayerSelectTableFieldMap(), fieldParseParseTableSelectVisitor.getLayerFieldTableMap());
-                    selectBody.accept(sowDecryptSelectVisitor);
-                    return;
+                //1.2.3 左边的Column是否密文存储影响后面子查询的加解密函数调用，如果需要密文存储的话，将自己的下标传给下游，因为只有一个，所以下标是0
+                List<Integer> upstreamNeedEncryptIndex = new ArrayList<>();
+                if (columnNeedEncrypt) {
+                    upstreamNeedEncryptIndex.add(NumberConstant.ZERO);
                 }
+                SDecryptSelectVisitor sDecryptSelectVisitor = SDecryptSelectVisitor.newInstanceCurLayer(fieldParseParseTableSelectVisitor, upstreamNeedEncryptIndex);
+                selectBody.accept(sDecryptSelectVisitor);
+                return;
             }
         }
-
 
         //2.其它情况，左边的表达式和右边的子查询都需要单独处理，但是右边的 Column in (?,?,?) 这种不需要处理
         //2.1解析左边表达式
         Expression leftExpression = inExpression.getLeftExpression();
-        SDecryptExpressionVisitor leftExpressionVisitor = SDecryptExpressionVisitor.newInstanceCurLayer(this, leftExpression);
+        SDecryptExpressionVisitor leftExpressionVisitor = SDecryptExpressionVisitor.newInstanceCurLayer(this);
         leftExpression.accept(leftExpressionVisitor);
-        inExpression.setLeftExpression(leftExpressionVisitor.getExpression());
+        inExpression.setLeftExpression(Optional.ofNullable(leftExpressionVisitor.getExpression()).orElse(leftExpression));
         //2.2解析右边表达式(右边是子查询)
         Expression rightExpression = inExpression.getRightExpression();
         if (rightExpression != null && (rightExpression instanceof SubSelect)) {
@@ -400,9 +392,9 @@ public class SDecryptExpressionVisitor extends BaseDEcryptParseTable implements 
             FieldParseParseTableSelectVisitor fieldParseParseTableSelectVisitor = new FieldParseParseTableSelectVisitor(NumberConstant.ONE, null, null);
             ((SubSelect) rightExpression).getSelectBody().accept(fieldParseParseTableSelectVisitor);
             //根据上面解析出来sql拥有的字段信息，将子查询进行加解密
-            SDecryptExpressionVisitor rightExpressionVisitor = SDecryptExpressionVisitor.newInstanceCurLayer(this, rightExpression);
+            SDecryptExpressionVisitor rightExpressionVisitor = SDecryptExpressionVisitor.newInstanceCurLayer(this);
             rightExpression.accept(rightExpressionVisitor);
-            inExpression.setRightExpression(rightExpressionVisitor.getExpression());
+            inExpression.setRightExpression(Optional.ofNullable(rightExpressionVisitor.getExpression()).orElse(rightExpression));
         }
 
     }
@@ -421,51 +413,51 @@ public class SDecryptExpressionVisitor extends BaseDEcryptParseTable implements 
     public void visit(IsBooleanExpression isBooleanExpression) {
         //解析表达式
         Expression leftExpression = isBooleanExpression.getLeftExpression();
-        SDecryptExpressionVisitor leftExpressionVisitor = SDecryptExpressionVisitor.newInstanceCurLayer(this, leftExpression);
+        SDecryptExpressionVisitor leftExpressionVisitor = SDecryptExpressionVisitor.newInstanceCurLayer(this);
         leftExpression.accept(leftExpressionVisitor);
-        isBooleanExpression.setLeftExpression(leftExpressionVisitor.getExpression());
+        isBooleanExpression.setLeftExpression(Optional.ofNullable(leftExpressionVisitor.getExpression()).orElse(leftExpression));
     }
 
     @Override
     public void visit(LikeExpression likeExpression) {
         //解析左右表达式
         Expression leftExpression = likeExpression.getLeftExpression();
-        SDecryptExpressionVisitor leftExpressionVisitor = SDecryptExpressionVisitor.newInstanceCurLayer(this, leftExpression);
+        SDecryptExpressionVisitor leftExpressionVisitor = SDecryptExpressionVisitor.newInstanceCurLayer(this);
         leftExpression.accept(leftExpressionVisitor);
-        likeExpression.setLeftExpression(leftExpressionVisitor.getExpression());
+        likeExpression.setLeftExpression(Optional.ofNullable(leftExpressionVisitor.getExpression()).orElse(leftExpression));
 
         Expression rightExpression = likeExpression.getRightExpression();
-        SDecryptExpressionVisitor rightExpressionVisitor = SDecryptExpressionVisitor.newInstanceCurLayer(this, rightExpression);
+        SDecryptExpressionVisitor rightExpressionVisitor = SDecryptExpressionVisitor.newInstanceCurLayer(this);
         rightExpression.accept(rightExpressionVisitor);
-        likeExpression.setRightExpression(rightExpressionVisitor.getExpression());
+        likeExpression.setRightExpression(Optional.ofNullable(rightExpressionVisitor.getExpression()).orElse(rightExpression));
     }
 
     @Override
     public void visit(MinorThan minorThan) {
         //解析左右表达式
         Expression leftExpression = minorThan.getLeftExpression();
-        SDecryptExpressionVisitor leftExpressionVisitor = SDecryptExpressionVisitor.newInstanceCurLayer(this, leftExpression);
+        SDecryptExpressionVisitor leftExpressionVisitor = SDecryptExpressionVisitor.newInstanceCurLayer(this);
         leftExpression.accept(leftExpressionVisitor);
-        minorThan.setLeftExpression(leftExpressionVisitor.getExpression());
+        minorThan.setLeftExpression(Optional.ofNullable(leftExpressionVisitor.getExpression()).orElse(leftExpression));
 
         Expression rightExpression = minorThan.getRightExpression();
-        SDecryptExpressionVisitor rightExpressionVisitor = SDecryptExpressionVisitor.newInstanceCurLayer(this, rightExpression);
+        SDecryptExpressionVisitor rightExpressionVisitor = SDecryptExpressionVisitor.newInstanceCurLayer(this);
         rightExpression.accept(rightExpressionVisitor);
-        minorThan.setRightExpression(rightExpressionVisitor.getExpression());
+        minorThan.setRightExpression(Optional.ofNullable(rightExpressionVisitor.getExpression()).orElse(rightExpression));
     }
 
     @Override
     public void visit(MinorThanEquals minorThanEquals) {
         //解析左右表达式
         Expression leftExpression = minorThanEquals.getLeftExpression();
-        SDecryptExpressionVisitor leftExpressionVisitor = SDecryptExpressionVisitor.newInstanceCurLayer(this, leftExpression);
+        SDecryptExpressionVisitor leftExpressionVisitor = SDecryptExpressionVisitor.newInstanceCurLayer(this);
         leftExpression.accept(leftExpressionVisitor);
-        minorThanEquals.setLeftExpression(leftExpressionVisitor.getExpression());
+        minorThanEquals.setLeftExpression(Optional.ofNullable(leftExpressionVisitor.getExpression()).orElse(leftExpression));
 
         Expression rightExpression = minorThanEquals.getRightExpression();
-        SDecryptExpressionVisitor rightExpressionVisitor = SDecryptExpressionVisitor.newInstanceCurLayer(this, rightExpression);
+        SDecryptExpressionVisitor rightExpressionVisitor = SDecryptExpressionVisitor.newInstanceCurLayer(this);
         rightExpression.accept(rightExpressionVisitor);
-        minorThanEquals.setRightExpression(rightExpressionVisitor.getExpression());
+        minorThanEquals.setRightExpression(Optional.ofNullable(rightExpressionVisitor.getExpression()).orElse(rightExpression));
     }
 
     @Override
@@ -501,14 +493,14 @@ public class SDecryptExpressionVisitor extends BaseDEcryptParseTable implements 
 
         //4.其它情况（两边都不是Column） 解析左右两边的表达式
         Expression leftExpression = notEqualsTo.getLeftExpression();
-        SDecryptExpressionVisitor leftExpressionVisitor = SDecryptExpressionVisitor.newInstanceCurLayer(this, leftExpression);
+        SDecryptExpressionVisitor leftExpressionVisitor = SDecryptExpressionVisitor.newInstanceCurLayer(this);
         leftExpression.accept(leftExpressionVisitor);
-        notEqualsTo.setLeftExpression(leftExpressionVisitor.getExpression());
+        notEqualsTo.setLeftExpression(Optional.ofNullable(leftExpressionVisitor.getExpression()).orElse(leftExpression));
 
         Expression rightExpression = notEqualsTo.getRightExpression();
-        SDecryptExpressionVisitor rightExpressionVisitor = SDecryptExpressionVisitor.newInstanceCurLayer(this, rightExpression);
+        SDecryptExpressionVisitor rightExpressionVisitor = SDecryptExpressionVisitor.newInstanceCurLayer(this);
         rightExpression.accept(rightExpressionVisitor);
-        notEqualsTo.setRightExpression(rightExpressionVisitor.getExpression());
+        notEqualsTo.setRightExpression(Optional.ofNullable(rightExpressionVisitor.getExpression()).orElse(rightExpression));
 
 
     }
@@ -560,7 +552,7 @@ public class SDecryptExpressionVisitor extends BaseDEcryptParseTable implements 
         subSelect.getSelectBody().accept(sFieldSelectItemVisitor);
 
         //3.利用解析后的表结构Map进行子查询解密处理
-        SDecryptSelectVisitor sDecryptSelectVisitor = SDecryptSelectVisitor.newInstanceCurLayer(sFieldSelectItemVisitor, EncryptorFunctionEnum.DEFAULT_DECRYPTION);
+        SDecryptSelectVisitor sDecryptSelectVisitor = SDecryptSelectVisitor.newInstanceCurLayer(sFieldSelectItemVisitor);
         subSelect.getSelectBody().accept(sDecryptSelectVisitor);
     }
 
@@ -577,19 +569,19 @@ public class SDecryptExpressionVisitor extends BaseDEcryptParseTable implements 
         //处理case的条件
         Expression switchExpression = caseExpression.getSwitchExpression();
         if (switchExpression != null) {
-            SDecryptExpressionVisitor expressionVisitor = SDecryptExpressionVisitor.newInstanceCurLayer(this, switchExpression);
+            SDecryptExpressionVisitor expressionVisitor = SDecryptExpressionVisitor.newInstanceCurLayer(this);
             switchExpression.accept(expressionVisitor);
-            caseExpression.setSwitchExpression(expressionVisitor.getExpression());
+            caseExpression.setSwitchExpression(Optional.ofNullable(expressionVisitor.getExpression()).orElse(switchExpression));
         }
 
         //处理when的条件
         if (!CollectionUtils.isEmpty(caseExpression.getWhenClauses())) {
             List<WhenClause> whenClauses = caseExpression.getWhenClauses().stream()
                     .map(m -> {
-                        SDecryptExpressionVisitor expressionVisitor = SDecryptExpressionVisitor.newInstanceCurLayer(this, m);
+                        SDecryptExpressionVisitor expressionVisitor = SDecryptExpressionVisitor.newInstanceCurLayer(this);
                         m.accept(expressionVisitor);
                         // 这里返回的类型肯定是通过构造函数传输过去的，所以可以直接强转（这里过去是WhenClause WhenClause下一层才是Column才会转换类型）
-                        return (WhenClause) expressionVisitor.getExpression();
+                        return (WhenClause) (Optional.ofNullable(expressionVisitor.getExpression()).orElse(m));
                     }).collect(Collectors.toList());
             caseExpression.setWhenClauses(whenClauses);
         }
@@ -597,9 +589,9 @@ public class SDecryptExpressionVisitor extends BaseDEcryptParseTable implements 
         //处理else
         Expression elseExpression = caseExpression.getElseExpression();
         if (elseExpression != null) {
-            SDecryptExpressionVisitor expressionVisitor = SDecryptExpressionVisitor.newInstanceCurLayer(this, elseExpression);
+            SDecryptExpressionVisitor expressionVisitor = SDecryptExpressionVisitor.newInstanceCurLayer(this);
             elseExpression.accept(expressionVisitor);
-            caseExpression.setElseExpression(expressionVisitor.getExpression());
+            caseExpression.setElseExpression(Optional.ofNullable(expressionVisitor.getExpression()).orElse(elseExpression));
         }
     }
 
@@ -607,17 +599,16 @@ public class SDecryptExpressionVisitor extends BaseDEcryptParseTable implements 
     public void visit(WhenClause whenClause) {
         Expression thenExpression = whenClause.getThenExpression();
         if (thenExpression != null) {
-            SDecryptExpressionVisitor expressionVisitor = SDecryptExpressionVisitor.newInstanceCurLayer(this, thenExpression);
+            SDecryptExpressionVisitor expressionVisitor = SDecryptExpressionVisitor.newInstanceCurLayer(this);
             thenExpression.accept(expressionVisitor);
-            whenClause.setThenExpression(expressionVisitor.getExpression());
+            whenClause.setThenExpression(Optional.ofNullable(expressionVisitor.getExpression()).orElse(thenExpression));
         }
 
         Expression whenExpression = whenClause.getWhenExpression();
         if (whenExpression != null) {
-            SDecryptExpressionVisitor expressionVisitor = SDecryptExpressionVisitor.newInstanceCurLayer(this, whenExpression);
+            SDecryptExpressionVisitor expressionVisitor = SDecryptExpressionVisitor.newInstanceCurLayer(this);
             whenExpression.accept(expressionVisitor);
-            whenClause.setWhenExpression(expressionVisitor.getExpression());
-//            whenExpression.accept(expressionVisitor); todo-ltq 研究看这个东西怎么改
+            whenClause.setWhenExpression(Optional.ofNullable(expressionVisitor.getExpression()).orElse(whenExpression));
         }
     }
 
@@ -625,9 +616,9 @@ public class SDecryptExpressionVisitor extends BaseDEcryptParseTable implements 
     public void visit(ExistsExpression existsExpression) {
         //解析表达式
         Expression rightExpression = existsExpression.getRightExpression();
-        SDecryptExpressionVisitor rightExpressionVisitor = SDecryptExpressionVisitor.newInstanceCurLayer(this, rightExpression);
+        SDecryptExpressionVisitor rightExpressionVisitor = SDecryptExpressionVisitor.newInstanceCurLayer(this);
         rightExpression.accept(rightExpressionVisitor);
-        existsExpression.setRightExpression(rightExpressionVisitor.getExpression());
+        existsExpression.setRightExpression(Optional.ofNullable(rightExpressionVisitor.getExpression()).orElse(rightExpression));
     }
 
     @Override
@@ -663,9 +654,9 @@ public class SDecryptExpressionVisitor extends BaseDEcryptParseTable implements 
     @Override
     public void visit(CastExpression cast) {
         Expression leftExpression = cast.getLeftExpression();
-        SDecryptExpressionVisitor expressionVisitor = SDecryptExpressionVisitor.newInstanceCurLayer(this, leftExpression);
+        SDecryptExpressionVisitor expressionVisitor = SDecryptExpressionVisitor.newInstanceCurLayer(this);
         leftExpression.accept(expressionVisitor);
-        cast.setLeftExpression(expressionVisitor.getExpression());
+        cast.setLeftExpression(Optional.ofNullable(expressionVisitor.getExpression()).orElse(leftExpression));
     }
 
     @Override
@@ -717,14 +708,14 @@ public class SDecryptExpressionVisitor extends BaseDEcryptParseTable implements 
     public void visit(RegExpMySQLOperator regExpMySQLOperator) {
         //解析左右表达式
         Expression leftExpression = regExpMySQLOperator.getLeftExpression();
-        SDecryptExpressionVisitor leftExpressionVisitor = SDecryptExpressionVisitor.newInstanceCurLayer(this, leftExpression);
+        SDecryptExpressionVisitor leftExpressionVisitor = SDecryptExpressionVisitor.newInstanceCurLayer(this);
         leftExpression.accept(leftExpressionVisitor);
-        regExpMySQLOperator.setLeftExpression(leftExpressionVisitor.getExpression());
+        regExpMySQLOperator.setLeftExpression(Optional.ofNullable(leftExpressionVisitor.getExpression()).orElse(leftExpression));
 
         Expression rightExpression = regExpMySQLOperator.getRightExpression();
-        SDecryptExpressionVisitor rightExpressionVisitor = SDecryptExpressionVisitor.newInstanceCurLayer(this, rightExpression);
+        SDecryptExpressionVisitor rightExpressionVisitor = SDecryptExpressionVisitor.newInstanceCurLayer(this);
         rightExpression.accept(rightExpressionVisitor);
-        regExpMySQLOperator.setRightExpression(rightExpressionVisitor.getExpression());
+        regExpMySQLOperator.setRightExpression(Optional.ofNullable(rightExpressionVisitor.getExpression()).orElse(rightExpression));
     }
 
     @Override
@@ -748,9 +739,9 @@ public class SDecryptExpressionVisitor extends BaseDEcryptParseTable implements 
         ExpressionList expressionList = groupConcat.getExpressionList();
         List<Expression> newExpressions = new ArrayList<>();
         for (Expression exp : expressionList.getExpressions()) {
-            SDecryptExpressionVisitor sDecryptExpressionVisitor = SDecryptExpressionVisitor.newInstanceCurLayer(this, exp);
+            SDecryptExpressionVisitor sDecryptExpressionVisitor = SDecryptExpressionVisitor.newInstanceCurLayer(this);
             exp.accept(sDecryptExpressionVisitor);
-            newExpressions.add(sDecryptExpressionVisitor.getExpression());
+            newExpressions.add(Optional.ofNullable(sDecryptExpressionVisitor.getExpression()).orElse(exp));
         }
 
         //替换解密后的表达式
@@ -778,9 +769,9 @@ public class SDecryptExpressionVisitor extends BaseDEcryptParseTable implements 
         //依次处理每个表达式
         List<Expression> expressions = exprList.getExpressions();
         for (Expression exp : expressions) {
-            SDecryptExpressionVisitor expressionVisitor = SDecryptExpressionVisitor.newInstanceCurLayer(this, exp);
+            SDecryptExpressionVisitor expressionVisitor = SDecryptExpressionVisitor.newInstanceCurLayer(this);
             exp.accept(expressionVisitor);
-            resExp.add(expressionVisitor.getExpression());
+            resExp.add(Optional.ofNullable(expressionVisitor.getExpression()).orElse(exp));
         }
 
         //处理后的表达式赋值

@@ -20,9 +20,9 @@ import java.util.List;
 public class IDecryptItemsListVisitor implements ItemsListVisitor {
 
     //需要加密的字段的索引
-    private List<String> needEncryptIndex;
+    private List<Integer> needEncryptIndex;
 
-    public IDecryptItemsListVisitor(List<String> needEncryptIndex) {
+    public IDecryptItemsListVisitor(List<Integer> needEncryptIndex) {
         this.needEncryptIndex = needEncryptIndex;
     }
 
@@ -48,7 +48,7 @@ public class IDecryptItemsListVisitor implements ItemsListVisitor {
         for (int i = 0; i < expressions.size(); i++) {
             Expression expression = expressions.get(i);
             //当前字段需要加密，并且当前字段是String类型的，才进行加密处理
-            if (needEncryptIndex.contains(String.valueOf(i))) {
+            if (needEncryptIndex.contains(i)) {
                 //将原表达式进行加密
                 Expression toBase64Function = FieldEncryptorPatternCache.getInstance().encryption(expression);
 
