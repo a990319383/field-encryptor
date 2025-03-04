@@ -87,7 +87,7 @@ public class PlaceholderSelectVisitor extends PlaceholderFieldParseTable impleme
         List<SelectBody> selects = setOperationList.getSelects();
         for (SelectBody select : selects) {
             //单独解析这条sql
-            FieldParseParseTableSelectVisitor fieldParseParseTableSelectVisitor = new FieldParseParseTableSelectVisitor(NumberConstant.ONE, null, null);
+            FieldParseParseTableSelectVisitor fieldParseParseTableSelectVisitor = FieldParseParseTableSelectVisitor.newInstanceFirstLayer();
             select.accept(fieldParseParseTableSelectVisitor);
 
             //用解析后的结果，去解析#{}占位符  (字段所属信息从上面解析结果中取，存放占位符的解析结果的Map用当前的 )

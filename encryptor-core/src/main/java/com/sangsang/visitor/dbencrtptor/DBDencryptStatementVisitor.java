@@ -99,7 +99,7 @@ public class DBDencryptStatementVisitor implements StatementVisitor {
         }
 
         //2.解析涉及到的表拥有的全部字段信息
-        FieldParseParseTableFromItemVisitor fieldParseTableFromItemVisitor = new FieldParseParseTableFromItemVisitor(NumberConstant.ONE, null, null);
+        FieldParseParseTableFromItemVisitor fieldParseTableFromItemVisitor = FieldParseParseTableFromItemVisitor.newInstanceFirstLayer();
         // from 后的表
         Table table = delete.getTable();
         table.accept(fieldParseTableFromItemVisitor);
@@ -129,7 +129,7 @@ public class DBDencryptStatementVisitor implements StatementVisitor {
     @Override
     public void visit(Update update) {
         //1.解析涉及到的表拥有的全部字段信息
-        FieldParseParseTableFromItemVisitor fieldParseTableFromItemVisitor = new FieldParseParseTableFromItemVisitor(NumberConstant.ONE, null, null);
+        FieldParseParseTableFromItemVisitor fieldParseTableFromItemVisitor = FieldParseParseTableFromItemVisitor.newInstanceFirstLayer();
 
         //update的表
         Table table = update.getTable();
@@ -248,7 +248,7 @@ public class DBDencryptStatementVisitor implements StatementVisitor {
         Select select = insert.getSelect();
         if (select != null) {
             //解析当前查询语句的每层表的全部字段
-            FieldParseParseTableSelectVisitor fieldParseTableSelectVisitor = new FieldParseParseTableSelectVisitor(NumberConstant.ONE, null, null);
+            FieldParseParseTableSelectVisitor fieldParseTableSelectVisitor = FieldParseParseTableSelectVisitor.newInstanceFirstLayer();
             select.getSelectBody().accept(fieldParseTableSelectVisitor);
 
             //将这个查询语句where 条件后面的进行加解密处理
@@ -356,7 +356,7 @@ public class DBDencryptStatementVisitor implements StatementVisitor {
     @Override
     public void visit(Select select) {
         //1.解析当前sql拥有的全部字段信息
-        FieldParseParseTableSelectVisitor fieldParseTableSelectVisitor = new FieldParseParseTableSelectVisitor(NumberConstant.ONE, null, null);
+        FieldParseParseTableSelectVisitor fieldParseTableSelectVisitor = FieldParseParseTableSelectVisitor.newInstanceFirstLayer();
         select.getSelectBody().accept(fieldParseTableSelectVisitor);
 
         //2.如果不是union语句  并且 该sql涉及的表都不需要加解密，则不处理后续逻辑 （union语句没有整个解析到这个结果集中，union语句是分成多次解析的）

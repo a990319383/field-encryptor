@@ -373,7 +373,8 @@ public class DBDecryptExpressionVisitor extends BaseDEcryptParseTable implements
                 //1.3.1 拿出右边子查询的sql
                 SelectBody selectBody = ((SubSelect) inExpression.getRightExpression()).getSelectBody();
                 //1.3.2 因为这个sql是一个完全独立的sql，所以单独解析这个sql拥有的字段信息
-                FieldParseParseTableSelectVisitor fieldParseParseTableSelectVisitor = new FieldParseParseTableSelectVisitor(NumberConstant.ONE, null, null);
+                FieldParseParseTableSelectVisitor fieldParseParseTableSelectVisitor = FieldParseParseTableSelectVisitor.newInstanceFirstLayer();
+                ;
                 selectBody.accept(fieldParseParseTableSelectVisitor);
 
                 DBDecryptSelectVisitor sDecryptSelectVisitor = DBDecryptSelectVisitor.newInstanceCurLayer(fieldParseParseTableSelectVisitor, upstreamNeedEncryptIndex);
@@ -392,7 +393,7 @@ public class DBDecryptExpressionVisitor extends BaseDEcryptParseTable implements
         Expression rightExpression = inExpression.getRightExpression();
         if (rightExpression != null && (rightExpression instanceof SubSelect)) {
             //备注：右边的子查询是一个完全独立的sql，所以不共用一个解析结果，需要单独解析当前sql中涉及的字段
-            FieldParseParseTableSelectVisitor fieldParseParseTableSelectVisitor = new FieldParseParseTableSelectVisitor(NumberConstant.ONE, null, null);
+            FieldParseParseTableSelectVisitor fieldParseParseTableSelectVisitor = FieldParseParseTableSelectVisitor.newInstanceFirstLayer();
             ((SubSelect) rightExpression).getSelectBody().accept(fieldParseParseTableSelectVisitor);
             //根据上面解析出来sql拥有的字段信息，将子查询进行加解密
             DBDecryptExpressionVisitor rightExpressionVisitor = DBDecryptExpressionVisitor.newInstanceCurLayer(this);
@@ -546,15 +547,12 @@ public class DBDecryptExpressionVisitor extends BaseDEcryptParseTable implements
     @Override
     public void visit(SubSelect subSelect) {
         //这种语法的里面都是单独的语句，所以这里将里层的语句单独解析一次
-        //1.将现在的两个存储解析结果的map深克隆拷贝一份，用这两份数据去解析子查询的结果，避免这个子查询也拥有子查询，导致影响当前解析结果的map的下一层结果出错
-        Map<String, Map<String, Set<FieldInfoDto>>> cloneLayerSelectTableFieldMap = ObjectUtil.cloneByStream(this.getLayerSelectTableFieldMap());
-        Map<String, Map<String, Set<FieldInfoDto>>> cloneLayerFieldTableMap = ObjectUtil.cloneByStream(this.getLayerFieldTableMap());
 
-        //2.单独解析当前子查询的语法 （单独解析是为了好提取，因为解析的两个Map值的别名需要单独修改）
-        FieldParseParseTableSelectVisitor sFieldSelectItemVisitor = new FieldParseParseTableSelectVisitor(this.getLayer(), cloneLayerSelectTableFieldMap, cloneLayerFieldTableMap);
+        //1.采用独立存储空间单独解析当前子查询的语法
+        FieldParseParseTableSelectVisitor sFieldSelectItemVisitor = FieldParseParseTableSelectVisitor.newInstanceIndividualMap(this);
         subSelect.getSelectBody().accept(sFieldSelectItemVisitor);
 
-        //3.利用解析后的表结构Map进行子查询解密处理
+        //2.利用解析后的表结构Map进行子查询解密处理
         DBDecryptSelectVisitor sDecryptSelectVisitor = DBDecryptSelectVisitor.newInstanceCurLayer(sFieldSelectItemVisitor);
         subSelect.getSelectBody().accept(sDecryptSelectVisitor);
     }

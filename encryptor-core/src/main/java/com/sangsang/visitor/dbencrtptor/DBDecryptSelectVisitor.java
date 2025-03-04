@@ -177,7 +177,7 @@ public class DBDecryptSelectVisitor extends BaseFieldParseTable implements Selec
         for (int i = 0; i < selects.size(); i++) {
             SelectBody select = selects.get(i);
             //解析每个union的语句自己拥有的字段信息
-            FieldParseParseTableSelectVisitor fieldParseTableSelectVisitor = new FieldParseParseTableSelectVisitor(NumberConstant.ONE, null, null);
+            FieldParseParseTableSelectVisitor fieldParseTableSelectVisitor = FieldParseParseTableSelectVisitor.newInstanceFirstLayer();
             select.accept(fieldParseTableSelectVisitor);
 
             //需要加密的字段进行加密处理

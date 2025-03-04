@@ -231,7 +231,7 @@ public class PlaceholderWhereExpressionVisitor extends PlaceholderFieldParseTabl
                 //1.2.1 取出右边的select语句
                 SelectBody selectBody = ((SubSelect) inExpression.getRightExpression()).getSelectBody();
                 //1.2.2 因为这个sql是一个完全独立的sql，所以单独解析这个sql拥有的字段信息
-                FieldParseParseTableSelectVisitor fieldParseParseTableSelectVisitor = new FieldParseParseTableSelectVisitor(NumberConstant.ONE, null, null);
+                FieldParseParseTableSelectVisitor fieldParseParseTableSelectVisitor = FieldParseParseTableSelectVisitor.newInstanceFirstLayer();
                 selectBody.accept(fieldParseParseTableSelectVisitor);
                 //1.2.3 利用这个单独的sql的解析结果，对这个sql的where的#{}占位符进行分析
                 PlaceholderSelectVisitor placeholderSelectVisitor = new PlaceholderSelectVisitor(fieldParseParseTableSelectVisitor, this.getPlaceholderColumnTableMap());
@@ -241,7 +241,7 @@ public class PlaceholderWhereExpressionVisitor extends PlaceholderFieldParseTabl
             //2.1 左边不是Column，但是右边是子查询时，需要对子查询的where进行处理  栗子： wher  concat(a.phone,b.name) in (select xxx from 表 where  xxx= ?占位符)
             if (inExpression.getRightExpression() instanceof SubSelect) {
                 //备注：右边的子查询是一个完全独立的sql，所以不共用一个解析结果，需要单独解析当前sql中涉及的字段
-                FieldParseParseTableSelectVisitor fieldParseParseTableSelectVisitor = new FieldParseParseTableSelectVisitor(NumberConstant.ONE, null, null);
+                FieldParseParseTableSelectVisitor fieldParseParseTableSelectVisitor = FieldParseParseTableSelectVisitor.newInstanceFirstLayer();
                 ((SubSelect) inExpression.getRightExpression()).getSelectBody().accept(fieldParseParseTableSelectVisitor);
                 //基于新解析的表结构信息 和当前存储？占位符的Map 解析其中的where条件
                 PlaceholderWhereExpressionVisitor placeholderWhereExpressionVisitor = new PlaceholderWhereExpressionVisitor(fieldParseParseTableSelectVisitor, this.getPlaceholderColumnTableMap());

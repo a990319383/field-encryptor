@@ -22,7 +22,22 @@ import java.util.stream.Collectors;
 public class FieldParseParseSelectItemVisitor extends BaseFieldParseTable implements SelectItemVisitor {
 
 
-    public FieldParseParseSelectItemVisitor(int layer, Map<String, Map<String, Set<FieldInfoDto>>> layerSelectTableFieldMap, Map<String, Map<String, Set<FieldInfoDto>>> layerFieldTableMap) {
+    /**
+     * 获取当前层实例对象
+     *
+     * @author liutangqi
+     * @date 2025/3/4 17:25
+     * @Param [baseFieldParseTable]
+     **/
+    public static FieldParseParseSelectItemVisitor newInstanceCurLayer(BaseFieldParseTable baseFieldParseTable) {
+        return new FieldParseParseSelectItemVisitor(
+                baseFieldParseTable.getLayer(),
+                baseFieldParseTable.getLayerSelectTableFieldMap(),
+                baseFieldParseTable.getLayerFieldTableMap()
+        );
+    }
+
+    private FieldParseParseSelectItemVisitor(int layer, Map<String, Map<String, Set<FieldInfoDto>>> layerSelectTableFieldMap, Map<String, Map<String, Set<FieldInfoDto>>> layerFieldTableMap) {
         super(layer, layerSelectTableFieldMap, layerFieldTableMap);
     }
 
@@ -85,7 +100,7 @@ public class FieldParseParseSelectItemVisitor extends BaseFieldParseTable implem
         Expression expression = selectExpressionItem.getExpression();
 
         Alias alias = selectExpressionItem.getAlias();
-        FieldParseParseExpressionVisitor fieldParseExpressionVisitor = new FieldParseParseExpressionVisitor(alias, this.getLayer(), this.getLayerSelectTableFieldMap(), this.getLayerFieldTableMap());
+        FieldParseParseExpressionVisitor fieldParseExpressionVisitor = FieldParseParseExpressionVisitor.newInstanceCurLayer(this, alias);
         expression.accept(fieldParseExpressionVisitor);
 
     }
