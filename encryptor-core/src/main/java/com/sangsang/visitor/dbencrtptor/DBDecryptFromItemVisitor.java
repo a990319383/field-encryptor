@@ -1,9 +1,7 @@
-package com.sangsang.visitor.dbencrtptor.select;
+package com.sangsang.visitor.dbencrtptor;
 
 import com.sangsang.domain.dto.BaseFieldParseTable;
 import com.sangsang.domain.dto.FieldInfoDto;
-import com.sangsang.domain.enums.EncryptorFunctionEnum;
-import com.sangsang.domain.function.EncryptorFunctionScene;
 import net.sf.jsqlparser.schema.Table;
 import net.sf.jsqlparser.statement.select.*;
 
@@ -15,10 +13,23 @@ import java.util.Set;
  * @author liutangqi
  * @date 2024/2/29 16:07
  */
-public class SDecryptFromItemVisitor extends BaseFieldParseTable implements FromItemVisitor {
+public class DBDecryptFromItemVisitor extends BaseFieldParseTable implements FromItemVisitor {
 
 
-    public SDecryptFromItemVisitor(int layer, Map<String, Map<String, Set<FieldInfoDto>>> layerSelectTableFieldMap, Map<String, Map<String, Set<FieldInfoDto>>> layerFieldTableMap) {
+    /**
+     * 获取当前层的解析对象
+     *
+     * @author liutangqi
+     * @date 2025/3/4 15:44
+     * @Param [baseFieldParseTable]
+     **/
+    public static DBDecryptFromItemVisitor newInstanceCurLayer(BaseFieldParseTable baseFieldParseTable) {
+        return new DBDecryptFromItemVisitor(baseFieldParseTable.getLayer(),
+                baseFieldParseTable.getLayerSelectTableFieldMap(),
+                baseFieldParseTable.getLayerFieldTableMap());
+    }
+
+    private DBDecryptFromItemVisitor(int layer, Map<String, Map<String, Set<FieldInfoDto>>> layerSelectTableFieldMap, Map<String, Map<String, Set<FieldInfoDto>>> layerFieldTableMap) {
         super(layer, layerSelectTableFieldMap, layerFieldTableMap);
     }
 
@@ -38,7 +49,7 @@ public class SDecryptFromItemVisitor extends BaseFieldParseTable implements From
     public void visit(SubSelect subSelect) {
         SelectBody selectBody = subSelect.getSelectBody();
         //解密子查询内容
-        SDecryptSelectVisitor sDecryptSelectVisitor = SDecryptSelectVisitor.newInstanceNextLayer(this);
+        DBDecryptSelectVisitor sDecryptSelectVisitor = DBDecryptSelectVisitor.newInstanceNextLayer(this);
         selectBody.accept(sDecryptSelectVisitor);
     }
 

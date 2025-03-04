@@ -1,7 +1,6 @@
 package com.sangsang.visitor.dbencrtptor;
 
 import com.sangsang.domain.enums.EncryptorFunctionEnum;
-import com.sangsang.domain.function.EncryptorFunctionScene;
 import com.sangsang.util.CollectionUtils;
 import com.sangsang.cache.FieldEncryptorPatternCache;
 import com.sangsang.cache.TableCache;
@@ -9,11 +8,8 @@ import com.sangsang.domain.annos.FieldEncryptor;
 import com.sangsang.domain.constants.NumberConstant;
 import com.sangsang.domain.constants.SymbolConstant;
 import com.sangsang.util.JsqlparserUtil;
-import com.sangsang.visitor.dbencrtptor.select.SDecryptExpressionVisitor;
 import com.sangsang.visitor.fieldparse.FieldParseParseTableFromItemVisitor;
 import com.sangsang.visitor.fieldparse.FieldParseParseTableSelectVisitor;
-import com.sangsang.visitor.dbencrtptor.insert.IDecryptItemsListVisitor;
-import com.sangsang.visitor.dbencrtptor.select.SDecryptSelectVisitor;
 import net.sf.jsqlparser.expression.Expression;
 import net.sf.jsqlparser.expression.operators.relational.ItemsList;
 import net.sf.jsqlparser.schema.Column;
@@ -122,7 +118,7 @@ public class DBDencryptStatementVisitor implements StatementVisitor {
         }
 
         //4.将where 条件进行解密
-        SDecryptExpressionVisitor sDecryptExpressionVisitor = SDecryptExpressionVisitor.newInstanceCurLayer(fieldParseTableFromItemVisitor, EncryptorFunctionEnum.DEFAULT_DECRYPTION);
+        DBDecryptExpressionVisitor sDecryptExpressionVisitor = DBDecryptExpressionVisitor.newInstanceCurLayer(fieldParseTableFromItemVisitor, EncryptorFunctionEnum.DEFAULT_DECRYPTION);
         where.accept(sDecryptExpressionVisitor);
 
         //5.结果赋值
@@ -154,7 +150,7 @@ public class DBDencryptStatementVisitor implements StatementVisitor {
         //3.解密where 条件的数据
         Expression where = update.getWhere();
         if (where != null) {
-            SDecryptExpressionVisitor expressionVisitor = SDecryptExpressionVisitor.newInstanceCurLayer(fieldParseTableFromItemVisitor, EncryptorFunctionEnum.DEFAULT_DECRYPTION);
+            DBDecryptExpressionVisitor expressionVisitor = DBDecryptExpressionVisitor.newInstanceCurLayer(fieldParseTableFromItemVisitor, EncryptorFunctionEnum.DEFAULT_DECRYPTION);
             where.accept(expressionVisitor);
             //修改后的where赋值
             update.setWhere(Optional.ofNullable(expressionVisitor.getExpression()).orElse(where));
@@ -244,8 +240,8 @@ public class DBDencryptStatementVisitor implements StatementVisitor {
         //情况1：这里是 insert into table(xxx,xxx) values(),()  这种语法
         ItemsList itemsList = insert.getItemsList();
         if (itemsList != null) {
-            IDecryptItemsListVisitor iDecryptItemsListVisitor = new IDecryptItemsListVisitor(needEncryptIndex);
-            itemsList.accept(iDecryptItemsListVisitor);
+            DBDecryptItemsListVisitor dBDecryptItemsListVisitor = DBDecryptItemsListVisitor.newInstanceCurLayer(needEncryptIndex);
+            itemsList.accept(dBDecryptItemsListVisitor);
         }
 
         //情况2：insert select 语句
@@ -256,7 +252,7 @@ public class DBDencryptStatementVisitor implements StatementVisitor {
             select.getSelectBody().accept(fieldParseTableSelectVisitor);
 
             //将这个查询语句where 条件后面的进行加解密处理
-            SDecryptSelectVisitor sDecryptSelectVisitor = SDecryptSelectVisitor.newInstanceCurLayer(fieldParseTableSelectVisitor, needEncryptIndex);
+            DBDecryptSelectVisitor sDecryptSelectVisitor = DBDecryptSelectVisitor.newInstanceCurLayer(fieldParseTableSelectVisitor, needEncryptIndex);
             select.getSelectBody().accept(sDecryptSelectVisitor);
         }
 
@@ -370,7 +366,7 @@ public class DBDencryptStatementVisitor implements StatementVisitor {
         }
 
         //3.将需要加密的字段进行加密处理
-        SDecryptSelectVisitor sDecryptSelectVisitor = SDecryptSelectVisitor.newInstanceCurLayer(fieldParseTableSelectVisitor);
+        DBDecryptSelectVisitor sDecryptSelectVisitor = DBDecryptSelectVisitor.newInstanceCurLayer(fieldParseTableSelectVisitor);
         select.getSelectBody().accept(sDecryptSelectVisitor);
 
         //4.处理后的结果赋值

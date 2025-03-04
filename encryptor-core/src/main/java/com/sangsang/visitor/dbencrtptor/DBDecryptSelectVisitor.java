@@ -1,4 +1,4 @@
-package com.sangsang.visitor.dbencrtptor.select;
+package com.sangsang.visitor.dbencrtptor;
 
 import com.sangsang.domain.constants.NumberConstant;
 import com.sangsang.domain.dto.BaseFieldParseTable;
@@ -21,7 +21,7 @@ import java.util.stream.Collectors;
  * @author liutangqi
  * @date 2024/2/29 15:43
  */
-public class SDecryptSelectVisitor extends BaseFieldParseTable implements SelectVisitor {
+public class DBDecryptSelectVisitor extends BaseFieldParseTable implements SelectVisitor {
 
     private String resultSql;
 
@@ -41,9 +41,9 @@ public class SDecryptSelectVisitor extends BaseFieldParseTable implements Select
      * @date 2025/3/2 22:22
      * @Param [baseFieldParseTable, encryptorFunction]
      **/
-    public static SDecryptSelectVisitor newInstanceCurLayer(BaseFieldParseTable baseFieldParseTable,
-                                                            List<Integer> upstreamNeedEncryptIndex) {
-        return new SDecryptSelectVisitor(upstreamNeedEncryptIndex,
+    public static DBDecryptSelectVisitor newInstanceCurLayer(BaseFieldParseTable baseFieldParseTable,
+                                                             List<Integer> upstreamNeedEncryptIndex) {
+        return new DBDecryptSelectVisitor(upstreamNeedEncryptIndex,
                 baseFieldParseTable.getLayer(),
                 baseFieldParseTable.getLayerSelectTableFieldMap(),
                 baseFieldParseTable.getLayerFieldTableMap());
@@ -57,8 +57,8 @@ public class SDecryptSelectVisitor extends BaseFieldParseTable implements Select
      * @date 2025/3/2 22:22
      * @Param [baseFieldParseTable, encryptorFunction]
      **/
-    public static SDecryptSelectVisitor newInstanceCurLayer(BaseFieldParseTable baseFieldParseTable) {
-        return new SDecryptSelectVisitor(null,
+    public static DBDecryptSelectVisitor newInstanceCurLayer(BaseFieldParseTable baseFieldParseTable) {
+        return new DBDecryptSelectVisitor(null,
                 baseFieldParseTable.getLayer(),
                 baseFieldParseTable.getLayerSelectTableFieldMap(),
                 baseFieldParseTable.getLayerFieldTableMap());
@@ -72,8 +72,8 @@ public class SDecryptSelectVisitor extends BaseFieldParseTable implements Select
      * @date 2025/3/2 22:22
      * @Param [baseFieldParseTable, encryptorFunction]
      **/
-    public static SDecryptSelectVisitor newInstanceNextLayer(BaseFieldParseTable baseFieldParseTable) {
-        return new SDecryptSelectVisitor(null,
+    public static DBDecryptSelectVisitor newInstanceNextLayer(BaseFieldParseTable baseFieldParseTable) {
+        return new DBDecryptSelectVisitor(null,
                 (baseFieldParseTable.getLayer() + 1),
                 baseFieldParseTable.getLayerSelectTableFieldMap(),
                 baseFieldParseTable.getLayerFieldTableMap());
@@ -81,10 +81,10 @@ public class SDecryptSelectVisitor extends BaseFieldParseTable implements Select
     }
 
 
-    private SDecryptSelectVisitor(List<Integer> upstreamNeedEncryptIndex,
-                                  int layer,
-                                  Map<String, Map<String, Set<FieldInfoDto>>> layerSelectTableFieldMap,
-                                  Map<String, Map<String, Set<FieldInfoDto>>> layerFieldTableMap) {
+    private DBDecryptSelectVisitor(List<Integer> upstreamNeedEncryptIndex,
+                                   int layer,
+                                   Map<String, Map<String, Set<FieldInfoDto>>> layerSelectTableFieldMap,
+                                   Map<String, Map<String, Set<FieldInfoDto>>> layerFieldTableMap) {
         super(layer, layerSelectTableFieldMap, layerFieldTableMap);
         this.upstreamNeedEncryptIndex = Optional.ofNullable(upstreamNeedEncryptIndex).orElse(new ArrayList<>());
     }
@@ -105,7 +105,7 @@ public class SDecryptSelectVisitor extends BaseFieldParseTable implements Select
         //1.解密 from 的表 （解密所有内层的语句）
         FromItem fromItem = plainSelect.getFromItem();
         if (fromItem != null) {
-            SDecryptFromItemVisitor sDecryptFromItemVisitor = new SDecryptFromItemVisitor(this.getLayer(), this.getLayerSelectTableFieldMap(), this.getLayerFieldTableMap());
+            DBDecryptFromItemVisitor sDecryptFromItemVisitor = DBDecryptFromItemVisitor.newInstanceCurLayer(this);
             fromItem.accept(sDecryptFromItemVisitor);
         }
 
@@ -123,7 +123,7 @@ public class SDecryptSelectVisitor extends BaseFieldParseTable implements Select
                 Expression expression = se.getExpression();
                 //根据当前项对应的上游字段是否密文存储来决定下游使用加密还是使用解密
                 EncryptorFunctionEnum encryptorFunctionEnum = this.upstreamNeedEncryptIndex.contains(i) ? EncryptorFunctionEnum.UPSTREAM_SECRET : EncryptorFunctionEnum.UPSTREAM_PLAINTEXT;
-                SDecryptExpressionVisitor sDecryptExpressionVisitor = SDecryptExpressionVisitor.newInstanceCurLayer(this, encryptorFunctionEnum);
+                DBDecryptExpressionVisitor sDecryptExpressionVisitor = DBDecryptExpressionVisitor.newInstanceCurLayer(this, encryptorFunctionEnum);
                 expression.accept(sDecryptExpressionVisitor);
                 //之前有别名就用之前的，之前没有的话，采用处理后的别名
                 se.setAlias(Optional.ofNullable(se.getAlias()).orElse(sDecryptExpressionVisitor.getAlias()));
@@ -137,7 +137,7 @@ public class SDecryptSelectVisitor extends BaseFieldParseTable implements Select
         //5.对where条件后的进行解密
         if (plainSelect.getWhere() != null) {
             Expression where = plainSelect.getWhere();
-            SDecryptExpressionVisitor sDecryptExpressionVisitor = SDecryptExpressionVisitor.newInstanceCurLayer(this, EncryptorFunctionEnum.DEFAULT_DECRYPTION);
+            DBDecryptExpressionVisitor sDecryptExpressionVisitor = DBDecryptExpressionVisitor.newInstanceCurLayer(this, EncryptorFunctionEnum.DEFAULT_DECRYPTION);
             where.accept(sDecryptExpressionVisitor);
             //处理后的条件赋值
             plainSelect.setWhere(Optional.ofNullable(sDecryptExpressionVisitor.getExpression()).orElse(where));
@@ -149,7 +149,7 @@ public class SDecryptSelectVisitor extends BaseFieldParseTable implements Select
             for (Join join : joins) {
                 List<Expression> dencryptExpressions = new ArrayList<>();
                 for (Expression expression : join.getOnExpressions()) {
-                    SDecryptExpressionVisitor sDecryptExpressionVisitor = SDecryptExpressionVisitor.newInstanceCurLayer(this, EncryptorFunctionEnum.DEFAULT_DECRYPTION);
+                    DBDecryptExpressionVisitor sDecryptExpressionVisitor = DBDecryptExpressionVisitor.newInstanceCurLayer(this, EncryptorFunctionEnum.DEFAULT_DECRYPTION);
                     expression.accept(sDecryptExpressionVisitor);
                     dencryptExpressions.add(Optional.ofNullable(sDecryptExpressionVisitor.getExpression()).orElse(expression));
                 }
@@ -181,7 +181,7 @@ public class SDecryptSelectVisitor extends BaseFieldParseTable implements Select
             select.accept(fieldParseTableSelectVisitor);
 
             //需要加密的字段进行加密处理
-            SDecryptSelectVisitor sDecryptSelectVisitor = SDecryptSelectVisitor.newInstanceCurLayer(fieldParseTableSelectVisitor);
+            DBDecryptSelectVisitor sDecryptSelectVisitor = DBDecryptSelectVisitor.newInstanceCurLayer(fieldParseTableSelectVisitor);
             select.accept(sDecryptSelectVisitor);
 
             //维护加解密之后的语句
