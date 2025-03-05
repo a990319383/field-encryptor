@@ -1,4 +1,4 @@
-package com.sangsang.visitor.pojoencrtptor.select;
+package com.sangsang.visitor.pojoencrtptor;
 
 import com.sangsang.domain.dto.BaseFieldParseTable;
 import com.sangsang.domain.dto.ColumnTableDto;
@@ -38,7 +38,7 @@ public class PlaceholderSelectFromItemVisitor extends PlaceholderFieldParseTable
      **/
     @Override
     public void visit(SubSelect subSelect) {
-        PlaceholderSelectVisitor placeholderSelectVisitor = new PlaceholderSelectVisitor((this.getLayer() + 1), this.getLayerSelectTableFieldMap(), this.getLayerFieldTableMap(), this.getPlaceholderColumnTableMap());
+        PlaceholderSelectVisitor placeholderSelectVisitor = PlaceholderSelectVisitor.newInstanceNextLayer(this);
         subSelect.getSelectBody().accept(placeholderSelectVisitor);
     }
 

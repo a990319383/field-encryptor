@@ -1,12 +1,10 @@
-package com.sangsang.visitor.pojoencrtptor.select;
+package com.sangsang.visitor.pojoencrtptor;
 
 import com.sangsang.util.CollectionUtils;
-import com.sangsang.domain.constants.NumberConstant;
 import com.sangsang.domain.dto.BaseFieldParseTable;
 import com.sangsang.domain.dto.ColumnTableDto;
 import com.sangsang.domain.dto.FieldInfoDto;
 import com.sangsang.domain.dto.PlaceholderFieldParseTable;
-import com.sangsang.visitor.pojoencrtptor.where.PlaceholderWhereExpressionVisitor;
 import com.sangsang.visitor.fieldparse.FieldParseParseTableSelectVisitor;
 import net.sf.jsqlparser.expression.Expression;
 import net.sf.jsqlparser.statement.select.*;
@@ -24,29 +22,60 @@ import java.util.Set;
  */
 public class PlaceholderSelectVisitor extends PlaceholderFieldParseTable implements SelectVisitor {
 
-    public PlaceholderSelectVisitor(int layer, Map<String, Map<String, Set<FieldInfoDto>>> layerSelectTableFieldMap, Map<String, Map<String, Set<FieldInfoDto>>> layerFieldTableMap, Map<String, ColumnTableDto> placeholderColumnTableMap) {
+    private PlaceholderSelectVisitor(int layer, Map<String, Map<String, Set<FieldInfoDto>>> layerSelectTableFieldMap, Map<String, Map<String, Set<FieldInfoDto>>> layerFieldTableMap, Map<String, ColumnTableDto> placeholderColumnTableMap) {
         super(layer, layerSelectTableFieldMap, layerFieldTableMap, placeholderColumnTableMap);
     }
 
-    public PlaceholderSelectVisitor(PlaceholderFieldParseTable placeholderFieldParseTable) {
-        super(placeholderFieldParseTable, placeholderFieldParseTable.getPlaceholderColumnTableMap());
+    /**
+     * 返回当前层实例
+     *
+     * @author liutangqi
+     * @date 2025/3/5 14:55
+     * @Param [placeholderFieldParseTable]
+     **/
+    public static PlaceholderSelectVisitor newInstanceCurLayer(PlaceholderFieldParseTable placeholderFieldParseTable) {
+        return PlaceholderSelectVisitor.newInstanceCurLayer(placeholderFieldParseTable, placeholderFieldParseTable.getPlaceholderColumnTableMap());
     }
 
-    public PlaceholderSelectVisitor(BaseFieldParseTable baseFieldParseTable, Map<String, ColumnTableDto> placeholderColumnTableMap) {
-        super(baseFieldParseTable, placeholderColumnTableMap);
+    /**
+     * 返回当前层实例
+     *
+     * @author liutangqi
+     * @date 2025/3/5 14:57
+     * @Param [baseFieldParseTable, placeholderColumnTableMap]
+     **/
+    public static PlaceholderSelectVisitor newInstanceCurLayer(BaseFieldParseTable baseFieldParseTable, Map<String, ColumnTableDto> placeholderColumnTableMap) {
+        return new PlaceholderSelectVisitor(baseFieldParseTable.getLayer(),
+                baseFieldParseTable.getLayerSelectTableFieldMap(),
+                baseFieldParseTable.getLayerFieldTableMap(),
+                placeholderColumnTableMap);
+    }
+
+    /**
+     * 返回下一层实例
+     *
+     * @author liutangqi
+     * @date 2025/3/5 14:55
+     * @Param [placeholderFieldParseTable]
+     **/
+    public static PlaceholderSelectVisitor newInstanceNextLayer(PlaceholderFieldParseTable placeholderFieldParseTable) {
+        return new PlaceholderSelectVisitor((placeholderFieldParseTable.getLayer() + 1),
+                placeholderFieldParseTable.getLayerSelectTableFieldMap(),
+                placeholderFieldParseTable.getLayerFieldTableMap(),
+                placeholderFieldParseTable.getPlaceholderColumnTableMap());
     }
 
 
     @Override
     public void visit(PlainSelect plainSelect) {
         //1.获取select的每一项，将其中 select (select a from xxx) from 这种语法的#{}占位符进行解析
-        PlaceholderSelectExpressionVisitor placeholderSelectExpressionVisitor = new PlaceholderSelectExpressionVisitor(this);
+        PlaceholderExpressionVisitor placeholderWhereExpressionVisitor = PlaceholderExpressionVisitor.newInstanceCurLayer(this);
         plainSelect.getSelectItems()
                 .stream()
                 .forEach(f -> {
                     //因为每一项只有3种类型  (1)*   (2)别名.*  (3)xxx，只有第三种我们需要处理,所以这里直接类型判断，就不单独搞个访问者类了
                     if (f instanceof SelectExpressionItem) {
-                        ((SelectExpressionItem) f).getExpression().accept(placeholderSelectExpressionVisitor);
+                        ((SelectExpressionItem) f).getExpression().accept(placeholderWhereExpressionVisitor);
                     }
                 });
 
@@ -60,7 +89,6 @@ public class PlaceholderSelectVisitor extends PlaceholderFieldParseTable impleme
         //3.将where 条件中的#{} 占位符进行解析
         Expression where = plainSelect.getWhere();
         if (where != null) {
-            PlaceholderWhereExpressionVisitor placeholderWhereExpressionVisitor = new PlaceholderWhereExpressionVisitor(this);
             where.accept(placeholderWhereExpressionVisitor);
         }
 
@@ -69,7 +97,7 @@ public class PlaceholderSelectVisitor extends PlaceholderFieldParseTable impleme
         if (CollectionUtils.isNotEmpty(joins)) {
             for (Join join : joins) {
                 for (Expression expression : join.getOnExpressions()) {
-                    expression.accept(new PlaceholderWhereExpressionVisitor(this));
+                    expression.accept(PlaceholderExpressionVisitor.newInstanceCurLayer(this));
                 }
             }
         }
@@ -91,7 +119,7 @@ public class PlaceholderSelectVisitor extends PlaceholderFieldParseTable impleme
             select.accept(fieldParseParseTableSelectVisitor);
 
             //用解析后的结果，去解析#{}占位符  (字段所属信息从上面解析结果中取，存放占位符的解析结果的Map用当前的 )
-            PlaceholderSelectVisitor placeholderSelectVisitor = new PlaceholderSelectVisitor(fieldParseParseTableSelectVisitor, this.getPlaceholderColumnTableMap());
+            PlaceholderSelectVisitor placeholderSelectVisitor = PlaceholderSelectVisitor.newInstanceCurLayer(fieldParseParseTableSelectVisitor, this.getPlaceholderColumnTableMap());
             select.accept(placeholderSelectVisitor);
 
         }

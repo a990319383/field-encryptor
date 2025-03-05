@@ -1,12 +1,11 @@
-package com.sangsang.visitor.pojoencrtptor.where;
+package com.sangsang.visitor.pojoencrtptor;
 
-import com.sangsang.domain.constants.NumberConstant;
+import com.sangsang.domain.constants.DecryptConstant;
 import com.sangsang.domain.dto.BaseFieldParseTable;
 import com.sangsang.domain.dto.ColumnTableDto;
 import com.sangsang.domain.dto.PlaceholderFieldParseTable;
+import com.sangsang.util.CollectionUtils;
 import com.sangsang.util.JsqlparserUtil;
-import com.sangsang.visitor.pojoencrtptor.select.PlaceholderSelectExpressionVisitor;
-import com.sangsang.visitor.pojoencrtptor.select.PlaceholderSelectVisitor;
 import com.sangsang.visitor.fieldparse.FieldParseParseTableSelectVisitor;
 import net.sf.jsqlparser.expression.*;
 import net.sf.jsqlparser.expression.operators.arithmetic.*;
@@ -28,16 +27,51 @@ import java.util.Map;
  * @author liutangqi
  * @date 2024/7/11 10:47
  */
-public class PlaceholderWhereExpressionVisitor extends PlaceholderFieldParseTable implements ExpressionVisitor {
+public class PlaceholderExpressionVisitor extends PlaceholderFieldParseTable implements ExpressionVisitor {
 
-    public PlaceholderWhereExpressionVisitor(PlaceholderFieldParseTable placeholderFieldParseTable) {
-        super(placeholderFieldParseTable, placeholderFieldParseTable.getPlaceholderColumnTableMap());
+    /**
+     * 当此表达式和上游表达式相关联时，这个是传的上游的表达式
+     * 例如：  case 字段 when xxx    的when语句的时候，需要知道这个when语句所属的case后面的字段，这个变量是存储这种情况的case字段的
+     */
+    private Expression upstreamExpression;
+
+    /**
+     * 获取当前层解析对象
+     *
+     * @author liutangqi
+     * @date 2025/3/5 10:40
+     * @Param [placeholderFieldParseTable]
+     **/
+    public static PlaceholderExpressionVisitor newInstanceCurLayer(PlaceholderFieldParseTable placeholderFieldParseTable, Expression upstreamExpression) {
+        return new PlaceholderExpressionVisitor(placeholderFieldParseTable, placeholderFieldParseTable.getPlaceholderColumnTableMap(), upstreamExpression);
     }
 
-    public PlaceholderWhereExpressionVisitor(BaseFieldParseTable baseFieldParseTable, Map<String, ColumnTableDto> placeholderColumnTableMap) {
+    /**
+     * 获取当前层解析对象
+     *
+     * @author liutangqi
+     * @date 2025/3/5 10:40
+     * @Param [placeholderFieldParseTable]
+     **/
+    public static PlaceholderExpressionVisitor newInstanceCurLayer(PlaceholderFieldParseTable placeholderFieldParseTable) {
+        return new PlaceholderExpressionVisitor(placeholderFieldParseTable, placeholderFieldParseTable.getPlaceholderColumnTableMap(), null);
+    }
+
+    /**
+     * 获取当前层解析对象
+     *
+     * @author liutangqi
+     * @date 2025/3/5 10:40
+     * @Param [placeholderFieldParseTable]
+     **/
+    public static PlaceholderExpressionVisitor newInstanceCurLayer(BaseFieldParseTable baseFieldParseTable, Map<String, ColumnTableDto> placeholderColumnTableMap) {
+        return new PlaceholderExpressionVisitor(baseFieldParseTable, placeholderColumnTableMap, null);
+    }
+
+    private PlaceholderExpressionVisitor(BaseFieldParseTable baseFieldParseTable, Map<String, ColumnTableDto> placeholderColumnTableMap, Expression upstreamExpression) {
         super(baseFieldParseTable, placeholderColumnTableMap);
+        this.upstreamExpression = upstreamExpression;
     }
-
 
     @Override
     public void visit(BitwiseRightShift bitwiseRightShift) {
@@ -234,7 +268,7 @@ public class PlaceholderWhereExpressionVisitor extends PlaceholderFieldParseTabl
                 FieldParseParseTableSelectVisitor fieldParseParseTableSelectVisitor = FieldParseParseTableSelectVisitor.newInstanceFirstLayer();
                 selectBody.accept(fieldParseParseTableSelectVisitor);
                 //1.2.3 利用这个单独的sql的解析结果，对这个sql的where的#{}占位符进行分析
-                PlaceholderSelectVisitor placeholderSelectVisitor = new PlaceholderSelectVisitor(fieldParseParseTableSelectVisitor, this.getPlaceholderColumnTableMap());
+                PlaceholderSelectVisitor placeholderSelectVisitor = PlaceholderSelectVisitor.newInstanceCurLayer(fieldParseParseTableSelectVisitor, this.getPlaceholderColumnTableMap());
                 selectBody.accept(placeholderSelectVisitor);
             }
         } else {
@@ -244,12 +278,12 @@ public class PlaceholderWhereExpressionVisitor extends PlaceholderFieldParseTabl
                 FieldParseParseTableSelectVisitor fieldParseParseTableSelectVisitor = FieldParseParseTableSelectVisitor.newInstanceFirstLayer();
                 ((SubSelect) inExpression.getRightExpression()).getSelectBody().accept(fieldParseParseTableSelectVisitor);
                 //基于新解析的表结构信息 和当前存储？占位符的Map 解析其中的where条件
-                PlaceholderWhereExpressionVisitor placeholderWhereExpressionVisitor = new PlaceholderWhereExpressionVisitor(fieldParseParseTableSelectVisitor, this.getPlaceholderColumnTableMap());
+                PlaceholderExpressionVisitor placeholderWhereExpressionVisitor = PlaceholderExpressionVisitor.newInstanceCurLayer(fieldParseParseTableSelectVisitor, this.getPlaceholderColumnTableMap());
                 inExpression.getRightExpression().accept(placeholderWhereExpressionVisitor);
             } else {
                 //2.2 当左边的不是Column时（比如左边是列运算，就是Function，不是单纯的列） 栗子： where concat(a.phone,b.name) in ( ?,?)
                 // 这种情况不做处理，这种情况#{}占位符所属的字段信息是一个聚合结果，同时来源多张表，不支持此种写法，两个单独的字段聚合后，单独加密和整体加密密文肯定不同
-                // 写出这种sql的时候请反省一下自己，表结构是不是有问题，硬要用这种写法的，请使用数据库函数加密的模式
+                // 写出这种sql的时候请反省一下自己，表结构是不是有问题，硬要用这种写法的，请使用数据库函数加密的db模式
             }
         }
 
@@ -315,11 +349,16 @@ public class PlaceholderWhereExpressionVisitor extends PlaceholderFieldParseTabl
     @Override
     public void visit(SubSelect subSelect) {
         //注意：exist这种情况，层数不需要加1，这里使用的字段和上级是同一层的
-        subSelect.getSelectBody().accept(new PlaceholderSelectVisitor(this.getLayer(), this.getLayerSelectTableFieldMap(), this.getLayerFieldTableMap(), this.getPlaceholderColumnTableMap()));
+        subSelect.getSelectBody().accept(PlaceholderSelectVisitor.newInstanceCurLayer(this));
     }
 
     /**
-     * 对于处理占位符的所属字段，where 后面的case  和 select后面的case处理情况一致，这里直接复用select的case的逻辑
+     * case 字段 when xxx then
+     * case when 字段=xxx then
+     * 只有下面情况的占位符才有字段对应，需要进行处理
+     * 情况1: case 表字段  when ?占位符 then xxx
+     * 情况2: case when 表字段=? then （这种情况条件在when里面）
+     * 情况3：... then 表字段>= ?占位符
      *
      * @author liutangqi
      * @date 2024/7/31 10:58
@@ -327,12 +366,65 @@ public class PlaceholderWhereExpressionVisitor extends PlaceholderFieldParseTabl
      **/
     @Override
     public void visit(CaseExpression caseExpression) {
-        //复用select的case 的逻辑
-        caseExpression.accept(new PlaceholderSelectExpressionVisitor(this));
+        //记录当前的case 后面的所属字段，如果when 语句后面是表达式的话，需要知道case后面的所属字段，才知道是否需要加密
+        Expression upstreamExpression = caseExpression.getSwitchExpression();
+
+        //处理when条件
+        if (CollectionUtils.isNotEmpty(caseExpression.getWhenClauses())) {
+            for (WhenClause whenClause : caseExpression.getWhenClauses()) {
+                //这里处理的逻辑在下面的public void visit(WhenClause whenClause)会处理
+                PlaceholderExpressionVisitor placeholderWhereExpressionVisitor = PlaceholderExpressionVisitor.newInstanceCurLayer(this, upstreamExpression);
+                whenClause.accept(placeholderWhereExpressionVisitor);
+            }
+        }
+
+        //else条件 只用处理else中是 表达式的场景  栗子：  case 字段 when xxx then  字段 >= ?占位符  else 字段 >= ?占位符，只有这种情况下，占位符才有对应的表字段信息
+        Expression elseExpression = caseExpression.getElseExpression();
+        if (elseExpression instanceof BinaryExpression) {
+            //如果有一边表达式是 特殊的占位符，则维护占位符对应的表字段信息
+            JsqlparserUtil.parseWhereColumTable(this.getLayer(),
+                    this.getLayerFieldTableMap(),
+                    (BinaryExpression) elseExpression,
+                    this.getPlaceholderColumnTableMap());
+        }
+
     }
 
+    /**
+     * 上面case when 中的when语句会走这里
+     *
+     * @author liutangqi
+     * @date 2024/7/30 17:35
+     * @Param [whenClause]
+     **/
     @Override
     public void visit(WhenClause whenClause) {
+        //对应case when的情况1： case 表字段  when ?占位符 then xxx
+        if (this.upstreamExpression instanceof Column && whenClause.getWhenExpression().toString().contains(DecryptConstant.PLACEHOLDER)) {
+            ColumnTableDto columnTableDto = JsqlparserUtil.parseColumn((Column) this.upstreamExpression, this.getLayer(), this.getLayerFieldTableMap());
+            this.getPlaceholderColumnTableMap().put(whenClause.getWhenExpression().toString(), columnTableDto);
+        }
+
+        //对应case when 的情况2： case  when 表字段=?占位符 then
+        if (whenClause.getWhenExpression() instanceof BinaryExpression) {
+            //如果有一边表达式是 特殊的占位符，则维护占位符对应的表字段信息
+            JsqlparserUtil.parseWhereColumTable(this.getLayer(),
+                    this.getLayerFieldTableMap(),
+                    (BinaryExpression) whenClause.getWhenExpression(),
+                    this.getPlaceholderColumnTableMap());
+        }
+
+        //对应case when 的情况3  ：... then 表字段>= ?占位符
+        Expression thenExpression = whenClause.getThenExpression();
+        if (thenExpression instanceof BinaryExpression) {
+            //如果有一边表达式是 特殊的占位符，则维护占位符对应的表字段信息
+            JsqlparserUtil.parseWhereColumTable(this.getLayer(),
+                    this.getLayerFieldTableMap(),
+                    (BinaryExpression) thenExpression,
+                    this.getPlaceholderColumnTableMap());
+        }
+
+
     }
 
     @Override

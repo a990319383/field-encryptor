@@ -1,4 +1,4 @@
-package com.sangsang.visitor.pojoencrtptor.insert;
+package com.sangsang.visitor.pojoencrtptor;
 
 import com.sangsang.domain.dto.ColumnTableDto;
 import com.sangsang.domain.dto.FieldInfoDto;
@@ -29,7 +29,27 @@ public class PlaceholderInsertItemsListVisitor extends PlaceholderFieldParseTabl
      */
     private List<Column> columns;
 
-    public PlaceholderInsertItemsListVisitor(List<Column> columns, int layer, Map<String, Map<String, Set<FieldInfoDto>>> layerSelectTableFieldMap, Map<String, Map<String, Set<FieldInfoDto>>> layerFieldTableMap, Map<String, ColumnTableDto> placeholderColumnTableMap) {
+    /**
+     * 获取当前层的解析对象
+     *
+     * @author liutangqi
+     * @date 2025/3/5 15:19
+     * @Param []
+     **/
+    public static PlaceholderInsertItemsListVisitor newInstanceCurLayer(PlaceholderFieldParseTable placeholderFieldParseTable, List<Column> columns) {
+        return new PlaceholderInsertItemsListVisitor(columns,
+                placeholderFieldParseTable.getLayer(),
+                placeholderFieldParseTable.getLayerSelectTableFieldMap(),
+                placeholderFieldParseTable.getLayerFieldTableMap(),
+                placeholderFieldParseTable.getPlaceholderColumnTableMap()
+        );
+    }
+
+    private PlaceholderInsertItemsListVisitor(List<Column> columns,
+                                              int layer,
+                                              Map<String, Map<String, Set<FieldInfoDto>>> layerSelectTableFieldMap,
+                                              Map<String, Map<String, Set<FieldInfoDto>>> layerFieldTableMap,
+                                              Map<String, ColumnTableDto> placeholderColumnTableMap) {
         super(layer, layerSelectTableFieldMap, layerFieldTableMap, placeholderColumnTableMap);
         this.columns = columns;
     }

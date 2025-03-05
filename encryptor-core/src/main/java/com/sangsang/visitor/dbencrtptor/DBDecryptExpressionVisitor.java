@@ -64,7 +64,7 @@ public class DBDecryptExpressionVisitor extends BaseDEcryptParseTable implements
 
     /**
      * 获取当前层的解析对象
-     * （一般是当前节点调用，当前节点调用不涉及到别名的处理）
+     * （一般是当前节点调用，当前节点调用请不用直接accept(this),每个节点处理完毕的alias 和expression 需要单独保存，复用会导致错乱）
      *
      * @author liutangqi
      * @date 2025/2/28 23:09

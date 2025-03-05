@@ -8,6 +8,7 @@ import com.sangsang.domain.annos.FieldEncryptor;
 import com.sangsang.domain.constants.NumberConstant;
 import com.sangsang.domain.constants.SymbolConstant;
 import com.sangsang.util.JsqlparserUtil;
+import com.sangsang.util.StringUtils;
 import com.sangsang.visitor.fieldparse.FieldParseParseTableFromItemVisitor;
 import com.sangsang.visitor.fieldparse.FieldParseParseTableSelectVisitor;
 import net.sf.jsqlparser.expression.Expression;
@@ -212,7 +213,7 @@ public class DBDencryptStatementVisitor implements StatementVisitor {
         //insert 的表
         Table table = insert.getTable();
         //1.当前表不需要加密，直接返回，不处理
-        if (!TableCache.getFieldEncryptTable().contains(table.getName().toLowerCase())) {
+        if (StringUtils.notExistEncryptor(insert.toString())) {
             this.resultSql = insert.toString();
             return;
         }
