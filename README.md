@@ -11,6 +11,7 @@
 |  1.0   |         支持db模式的自动加解密         | 2024/5 |
 | 2.0.0 | 增加pojo模式，pojo同时支持多种算法共存 | 2024/9 |
 | 2.1.0 | 将jsqlparser打入项目的jar中，重命名避免版本冲突 | 2025/2 |
+| 3.0.0 | 优化项目结构，减少visitor的重复代码，<br>db模式兼容insert(select)密文存储不同的场景 | 2025/3 |
 
 ## 使用场景
 
@@ -238,6 +239,8 @@ field.encryptor.secretKey=7uq?q8g3@q
 ### 3.pojo模式不兼容场景
 
 - mybatis-plus  service层自带的saveBatch()方法不支持
+- 列运算的结果集和sql的入参响应需要做对应的
+  - 例如： select  concat(phone,"---")  as ph from tb_user;  无法将ph变量做自动的解密映射
 
 ## 其它扩展
 
