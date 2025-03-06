@@ -30,9 +30,9 @@ public class BakSqlCreater {
      * @date 2024/8/26 16:12
      * @Param [tableFieldMsgList 从库中查询到的表，字段结构信息 ; suffix: 备份表的后缀 ;expansionMultiple 解密字段后的扩容倍数，建议值5]
      **/
-    public void bakSql(List<TableFieldMsgDto> tableFieldMsgList, String suffix, Integer expansionMultiple) {
+    public void bakSql(GainTableFieldInterface gainTableFieldInterface, String suffix, Integer expansionMultiple) {
         //1.过滤出需要加解密的表的主键和需要加解密的字段
-        tableFieldMsgList = tableFieldMsgList.stream()
+        List<TableFieldMsgDto> tableFieldMsgList = gainTableFieldInterface.getTableField().stream()
                 .filter(f -> TableCache.getFieldEncryptTable().contains(f.getTableName().toLowerCase()))
                 .filter(f -> StringUtils.equalCaseInsensitive(SymbolConstant.PRIMARY_KEY, f.getColumnKey()) //主键
                         ||

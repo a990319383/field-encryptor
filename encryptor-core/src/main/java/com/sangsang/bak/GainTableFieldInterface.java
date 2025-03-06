@@ -6,11 +6,11 @@ import java.util.List;
 
 /**
  * 想要获取默认备份表相关的DDL，DML语句时，实现此接口，将下列sql从库里面查询出来
- * 将下面方法的结果作为参数传给com.sangsang.bak.BakSqlCreater#bakSql()
  *
  * @author liutangqi
  * @date 2024/8/27 10:54
  */
+@FunctionalInterface
 public interface GainTableFieldInterface {
 
     /**
