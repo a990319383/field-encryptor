@@ -11,8 +11,8 @@ import com.sangsang.domain.function.DEncryptorFunction;
  */
 public enum EncryptorEnum {
 
-    ENCRYPTION("加密", (secret) -> FieldEncryptorPatternCache.getInstance().encryption(secret)),
-    DECRYPTION("解密", (plainText) -> FieldEncryptorPatternCache.getInstance().decryption(plainText)),
+    ENCRYPTION("加密", (plainText) -> FieldEncryptorPatternCache.getInstance().encryption(plainText)),
+    DECRYPTION("解密", (secret) -> FieldEncryptorPatternCache.getInstance().decryption(secret)),
     WITHOUT("不需要处理", (original) -> original),
     ;
 

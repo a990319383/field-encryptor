@@ -1,6 +1,5 @@
 package com.sangsang.visitor.fieldparse;
 
-import cn.hutool.core.util.ObjectUtil;
 import com.sangsang.domain.constants.DecryptConstant;
 import com.sangsang.domain.constants.SymbolConstant;
 import com.sangsang.domain.dto.BaseFieldParseTable;

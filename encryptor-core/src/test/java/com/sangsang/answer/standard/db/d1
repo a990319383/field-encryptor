@@ -1,0 +1,1 @@
+DELETE tu, tm FROM tb_user tu JOIN tb_menu tm ON tu.id = tm.id WHERE tu.phone = TO_BASE64(AES_ENCRYPT(?, '7uq?q8g3@q'))

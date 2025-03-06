@@ -1,0 +1,1 @@
+SELECT CAST(AES_DECRYPT(FROM_BASE64(tu.phone), '7uq?q8g3@q') AS CHAR) AS phone, count(1) AS nums FROM tb_user tu GROUP BY tu.phone HAVING count(1) > 1

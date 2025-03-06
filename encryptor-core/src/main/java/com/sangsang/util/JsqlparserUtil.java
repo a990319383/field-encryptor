@@ -102,7 +102,6 @@ public class JsqlparserUtil {
 
     /**
      * 解析当前字段所属表的信息
-     * 备注：当前没有对 `` 进行兼容， @TableField 中标注的字段有 ``的话，这里就会只对带``的进行匹配，没有对两种进行兼容
      *
      * @author liutangqi
      * @date 2024/3/6 14:52

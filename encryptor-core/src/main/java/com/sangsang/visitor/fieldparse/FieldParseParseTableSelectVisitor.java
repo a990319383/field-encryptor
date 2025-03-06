@@ -115,8 +115,7 @@ public class FieldParseParseTableSelectVisitor extends BaseFieldParseTable imple
             return;
         }
         SelectBody selectBody = selects.get(0);
-        FieldParseParseTableSelectVisitor fieldParseParseTableSelectVisitor = new FieldParseParseTableSelectVisitor(this.getLayer(), this.getLayerSelectTableFieldMap(), this.getLayerFieldTableMap());
-        selectBody.accept(fieldParseParseTableSelectVisitor);
+        selectBody.accept(this);
     }
 
     @Override
