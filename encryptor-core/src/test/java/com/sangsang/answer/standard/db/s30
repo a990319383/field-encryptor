@@ -1,0 +1,1 @@
+SELECT tu.login_name, tu.user_name REGEXP ?, CASE WHEN CAST(AES_DECRYPT(FROM_BASE64(tu.phone), '7uq?q8g3@q') AS CHAR) REGEXP ? THEN tu.login_name REGEXP ? ELSE tu.role_id REGEXP ? END FROM tb_user tu WHERE CAST(AES_DECRYPT(FROM_BASE64(phone), '7uq?q8g3@q') AS CHAR) REGEXP ?

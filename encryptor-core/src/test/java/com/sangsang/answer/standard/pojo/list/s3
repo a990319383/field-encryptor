@@ -1,0 +1,1 @@
+[FieldEncryptorInfoDto(columnName=btime, sourceColumn=create_time, sourceTableName=tb_menu, fieldEncryptor=null), FieldEncryptorInfoDto(columnName=ph, sourceColumn=phone, sourceTableName=tb_user, fieldEncryptor=@com.sangsang.domain.annos.FieldEncryptor(pojoAlgorithm=ALGORITHM_DEFAULT))]

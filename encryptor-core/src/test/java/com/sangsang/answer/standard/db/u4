@@ -1,0 +1,1 @@
+UPDATE sys_user SET last_login_date = ?, update_by = ?, update_date = ? WHERE id = ?

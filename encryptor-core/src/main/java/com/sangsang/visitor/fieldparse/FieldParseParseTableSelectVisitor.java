@@ -1,5 +1,7 @@
 package com.sangsang.visitor.fieldparse;
 
+import cn.hutool.core.util.ObjectUtil;
+import com.sangsang.domain.constants.NumberConstant;
 import com.sangsang.util.CollectionUtils;
 import com.sangsang.domain.dto.BaseFieldParseTable;
 import com.sangsang.domain.dto.FieldInfoDto;
@@ -16,8 +18,57 @@ import java.util.*;
  */
 public class FieldParseParseTableSelectVisitor extends BaseFieldParseTable implements SelectVisitor {
 
+    /**
+     * 获取第一层对象
+     *
+     * @author liutangqi
+     * @date 2025/3/4 16:47
+     * @Param [baseFieldParseTable]
+     **/
+    public static FieldParseParseTableSelectVisitor newInstanceFirstLayer() {
+        return new FieldParseParseTableSelectVisitor(
+                NumberConstant.ONE,
+                null,
+                null
+        );
+    }
 
-    public FieldParseParseTableSelectVisitor(int layer, Map<String, Map<String, Set<FieldInfoDto>>> layerSelectTableFieldMap, Map<String, Map<String, Set<FieldInfoDto>>> layerFieldTableMap) {
+    /**
+     * 获取下一层对象
+     *
+     * @author liutangqi
+     * @date 2025/3/4 16:47
+     * @Param [baseFieldParseTable]
+     **/
+    public static FieldParseParseTableSelectVisitor newInstanceNextLayer(BaseFieldParseTable baseFieldParseTable) {
+        return new FieldParseParseTableSelectVisitor(
+                (baseFieldParseTable.getLayer() + 1),
+                baseFieldParseTable.getLayerSelectTableFieldMap(),
+                baseFieldParseTable.getLayerFieldTableMap()
+        );
+    }
+
+    /**
+     * 创建一个实例，共用同一个层数，但是将存储数据的Map拷贝一份，采用单独的空间存储重要信息，和之前的数据存储独立开来
+     * 使用场景：一般用于独立的子查询，这个子查询的解析结果不能和父层级共享的时候使用
+     * 栗子：
+     * select
+     * (select 字段 from xx ) -- 这一坨的子查询的解析结果不应该和父层级共存，不管把这部分放哪层都是有问题的
+     * from
+     * 这种语法
+     *
+     * @author liutangqi
+     * @date 2025/3/4 17:01
+     * @Param [layer, layerSelectTableFieldMap, layerFieldTableMap]
+     **/
+    public static FieldParseParseTableSelectVisitor newInstanceIndividualMap(BaseFieldParseTable baseFieldParseTable) {
+        //将现在的两个存储解析结果的map深克隆拷贝一份，用这两份数据去解析子查询的结果，避免这个子查询也拥有子查询，导致影响当前解析结果的map的下一层结果出错
+        Map<String, Map<String, Set<FieldInfoDto>>> cloneLayerSelectTableFieldMap = ObjectUtil.cloneByStream(baseFieldParseTable.getLayerSelectTableFieldMap());
+        Map<String, Map<String, Set<FieldInfoDto>>> cloneLayerFieldTableMap = ObjectUtil.cloneByStream(baseFieldParseTable.getLayerFieldTableMap());
+        return new FieldParseParseTableSelectVisitor(baseFieldParseTable.getLayer(), cloneLayerSelectTableFieldMap, cloneLayerFieldTableMap);
+    }
+
+    private FieldParseParseTableSelectVisitor(int layer, Map<String, Map<String, Set<FieldInfoDto>>> layerSelectTableFieldMap, Map<String, Map<String, Set<FieldInfoDto>>> layerFieldTableMap) {
         super(layer, layerSelectTableFieldMap, layerFieldTableMap);
     }
 
@@ -26,7 +77,7 @@ public class FieldParseParseTableSelectVisitor extends BaseFieldParseTable imple
         // from 的表
         FromItem fromItem = plainSelect.getFromItem();
         if (fromItem != null) {
-            FieldParseParseTableFromItemVisitor fieldParseTableFromItemVisitor = new FieldParseParseTableFromItemVisitor(this.getLayer(), this.getLayerSelectTableFieldMap(), this.getLayerFieldTableMap());
+            FieldParseParseTableFromItemVisitor fieldParseTableFromItemVisitor = FieldParseParseTableFromItemVisitor.newInstanceCurLayer(this);
             fromItem.accept(fieldParseTableFromItemVisitor);
         }
 
@@ -35,14 +86,14 @@ public class FieldParseParseTableSelectVisitor extends BaseFieldParseTable imple
         List<Join> joins = Optional.ofNullable(plainSelect.getJoins()).orElse(new ArrayList<>());
         for (Join join : joins) {
             FromItem rightItem = join.getRightItem();
-            FieldParseParseTableFromItemVisitor joinFieldTableFromItemVisitor = new FieldParseParseTableFromItemVisitor(this.getLayer(), this.getLayerSelectTableFieldMap(), this.getLayerFieldTableMap());
+            FieldParseParseTableFromItemVisitor joinFieldTableFromItemVisitor = FieldParseParseTableFromItemVisitor.newInstanceCurLayer(this);
             rightItem.accept(joinFieldTableFromItemVisitor);
         }
 
         //查询的全部字段
         List<SelectItem> selectItems = plainSelect.getSelectItems();
         for (SelectItem selectItem : selectItems) {
-            FieldParseParseSelectItemVisitor fieldParseSelectItemVisitor = new FieldParseParseSelectItemVisitor(this.getLayer(), this.getLayerSelectTableFieldMap(), this.getLayerFieldTableMap());
+            FieldParseParseSelectItemVisitor fieldParseSelectItemVisitor = FieldParseParseSelectItemVisitor.newInstanceCurLayer(this);
             selectItem.accept(fieldParseSelectItemVisitor);
         }
     }
@@ -64,8 +115,7 @@ public class FieldParseParseTableSelectVisitor extends BaseFieldParseTable imple
             return;
         }
         SelectBody selectBody = selects.get(0);
-        FieldParseParseTableSelectVisitor fieldParseParseTableSelectVisitor = new FieldParseParseTableSelectVisitor(this.getLayer(), this.getLayerSelectTableFieldMap(), this.getLayerFieldTableMap());
-        selectBody.accept(fieldParseParseTableSelectVisitor);
+        selectBody.accept(this);
     }
 
     @Override

@@ -1,5 +1,6 @@
 package com.sangsang.visitor.dbencrtptor;
 
+import com.sangsang.domain.enums.EncryptorFunctionEnum;
 import com.sangsang.util.CollectionUtils;
 import com.sangsang.cache.FieldEncryptorPatternCache;
 import com.sangsang.cache.TableCache;
@@ -7,12 +8,9 @@ import com.sangsang.domain.annos.FieldEncryptor;
 import com.sangsang.domain.constants.NumberConstant;
 import com.sangsang.domain.constants.SymbolConstant;
 import com.sangsang.util.JsqlparserUtil;
+import com.sangsang.util.StringUtils;
 import com.sangsang.visitor.fieldparse.FieldParseParseTableFromItemVisitor;
 import com.sangsang.visitor.fieldparse.FieldParseParseTableSelectVisitor;
-import com.sangsang.visitor.dbencrtptor.insert.IDecryptItemsListVisitor;
-import com.sangsang.visitor.dbencrtptor.insert.IDecryptSelectVisitor;
-import com.sangsang.visitor.dbencrtptor.select.SDecryptSelectVisitor;
-import com.sangsang.visitor.dbencrtptor.where.WhereDencryptExpressionVisitor;
 import net.sf.jsqlparser.expression.Expression;
 import net.sf.jsqlparser.expression.operators.relational.ItemsList;
 import net.sf.jsqlparser.schema.Column;
@@ -102,7 +100,7 @@ public class DBDencryptStatementVisitor implements StatementVisitor {
         }
 
         //2.解析涉及到的表拥有的全部字段信息
-        FieldParseParseTableFromItemVisitor fieldParseTableFromItemVisitor = new FieldParseParseTableFromItemVisitor(NumberConstant.ONE, null, null);
+        FieldParseParseTableFromItemVisitor fieldParseTableFromItemVisitor = FieldParseParseTableFromItemVisitor.newInstanceFirstLayer();
         // from 后的表
         Table table = delete.getTable();
         table.accept(fieldParseTableFromItemVisitor);
@@ -120,19 +118,19 @@ public class DBDencryptStatementVisitor implements StatementVisitor {
             return;
         }
 
-        //4.将where 条件进行加密
-        WhereDencryptExpressionVisitor dencryptWhereFieldVisitor = new WhereDencryptExpressionVisitor(where, fieldParseTableFromItemVisitor.getLayer(), fieldParseTableFromItemVisitor.getLayerSelectTableFieldMap(), fieldParseTableFromItemVisitor.getLayerFieldTableMap());
-        where.accept(dencryptWhereFieldVisitor);
+        //4.将where 条件进行解密
+        DBDecryptExpressionVisitor sDecryptExpressionVisitor = DBDecryptExpressionVisitor.newInstanceCurLayer(fieldParseTableFromItemVisitor, EncryptorFunctionEnum.DEFAULT_DECRYPTION);
+        where.accept(sDecryptExpressionVisitor);
 
         //5.结果赋值
-        delete.setWhere(dencryptWhereFieldVisitor.getExpression());
+        delete.setWhere(Optional.ofNullable(sDecryptExpressionVisitor.getExpression()).orElse(where));
         this.resultSql = delete.toString();
     }
 
     @Override
     public void visit(Update update) {
         //1.解析涉及到的表拥有的全部字段信息
-        FieldParseParseTableFromItemVisitor fieldParseTableFromItemVisitor = new FieldParseParseTableFromItemVisitor(NumberConstant.ONE, null, null);
+        FieldParseParseTableFromItemVisitor fieldParseTableFromItemVisitor = FieldParseParseTableFromItemVisitor.newInstanceFirstLayer();
 
         //update的表
         Table table = update.getTable();
@@ -150,13 +148,13 @@ public class DBDencryptStatementVisitor implements StatementVisitor {
             return;
         }
 
-        //3.加密where 条件的数据
+        //3.解密where 条件的数据
         Expression where = update.getWhere();
         if (where != null) {
-            WhereDencryptExpressionVisitor dencryptWhereFieldVisitor = new WhereDencryptExpressionVisitor(where, fieldParseTableFromItemVisitor.getLayer(), fieldParseTableFromItemVisitor.getLayerSelectTableFieldMap(), fieldParseTableFromItemVisitor.getLayerFieldTableMap());
-            where.accept(dencryptWhereFieldVisitor);
+            DBDecryptExpressionVisitor expressionVisitor = DBDecryptExpressionVisitor.newInstanceCurLayer(fieldParseTableFromItemVisitor, EncryptorFunctionEnum.DEFAULT_DECRYPTION);
+            where.accept(expressionVisitor);
             //修改后的where赋值
-            update.setWhere(dencryptWhereFieldVisitor.getExpression());
+            update.setWhere(Optional.ofNullable(expressionVisitor.getExpression()).orElse(where));
         }
 
         //4.加密处理set的数据
@@ -215,7 +213,7 @@ public class DBDencryptStatementVisitor implements StatementVisitor {
         //insert 的表
         Table table = insert.getTable();
         //1.当前表不需要加密，直接返回，不处理
-        if (!TableCache.getFieldEncryptTable().contains(table.getName().toLowerCase())) {
+        if (StringUtils.notExistEncryptor(insert.toString())) {
             this.resultSql = insert.toString();
             return;
         }
@@ -224,7 +222,7 @@ public class DBDencryptStatementVisitor implements StatementVisitor {
 
         //2.获取当前第几个字段是需要加密的
         // 需要加密的字段的索引
-        List<String> needEncryptIndex = new ArrayList<>();
+        List<Integer> needEncryptIndex = new ArrayList<>();
         //insert 的字段名
         List<Column> columns = insert.getColumns();
         if (CollectionUtils.isEmpty(columns)) {
@@ -235,7 +233,7 @@ public class DBDencryptStatementVisitor implements StatementVisitor {
         for (int i = 0; i < columns.size(); i++) {
             Column column = columns.get(i);
             if (JsqlparserUtil.getValueIgnoreFloat(fieldEncryptMap, column.getColumnName().toLowerCase()) != null) {
-                needEncryptIndex.add(String.valueOf(i));
+                needEncryptIndex.add(i);
             }
         }
 
@@ -243,20 +241,20 @@ public class DBDencryptStatementVisitor implements StatementVisitor {
         //情况1：这里是 insert into table(xxx,xxx) values(),()  这种语法
         ItemsList itemsList = insert.getItemsList();
         if (itemsList != null) {
-            IDecryptItemsListVisitor iDecryptItemsListVisitor = new IDecryptItemsListVisitor(needEncryptIndex);
-            itemsList.accept(iDecryptItemsListVisitor);
+            DBDecryptItemsListVisitor dBDecryptItemsListVisitor = DBDecryptItemsListVisitor.newInstanceCurLayer(needEncryptIndex);
+            itemsList.accept(dBDecryptItemsListVisitor);
         }
 
-        //情况2：insert select 语句  （注意：默认是从明文到明文或者从密文到密文，没有一个明文一个密文的情况，所以这里只有对where条件加解密的情况，没有对select字段的处理）
+        //情况2：insert select 语句
         Select select = insert.getSelect();
         if (select != null) {
             //解析当前查询语句的每层表的全部字段
-            FieldParseParseTableSelectVisitor fieldParseTableSelectVisitor = new FieldParseParseTableSelectVisitor(NumberConstant.ONE, null, null);
+            FieldParseParseTableSelectVisitor fieldParseTableSelectVisitor = FieldParseParseTableSelectVisitor.newInstanceFirstLayer();
             select.getSelectBody().accept(fieldParseTableSelectVisitor);
 
             //将这个查询语句where 条件后面的进行加解密处理
-            IDecryptSelectVisitor iDecryptSelectVisitor = new IDecryptSelectVisitor(needEncryptIndex, fieldParseTableSelectVisitor.getLayer(), fieldParseTableSelectVisitor.getLayerSelectTableFieldMap(), fieldParseTableSelectVisitor.getLayerFieldTableMap());
-            select.getSelectBody().accept(iDecryptSelectVisitor);
+            DBDecryptSelectVisitor sDecryptSelectVisitor = DBDecryptSelectVisitor.newInstanceCurLayer(fieldParseTableSelectVisitor, needEncryptIndex);
+            select.getSelectBody().accept(sDecryptSelectVisitor);
         }
 
         //4.ON DUPLICATE KEY UPDATE 语法 此语法不用单独处理，即可兼容
@@ -359,7 +357,7 @@ public class DBDencryptStatementVisitor implements StatementVisitor {
     @Override
     public void visit(Select select) {
         //1.解析当前sql拥有的全部字段信息
-        FieldParseParseTableSelectVisitor fieldParseTableSelectVisitor = new FieldParseParseTableSelectVisitor(NumberConstant.ONE, null, null);
+        FieldParseParseTableSelectVisitor fieldParseTableSelectVisitor = FieldParseParseTableSelectVisitor.newInstanceFirstLayer();
         select.getSelectBody().accept(fieldParseTableSelectVisitor);
 
         //2.如果不是union语句  并且 该sql涉及的表都不需要加解密，则不处理后续逻辑 （union语句没有整个解析到这个结果集中，union语句是分成多次解析的）
@@ -369,11 +367,11 @@ public class DBDencryptStatementVisitor implements StatementVisitor {
         }
 
         //3.将需要加密的字段进行加密处理
-        SDecryptSelectVisitor SDecryptSelectVisitor = new SDecryptSelectVisitor(NumberConstant.ONE, fieldParseTableSelectVisitor.getLayerSelectTableFieldMap(), fieldParseTableSelectVisitor.getLayerFieldTableMap());
-        select.getSelectBody().accept(SDecryptSelectVisitor);
+        DBDecryptSelectVisitor sDecryptSelectVisitor = DBDecryptSelectVisitor.newInstanceCurLayer(fieldParseTableSelectVisitor);
+        select.getSelectBody().accept(sDecryptSelectVisitor);
 
         //4.处理后的结果赋值
-        this.resultSql = SDecryptSelectVisitor.getResultSql();
+        this.resultSql = sDecryptSelectVisitor.getResultSql();
     }
 
     @Override

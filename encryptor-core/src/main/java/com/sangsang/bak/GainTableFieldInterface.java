@@ -10,6 +10,7 @@ import java.util.List;
  * @author liutangqi
  * @date 2024/8/27 10:54
  */
+@FunctionalInterface
 public interface GainTableFieldInterface {
 
     /**

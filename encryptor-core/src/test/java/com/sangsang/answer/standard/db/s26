@@ -1,0 +1,1 @@
+SELECT CAST(CAST(AES_DECRYPT(FROM_BASE64(tu.phone), '7uq?q8g3@q') AS CHAR) AS char), CAST(CAST(AES_DECRYPT(FROM_BASE64(tu.phone), '7uq?q8g3@q') AS CHAR) AS char) AS ppp FROM tb_user tu

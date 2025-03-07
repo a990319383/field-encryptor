@@ -1,0 +1,1 @@
+INSERT INTO tb_user (id, user_name, phone) VALUES (1, ?, TO_BASE64(AES_ENCRYPT('18243512315', '7uq?q8g3@q'))), (2, '南瓜', TO_BASE64(AES_ENCRYPT(?, '7uq?q8g3@q')))
