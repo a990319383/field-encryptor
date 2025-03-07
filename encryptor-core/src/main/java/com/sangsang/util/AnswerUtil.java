@@ -1,0 +1,117 @@
+package com.sangsang.util;
+
+import cn.hutool.core.io.file.FileReader;
+import cn.hutool.core.io.file.FileWriter;
+import com.sangsang.domain.dto.ColumnTableDto;
+import com.sangsang.domain.dto.FieldEncryptorInfoDto;
+import javafx.util.Pair;
+
+import java.util.List;
+import java.util.Map;
+
+/**
+ * 自测sql时，获取答案相关的工具类
+ *
+ * @author liutangqi
+ * @date 2025/3/6 14:47
+ */
+public class AnswerUtil {
+
+    //当前的答案位置
+    private static String answerBasePath = "/src/test/java/com/sangsang/answer/current/";
+    //标准答案的位置
+    private static String standardBasePath = "/src/test/java/com/sangsang/answer/standard/";
+
+    /**
+     * 将db模式处理好的sql写入到文件中
+     *
+     * @author liutangqi
+     * @date 2025/3/6 14:02
+     * @Param [obj:存放sql的对象 ,oldSql, resSql]
+     **/
+    public static void writeDBAnswerToFile(Object obj,
+                                           String oldSql,
+                                           String resSql) throws IllegalAccessException {
+        //项目路径
+        String projectRoot = System.getProperty("user.dir");
+        //获取变量名作为文件名
+        String fileName = ReflectUtils.getFieldNameByValue(obj, oldSql);
+        String path = projectRoot + answerBasePath + "/db/" + fileName;
+        FileWriter writer = new FileWriter(path);
+        writer.write(resSql, false);
+    }
+
+    /**
+     * 将pojo模式处理好的sql写入到文件中
+     *
+     * @author liutangqi
+     * @date 2025/3/6 14:02
+     * @Param [obj:存放sql的对象 ，oldSql, resSql]
+     **/
+    public static void writePOJOAnswerToFile(Object obj,
+                                             String oldSql,
+                                             List<FieldEncryptorInfoDto> fieldEncryptorInfos,
+                                             Map<String, ColumnTableDto> placeholderColumnTableMap) throws IllegalAccessException {
+        //项目路径
+        String projectRoot = System.getProperty("user.dir");
+        //获取变量名作为文件名
+        String fileName = ReflectUtils.getFieldNameByValue(obj, oldSql);
+        String listPath = projectRoot + answerBasePath + "/pojo/list/" + fileName;
+        String mapPath = projectRoot + answerBasePath + "/pojo/map/" + fileName;
+        FileWriter listWriter = new FileWriter(listPath);
+        FileWriter mapWriter = new FileWriter(mapPath);
+        listWriter.write(fieldEncryptorInfos.toString(), false);
+        mapWriter.write(placeholderColumnTableMap.toString(), false);
+    }
+
+    /**
+     * 读取db模式的这个sql的答案
+     *
+     * @author liutangqi
+     * @date 2025/3/6 14:46
+     * @Param [obj:存放sql的对象 ，oldSql]
+     **/
+    public static String readDBAnswerToFile(Object obj,
+                                            String oldSql) throws IllegalAccessException {
+        //项目路径
+        String projectRoot = System.getProperty("user.dir");
+        //获取变量名作为文件名
+        String fileName = ReflectUtils.getFieldNameByValue(obj, oldSql);
+        String path = projectRoot + standardBasePath + "/db/" + fileName;
+        FileReader fileReader = null;
+        try {
+            fileReader = new FileReader(path);
+        } catch (Exception e) {
+            return null;
+        }
+        return fileReader.readString();
+    }
+
+    /**
+     * 读取pojo模式的这个sql的答案
+     *
+     * @return key: list的答案 value: map的答案
+     * @author liutangqi
+     * @date 2025/3/6 14:46
+     * @Param [obj:存放sql的对象 ，oldSql]
+     **/
+    public static Pair<String, String> readPOJOAnswerToFile(Object obj,
+                                                            String oldSql) throws IllegalAccessException {
+        //项目路径
+        String projectRoot = System.getProperty("user.dir");
+        //获取变量名作为文件名
+        String fileName = ReflectUtils.getFieldNameByValue(obj, oldSql);
+        String listPath = projectRoot + standardBasePath + "/pojo/list/" + fileName;
+        String mapPath = projectRoot + standardBasePath + "/pojo/map/" + fileName;
+        FileReader listFileReader = null;
+        FileReader mapFileReader = null;
+        try {
+            listFileReader = new FileReader(listPath);
+            mapFileReader = new FileReader(mapPath);
+        } catch (Exception e) {
+            return null;
+        }
+        return new Pair(listFileReader.readString(), mapFileReader.readString());
+    }
+
+}

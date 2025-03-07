@@ -1,0 +1,1 @@
+SELECT concat('xxx:', CAST(AES_DECRYPT(FROM_BASE64(tu.phone), '7uq?q8g3@q') AS CHAR), tm.id) AS ph FROM tb_user tu LEFT JOIN tb_menu tm ON tu.id = tm.id WHERE concat('yyy:', CAST(AES_DECRYPT(FROM_BASE64(tu.phone), '7uq?q8g3@q') AS CHAR), tm.id) LIKE '1840'

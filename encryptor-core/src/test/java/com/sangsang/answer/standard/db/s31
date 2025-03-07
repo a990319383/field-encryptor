@@ -1,0 +1,1 @@
+SELECT GROUP_CONCAT(CAST(AES_DECRYPT(FROM_BASE64(tu.phone), '7uq?q8g3@q') AS CHAR), ?), GROUP_CONCAT(CAST(AES_DECRYPT(FROM_BASE64(tu.phone), '7uq?q8g3@q') AS CHAR)) AS ppp FROM tb_user tu LEFT JOIN tb_menu tm ON tu.id = tm.id WHERE tu.phone = TO_BASE64(AES_ENCRYPT(?, '7uq?q8g3@q')) GROUP BY tu.id

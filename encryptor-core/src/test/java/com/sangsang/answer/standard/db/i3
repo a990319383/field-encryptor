@@ -1,0 +1,1 @@
+INSERT INTO tb_user (user_name, login_name, phone) VALUES (?, ?, TO_BASE64(AES_ENCRYPT(?, '7uq?q8g3@q'))) ON DUPLICATE KEY UPDATE user_name = values(user_name), login_name = values(login_name), phone = values(phone), update_time = now()

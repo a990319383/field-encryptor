@@ -1,0 +1,1 @@
+SELECT concat(?, CAST(AES_DECRYPT(FROM_BASE64(tu.phone), '7uq?q8g3@q') AS CHAR)) FROM tb_user tu WHERE concat(?, CAST(AES_DECRYPT(FROM_BASE64(tu.phone), '7uq?q8g3@q') AS CHAR)) LIKE ?

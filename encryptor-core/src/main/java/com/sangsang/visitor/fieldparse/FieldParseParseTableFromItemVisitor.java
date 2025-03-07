@@ -1,6 +1,7 @@
 package com.sangsang.visitor.fieldparse;
 
 import com.sangsang.cache.TableCache;
+import com.sangsang.domain.constants.NumberConstant;
 import com.sangsang.domain.dto.BaseFieldParseTable;
 import com.sangsang.domain.dto.FieldInfoDto;
 import com.sangsang.util.JsqlparserUtil;
@@ -19,7 +20,35 @@ import java.util.stream.Collectors;
  */
 public class FieldParseParseTableFromItemVisitor extends BaseFieldParseTable implements FromItemVisitor {
 
-    public FieldParseParseTableFromItemVisitor(int layer, Map<String, Map<String, Set<FieldInfoDto>>> layerSelectTableFieldMap, Map<String, Map<String, Set<FieldInfoDto>>> layerFieldTableMap) {
+    /**
+     * 获取第一层对象
+     *
+     * @author liutangqi
+     * @date 2025/3/4 16:47
+     * @Param [baseFieldParseTable]
+     **/
+    public static FieldParseParseTableFromItemVisitor newInstanceFirstLayer() {
+        return new FieldParseParseTableFromItemVisitor(
+                NumberConstant.ONE,
+                null,
+                null
+        );
+    }
+
+    /**
+     * 获取当前层的解析对象
+     *
+     * @author liutangqi
+     * @date 2025/3/4 17:17
+     * @Param [baseFieldParseTable]
+     **/
+    public static FieldParseParseTableFromItemVisitor newInstanceCurLayer(BaseFieldParseTable baseFieldParseTable) {
+        return new FieldParseParseTableFromItemVisitor(baseFieldParseTable.getLayer(),
+                baseFieldParseTable.getLayerSelectTableFieldMap(),
+                baseFieldParseTable.getLayerFieldTableMap());
+    }
+
+    private FieldParseParseTableFromItemVisitor(int layer, Map<String, Map<String, Set<FieldInfoDto>>> layerSelectTableFieldMap, Map<String, Map<String, Set<FieldInfoDto>>> layerFieldTableMap) {
         super(layer, layerSelectTableFieldMap, layerFieldTableMap);
     }
 
@@ -54,7 +83,7 @@ public class FieldParseParseTableFromItemVisitor extends BaseFieldParseTable imp
         String aliasTable = subSelect.getAlias().getName().toLowerCase();
 
         //1.解析子查询下一层，层数 + 1
-        FieldParseParseTableSelectVisitor fieldParseTableSelectVisitor = new FieldParseParseTableSelectVisitor(this.getLayer() + 1, this.getLayerSelectTableFieldMap(), this.getLayerFieldTableMap());
+        FieldParseParseTableSelectVisitor fieldParseTableSelectVisitor = FieldParseParseTableSelectVisitor.newInstanceNextLayer(this);
         subSelect.getSelectBody().accept(fieldParseTableSelectVisitor);
 
         //2.解析这一层涉及到的表的全部字段，子查询的时，本层的表的全部字段就是下一层的全部select的字段，本层的表名就是别名

@@ -1,6 +1,7 @@
 package com.sangsang.visitor.pojoencrtptor;
 
 import cn.hutool.core.map.MapUtil;
+import com.sangsang.domain.dto.PlaceholderFieldParseTable;
 import com.sangsang.util.CollectionUtils;
 import com.sangsang.cache.TableCache;
 import com.sangsang.domain.constants.NumberConstant;
@@ -8,10 +9,6 @@ import com.sangsang.domain.dto.ColumnTableDto;
 import com.sangsang.domain.dto.FieldEncryptorInfoDto;
 import com.sangsang.domain.dto.FieldInfoDto;
 import com.sangsang.util.JsqlparserUtil;
-import com.sangsang.visitor.pojoencrtptor.insert.PlaceholderInsertItemsListVisitor;
-import com.sangsang.visitor.pojoencrtptor.insert.PlaceholderInsertSelectVisitor;
-import com.sangsang.visitor.pojoencrtptor.select.PlaceholderSelectVisitor;
-import com.sangsang.visitor.pojoencrtptor.where.PlaceholderWhereExpressionVisitor;
 import com.sangsang.visitor.fieldparse.FieldParseParseTableFromItemVisitor;
 import com.sangsang.visitor.fieldparse.FieldParseParseTableSelectVisitor;
 import net.sf.jsqlparser.expression.Expression;
@@ -114,7 +111,7 @@ public class PoJoEncrtptorStatementVisitor implements StatementVisitor {
         }
 
         //2.解析涉及到的表拥有的全部字段信息
-        FieldParseParseTableFromItemVisitor fieldParseTableFromItemVisitor = new FieldParseParseTableFromItemVisitor(NumberConstant.ONE, null, null);
+        FieldParseParseTableFromItemVisitor fieldParseTableFromItemVisitor = FieldParseParseTableFromItemVisitor.newInstanceFirstLayer();
         // from 后的表
         Table table = delete.getTable();
         table.accept(fieldParseTableFromItemVisitor);
@@ -132,7 +129,7 @@ public class PoJoEncrtptorStatementVisitor implements StatementVisitor {
 //        }
 
         //4.将where 条件进行加密
-        PlaceholderWhereExpressionVisitor placeholderWhereExpressionVisitor = new PlaceholderWhereExpressionVisitor(fieldParseTableFromItemVisitor, this.placeholderColumnTableMap);
+        PlaceholderExpressionVisitor placeholderWhereExpressionVisitor = PlaceholderExpressionVisitor.newInstanceCurLayer(fieldParseTableFromItemVisitor, this.placeholderColumnTableMap);
         where.accept(placeholderWhereExpressionVisitor);
 
         //5.结果赋值
@@ -142,7 +139,7 @@ public class PoJoEncrtptorStatementVisitor implements StatementVisitor {
     @Override
     public void visit(Update update) {
         //1.解析涉及到的表拥有的全部字段信息
-        FieldParseParseTableFromItemVisitor fieldParseTableFromItemVisitor = new FieldParseParseTableFromItemVisitor(NumberConstant.ONE, null, null);
+        FieldParseParseTableFromItemVisitor fieldParseTableFromItemVisitor = FieldParseParseTableFromItemVisitor.newInstanceFirstLayer();
 
         //update的表
         Table table = update.getTable();
@@ -165,7 +162,7 @@ public class PoJoEncrtptorStatementVisitor implements StatementVisitor {
         //4.加密where 条件的数据
         Expression where = update.getWhere();
         if (where != null) {
-            PlaceholderWhereExpressionVisitor dencryptWhereFieldVisitor = new PlaceholderWhereExpressionVisitor(fieldParseTableFromItemVisitor, this.getPlaceholderColumnTableMap());
+            PlaceholderExpressionVisitor dencryptWhereFieldVisitor = PlaceholderExpressionVisitor.newInstanceCurLayer(fieldParseTableFromItemVisitor, this.getPlaceholderColumnTableMap());
             where.accept(dencryptWhereFieldVisitor);
         }
 
@@ -223,7 +220,8 @@ public class PoJoEncrtptorStatementVisitor implements StatementVisitor {
         //情况1：这里是 insert into table(xxx,xxx) values(),()  这种语法
         ItemsList itemsList = insert.getItemsList();
         if (itemsList != null) {
-            PlaceholderInsertItemsListVisitor iDecryptItemsListVisitor = new PlaceholderInsertItemsListVisitor(columns, NumberConstant.ONE, null, layerFieldTableMap, this.getPlaceholderColumnTableMap());
+            PlaceholderFieldParseTable placeholderFieldParseTable = new PlaceholderFieldParseTable(NumberConstant.ONE, null, layerFieldTableMap, this.getPlaceholderColumnTableMap());
+            PlaceholderInsertItemsListVisitor iDecryptItemsListVisitor = PlaceholderInsertItemsListVisitor.newInstanceCurLayer(placeholderFieldParseTable, columns);
             itemsList.accept(iDecryptItemsListVisitor);
         }
 
@@ -231,12 +229,12 @@ public class PoJoEncrtptorStatementVisitor implements StatementVisitor {
         Select select = insert.getSelect();
         if (select != null) {
             //解析当前查询语句的每层表的全部字段
-            FieldParseParseTableSelectVisitor fieldParseTableSelectVisitor = new FieldParseParseTableSelectVisitor(NumberConstant.ONE, null, null);
+            FieldParseParseTableSelectVisitor fieldParseTableSelectVisitor = FieldParseParseTableSelectVisitor.newInstanceFirstLayer();
             select.getSelectBody().accept(fieldParseTableSelectVisitor);
 
             //将这个查询语句where 条件后面的进行加解密处理
-            PlaceholderInsertSelectVisitor iSelectVisitor = new PlaceholderInsertSelectVisitor(fieldParseTableSelectVisitor, this.getPlaceholderColumnTableMap());
-            select.getSelectBody().accept(iSelectVisitor);
+            PlaceholderSelectVisitor selectVisitor = PlaceholderSelectVisitor.newInstanceCurLayer(fieldParseTableSelectVisitor, this.getPlaceholderColumnTableMap());
+            select.getSelectBody().accept(selectVisitor);
         }
 
         //5.ON DUPLICATE KEY UPDATE 语法 此语法不用单独处理，即可兼容
@@ -328,7 +326,8 @@ public class PoJoEncrtptorStatementVisitor implements StatementVisitor {
     public void visit(Select select) {
         //1.解析select拥有的字段对应的表结构信息
         //1.1解析当前sql拥有的全部字段信息
-        FieldParseParseTableSelectVisitor fieldParseTableSelectVisitor = new FieldParseParseTableSelectVisitor(NumberConstant.ONE, null, null);
+        FieldParseParseTableSelectVisitor fieldParseTableSelectVisitor = FieldParseParseTableSelectVisitor.newInstanceFirstLayer();
+        ;
         select.getSelectBody().accept(fieldParseTableSelectVisitor);
 
         //1.2.获取sql 查询的所有字段
@@ -354,7 +353,7 @@ public class PoJoEncrtptorStatementVisitor implements StatementVisitor {
 
         //2.将#{}占位符和数据库表结构字段对应起来
         //2.1开始解析
-        PlaceholderSelectVisitor placeholderSelectVisitor = new PlaceholderSelectVisitor(fieldParseTableSelectVisitor, null);
+        PlaceholderSelectVisitor placeholderSelectVisitor = PlaceholderSelectVisitor.newInstanceCurLayer(fieldParseTableSelectVisitor, null);
         select.getSelectBody().accept(placeholderSelectVisitor);
         //2.2结果赋值
         this.placeholderColumnTableMap = placeholderSelectVisitor.getPlaceholderColumnTableMap();

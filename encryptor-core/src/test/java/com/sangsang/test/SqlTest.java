@@ -1,13 +1,20 @@
 package com.sangsang.test;
 
 import com.sangsang.cache.FieldEncryptorPatternCache;
+import com.sangsang.domain.dto.ColumnTableDto;
+import com.sangsang.domain.dto.FieldEncryptorInfoDto;
+import com.sangsang.util.AnswerUtil;
+import com.sangsang.util.ReflectUtils;
 import com.sangsang.util.StringUtils;
 import com.sangsang.visitor.pojoencrtptor.PoJoEncrtptorStatementVisitor;
 import com.sangsang.visitor.dbencrtptor.DBDencryptStatementVisitor;
+import javafx.util.Pair;
 import net.sf.jsqlparser.JSQLParserException;
 import net.sf.jsqlparser.parser.CCJSqlParserUtil;
 import net.sf.jsqlparser.statement.Statement;
 import org.junit.jupiter.api.Test;
+
+import java.util.*;
 
 /**
  * @author liutangqi
@@ -343,13 +350,11 @@ public class SqlTest {
             "\t\tt.phone = ? \n" +
             "            )";
 
-    // 测试convert函数如何拼接的 (JsqlParse不支持 convert函数！！！)
-    String s25 = "SELECT \n" +
-            "convert(tu.phone using utf8mb4)\n" +
-            "from tb_user tu";
+    // 测试convert函数如何拼接的 (JsqlParse 4.4 不支持 convert函数！！！)
+//    String s25 = "SELECT \n" + "convert(tu.phone using utf8mb4)\n" + "from tb_user tu";
 
     //使用 cast 函数 某些场景下平替 convert 函数 （说的场景就是 AES_DECRYPT 中文解密乱码，点名批评一下）
-    String s26 = "select cast(tu.phone as char) from tb_user tu";
+    String s26 = "select cast(tu.phone as char) ,cast(tu.phone as char) as ppp from tb_user tu";
 
     //group by having
     String s27 = "SELECT \n" +
@@ -382,7 +387,8 @@ public class SqlTest {
 
     //group_concat
     String s31 = "select \n" +
-            "group_concat(tu.phone,?)\n" +
+            "group_concat(tu.phone,?) ,\n" +
+            "group_concat(tu.phone) as ppp \n" +
             "from tb_user tu \n" +
             "left join tb_menu tm \n" +
             "on tu.id = tm.id \n" +
@@ -415,7 +421,13 @@ public class SqlTest {
             "update_time = now()";
 
     // insert 语句没有指定字段  注意：不支持此语法！！！ 无法确定字段顺序
-    String i4 = "insert into tb_user  values( ?,?,?,?,?,?,?,?)";
+//    String i4 = "insert into tb_user  values( ?,?,?,?,?,?,?,?)";
+
+    //insert select ,其中insert语句和select语句中对应的字段，一个密文存储，一个明文存储，也有两个都是密文存储的
+    String i5 = "insert into  tb_user(user_name,phone,login_name)\n" +
+            "(select  phone, phone,(select tu2.phone from tb_user tu2 where tu2.id = tu.id) from tb_user tu\n" +
+            "where tu.phone is not null \n" +
+            ")";
 
     // --------------delete 测试语句 ---------------
 
@@ -466,15 +478,25 @@ public class SqlTest {
             "        WHERE\n" +
             "        id = ?";
 
+
+//----------------------------------------测试单条sql分割线---------------------------------------------------------
+
+    /**
+     * db模式下测试指定sql
+     *
+     * @author liutangqi
+     * @date 2025/3/6 15:17
+     * @Param []
+     **/
     @Test
-    public void testSql() throws JSQLParserException, NoSuchFieldException {
+    public void testdbEncryptor() throws JSQLParserException, NoSuchFieldException {
         //初始化加解密函数
         FieldEncryptorPatternCache.initDeafultInstance();
         //mock数据
         InitTableInfo.initTable();
 
         //需要测试的sql
-        String sql = s27;
+        String sql = i5;
         System.out.println("----------------------------------------------------------------------------");
         System.out.println(sql);
         System.out.println("----------------------------------------------------------------------------");
@@ -491,6 +513,13 @@ public class SqlTest {
     }
 
 
+    /**
+     * pojo模式下测试指定sql
+     *
+     * @author liutangqi
+     * @date 2025/3/6 15:17
+     * @Param []
+     **/
     @Test
     public void testPoJoEncryptor() throws JSQLParserException, NoSuchFieldException {
         //初始化加解密函数
@@ -514,4 +543,165 @@ public class SqlTest {
         System.out.println(poJoEncrtptorStatementVisitor.getFieldEncryptorInfos());
         System.out.println(poJoEncrtptorStatementVisitor.getPlaceholderColumnTableMap());
     }
+
+
+//----------------------------------------校验当前程序是否正确分割线---------------------------------------------------------
+
+    //需要测试的sql
+    List<String> sqls = Arrays.asList(s1, s2, s3, s4, s5, s6, s7, s8, s9, s10, s11, s12, s13, s14, s15, s16, s17, s18, s19,
+            s20,
+            s21, s22, s23, s24, s26, s27, s28, s29, s30, s31,
+            i1, i2, i3, //i4,
+            d1, d2,
+            u1, u2, u3, u4
+    );
+
+    /**
+     * 校验db模式下处理是否正确
+     * 哥们儿，来对答案了
+     *
+     * @author liutangqi
+     * @date 2025/3/6 15:02
+     * @Param []
+     **/
+    @Test
+    public void dbCheck() throws NoSuchFieldException, JSQLParserException, IllegalAccessException {
+        //初始化加解密函数
+        FieldEncryptorPatternCache.initDeafultInstance();
+        //mock数据
+        InitTableInfo.initTable();
+
+        for (int i = 0; i < sqls.size(); i++) {
+            String sql = sqls.get(i);
+            //开始解析sql
+            Statement statement = CCJSqlParserUtil.parse(sql);
+
+            DBDencryptStatementVisitor DBDencryptStatementVisitor = new DBDencryptStatementVisitor();
+            statement.accept(DBDencryptStatementVisitor);
+            String resultSql = DBDencryptStatementVisitor.getResultSql();
+
+            //找答案
+            String answer = AnswerUtil.readDBAnswerToFile(this, sql);
+            String sqlFieldName = ReflectUtils.getFieldNameByValue(this, sql);
+            if (StringUtils.isBlank(answer)) {
+                System.out.println("这个sql没答案，自己检查，然后把正确答案给录到com.sangsang.answer.standard下面 i:" + sqlFieldName);
+                System.out.println("原始sql: " + sql);
+                return;
+            }
+            if (answer.equals(resultSql)) {
+                System.out.println("成功: " + sqlFieldName);
+            } else {
+                System.out.println("错误: " + sqlFieldName);
+                System.out.println("原始sql: " + sql);
+                return;
+            }
+        }
+    }
+
+
+    /**
+     * 校验db模式下处理是否正确
+     * 哥们儿，来对答案了
+     *
+     * @author liutangqi
+     * @date 2025/3/6 15:02
+     * @Param []
+     **/
+    @Test
+    public void pojoCheck() throws NoSuchFieldException, JSQLParserException, IllegalAccessException {
+        //初始化加解密函数
+        FieldEncryptorPatternCache.initDeafultInstance();
+        //mock数据
+        InitTableInfo.initTable();
+
+        for (int i = 0; i < sqls.size(); i++) {
+            String sql = sqls.get(i);
+            //将原sql ？ 替换为自定义的占位符
+            String placeholderSql = StringUtils.question2Placeholder(sql);
+
+            //开始解析sql
+            Statement statement = CCJSqlParserUtil.parse(placeholderSql);
+            PoJoEncrtptorStatementVisitor poJoEncrtptorStatementVisitor = new PoJoEncrtptorStatementVisitor();
+            statement.accept(poJoEncrtptorStatementVisitor);
+            List<FieldEncryptorInfoDto> fieldEncryptorInfos = poJoEncrtptorStatementVisitor.getFieldEncryptorInfos();
+            Map<String, ColumnTableDto> placeholderColumnTableMap = poJoEncrtptorStatementVisitor.getPlaceholderColumnTableMap();
+
+            //找答案
+            Pair<String, String> answer = AnswerUtil.readPOJOAnswerToFile(this, sql);
+            String sqlFieldName = ReflectUtils.getFieldNameByValue(this, sql);
+            if (answer == null) {
+                System.out.println("这个sql没答案，自己检查，然后把正确答案给录到com.sangsang.answer.standard下面 i:" + sqlFieldName);
+                System.out.println("原始sql: " + sql);
+                return;
+            }
+            if (Objects.equals(answer.getKey(), fieldEncryptorInfos.toString())
+                    && Objects.equals(answer.getValue(), placeholderColumnTableMap.toString())) {
+                System.out.println("成功: " + sqlFieldName);
+            } else {
+                System.out.println("错误: " + sqlFieldName);
+                System.out.println("原始sql: " + sql);
+                return;
+            }
+        }
+    }
+
+
+//----------------------------------------写入处理好的答案分割线---------------------------------------------------------
+//-----------------标准答案存储路径：com.sangsang.answer.standard
+//-----------------此处答案输出路径：com.sangsang.answer.current
+
+    /**
+     * 将db模式下处理好的结果答案写入到文件中
+     *
+     * @author liutangqi
+     * @date 2025/3/6 13:18
+     * @Param []
+     **/
+    @Test
+    public void dbAnswerWrite() throws Exception {
+        //初始化加解密函数
+        FieldEncryptorPatternCache.initDeafultInstance();
+        //mock数据
+        InitTableInfo.initTable();
+
+        for (String sql : sqls) {
+            //开始解析sql
+            Statement statement = CCJSqlParserUtil.parse(sql);
+
+            DBDencryptStatementVisitor DBDencryptStatementVisitor = new DBDencryptStatementVisitor();
+            statement.accept(DBDencryptStatementVisitor);
+            String resultSql = DBDencryptStatementVisitor.getResultSql();
+            AnswerUtil.writeDBAnswerToFile(this, sql, resultSql);
+        }
+    }
+
+    /**
+     * 将pojo模式下处理好的结果答案写入到文件中
+     *
+     * @author liutangqi
+     * @date 2025/3/6 13:18
+     * @Param []
+     **/
+    @Test
+    public void pojoAnswerWrite() throws Exception {
+        //初始化加解密函数
+        FieldEncryptorPatternCache.initDeafultInstance();
+        //mock数据
+        InitTableInfo.initTable();
+
+        for (String sql : sqls) {
+            //将原sql ？ 替换为自定义的占位符
+            String placeholderSql = StringUtils.question2Placeholder(sql);
+
+            //开始解析sql
+            Statement statement = CCJSqlParserUtil.parse(placeholderSql);
+            PoJoEncrtptorStatementVisitor poJoEncrtptorStatementVisitor = new PoJoEncrtptorStatementVisitor();
+            statement.accept(poJoEncrtptorStatementVisitor);
+            List<FieldEncryptorInfoDto> fieldEncryptorInfos = poJoEncrtptorStatementVisitor.getFieldEncryptorInfos();
+            Map<String, ColumnTableDto> placeholderColumnTableMap = poJoEncrtptorStatementVisitor.getPlaceholderColumnTableMap();
+            AnswerUtil.writePOJOAnswerToFile(this, sql, fieldEncryptorInfos, placeholderColumnTableMap);
+        }
+    }
+
+
 }

@@ -1,0 +1,1 @@
+SELECT a.* FROM (SELECT concat(CAST(AES_DECRYPT(FROM_BASE64(tu.phone), '7uq?q8g3@q') AS CHAR), '-', tu.create_time) AS fff FROM tb_user tu) a

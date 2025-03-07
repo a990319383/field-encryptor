@@ -145,4 +145,22 @@ public class ReflectUtils {
             e.printStackTrace();
         }
     }
+
+
+    /**
+     * 根据对象的值，获取指定的obj对象里面值为这个的变量的变量名
+     *
+     * @author liutangqi
+     * @date 2025/3/6 13:29
+     * @Param [obj, fieldValue]
+     **/
+    public static String getFieldNameByValue(Object obj, Object fieldValue) throws IllegalAccessException {
+        for (Field field : obj.getClass().getDeclaredFields()) {
+            field.setAccessible(true);
+            if (field.get(obj).equals(fieldValue)) {
+                return field.getName();
+            }
+        }
+        return null;
+    }
 }
