@@ -4,6 +4,7 @@ import com.sangsang.cache.FieldEncryptorPatternCache;
 import com.sangsang.domain.dto.ColumnTableDto;
 import com.sangsang.domain.dto.FieldEncryptorInfoDto;
 import com.sangsang.util.AnswerUtil;
+import com.sangsang.util.ReflectUtils;
 import com.sangsang.util.StringUtils;
 import com.sangsang.visitor.pojoencrtptor.PoJoEncrtptorStatementVisitor;
 import com.sangsang.visitor.dbencrtptor.DBDencryptStatementVisitor;
@@ -581,15 +582,16 @@ public class SqlTest {
 
             //找答案
             String answer = AnswerUtil.readDBAnswerToFile(this, sql);
+            String sqlFieldName = ReflectUtils.getFieldNameByValue(this, sql);
             if (StringUtils.isBlank(answer)) {
-                System.out.println("这个sql没答案，自己检查，然后把正确答案给录到com.sangsang.answer.standard下面 i:" + i);
+                System.out.println("这个sql没答案，自己检查，然后把正确答案给录到com.sangsang.answer.standard下面 i:" + sqlFieldName);
                 System.out.println("原始sql: " + sql);
                 return;
             }
             if (answer.equals(resultSql)) {
-                System.out.println("成功: " + i);
+                System.out.println("成功: " + sqlFieldName);
             } else {
-                System.out.println("错误: " + i);
+                System.out.println("错误: " + sqlFieldName);
                 System.out.println("原始sql: " + sql);
                 return;
             }
@@ -626,16 +628,17 @@ public class SqlTest {
 
             //找答案
             Pair<String, String> answer = AnswerUtil.readPOJOAnswerToFile(this, sql);
+            String sqlFieldName = ReflectUtils.getFieldNameByValue(this, sql);
             if (answer == null) {
-                System.out.println("这个sql没答案，自己检查，然后把正确答案给录到com.sangsang.answer.standard下面 i:" + i);
+                System.out.println("这个sql没答案，自己检查，然后把正确答案给录到com.sangsang.answer.standard下面 i:" + sqlFieldName);
                 System.out.println("原始sql: " + sql);
                 return;
             }
             if (Objects.equals(answer.getKey(), fieldEncryptorInfos.toString())
                     && Objects.equals(answer.getValue(), placeholderColumnTableMap.toString())) {
-                System.out.println("成功: " + i);
+                System.out.println("成功: " + sqlFieldName);
             } else {
-                System.out.println("错误: " + i);
+                System.out.println("错误: " + sqlFieldName);
                 System.out.println("原始sql: " + sql);
                 return;
             }
