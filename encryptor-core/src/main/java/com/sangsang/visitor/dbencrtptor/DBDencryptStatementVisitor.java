@@ -2,17 +2,15 @@ package com.sangsang.visitor.dbencrtptor;
 
 import com.sangsang.domain.enums.EncryptorFunctionEnum;
 import com.sangsang.util.CollectionUtils;
-import com.sangsang.cache.FieldEncryptorPatternCache;
 import com.sangsang.cache.TableCache;
 import com.sangsang.domain.annos.FieldEncryptor;
-import com.sangsang.domain.constants.NumberConstant;
 import com.sangsang.domain.constants.SymbolConstant;
 import com.sangsang.util.JsqlparserUtil;
 import com.sangsang.util.StringUtils;
 import com.sangsang.visitor.fieldparse.FieldParseParseTableFromItemVisitor;
 import com.sangsang.visitor.fieldparse.FieldParseParseTableSelectVisitor;
 import net.sf.jsqlparser.expression.Expression;
-import net.sf.jsqlparser.expression.operators.relational.ItemsList;
+import net.sf.jsqlparser.expression.operators.relational.ExpressionList;
 import net.sf.jsqlparser.schema.Column;
 import net.sf.jsqlparser.schema.Table;
 import net.sf.jsqlparser.statement.*;
@@ -21,6 +19,7 @@ import net.sf.jsqlparser.statement.alter.AlterSession;
 import net.sf.jsqlparser.statement.alter.AlterSystemStatement;
 import net.sf.jsqlparser.statement.alter.RenameTableStatement;
 import net.sf.jsqlparser.statement.alter.sequence.AlterSequence;
+import net.sf.jsqlparser.statement.analyze.Analyze;
 import net.sf.jsqlparser.statement.comment.Comment;
 import net.sf.jsqlparser.statement.create.index.CreateIndex;
 import net.sf.jsqlparser.statement.create.schema.CreateSchema;
@@ -35,16 +34,16 @@ import net.sf.jsqlparser.statement.execute.Execute;
 import net.sf.jsqlparser.statement.grant.Grant;
 import net.sf.jsqlparser.statement.insert.Insert;
 import net.sf.jsqlparser.statement.merge.Merge;
-import net.sf.jsqlparser.statement.replace.Replace;
+import net.sf.jsqlparser.statement.refresh.RefreshMaterializedViewStatement;
 import net.sf.jsqlparser.statement.select.FromItem;
 import net.sf.jsqlparser.statement.select.Join;
 import net.sf.jsqlparser.statement.select.Select;
+import net.sf.jsqlparser.statement.show.ShowIndexStatement;
 import net.sf.jsqlparser.statement.show.ShowTablesStatement;
 import net.sf.jsqlparser.statement.truncate.Truncate;
 import net.sf.jsqlparser.statement.update.Update;
 import net.sf.jsqlparser.statement.update.UpdateSet;
 import net.sf.jsqlparser.statement.upsert.Upsert;
-import net.sf.jsqlparser.statement.values.ValuesStatement;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -69,6 +68,11 @@ public class DBDencryptStatementVisitor implements StatementVisitor {
 
     public String getResultSql() {
         return resultSql;
+    }
+
+    @Override
+    public void visit(Analyze analyze) {
+
     }
 
     @Override
@@ -161,45 +165,18 @@ public class DBDencryptStatementVisitor implements StatementVisitor {
         List<UpdateSet> updateSets = update.getUpdateSets();
         for (UpdateSet updateSet : updateSets) {
             List<Column> columns = updateSet.getColumns();
-            List<Expression> expressions = updateSet.getExpressions();
+            ExpressionList<Expression> expressions = (ExpressionList<Expression>) updateSet.getValues();
             //处理每对需要加密的字段，只处理一边是数据库字段，一边是常量的，两边都是数据库字段的，根据情况处理
             for (int i = 0; i < columns.size(); i++) {
                 Column column = columns.get(i);
                 Expression expression = expressions.get(i);
                 //左边是否需要加解密
                 boolean leftNeedEncrypt = JsqlparserUtil.needEncrypt(column, fieldParseTableFromItemVisitor.getLayer(), fieldParseTableFromItemVisitor.getLayerFieldTableMap());
-
-                //4.1 两边都是来自数据库
-                if (expression instanceof Column) {
-                    //右边是否需要加解密
-                    boolean rightNeedEncrypt = JsqlparserUtil.needEncrypt((Column) expression, fieldParseTableFromItemVisitor.getLayer(), fieldParseTableFromItemVisitor.getLayerFieldTableMap());
-                    //两边都需要加解密，不做处理
-                    if (leftNeedEncrypt && rightNeedEncrypt) {
-                        continue;
-                    }
-
-                    //左边需要加密，右边不需要，则将右边进行加密
-                    if (leftNeedEncrypt && !rightNeedEncrypt) {
-                        Expression encryptionExpression = FieldEncryptorPatternCache.getInstance().encryption(expression);
-                        expressions.set(i, encryptionExpression);
-                    }
-
-                    //左边不需要加密，右边需要，则将右边进行解密
-                    if (!leftNeedEncrypt && rightNeedEncrypt) {
-                        Expression decryptionExpression = FieldEncryptorPatternCache.getInstance().decryption(expression);
-                        expressions.set(i, decryptionExpression);
-                    }
-                }
-
-                //4.2 左边是数据库字段，右边不是
-                //左边的Column 字段不需要加密不做处理
-                if (!JsqlparserUtil.needEncrypt(column, fieldParseTableFromItemVisitor.getLayer(), fieldParseTableFromItemVisitor.getLayerFieldTableMap())) {
-                    continue;
-                }
-                //数据进行加密处理
-                Expression encryptionExpression = FieldEncryptorPatternCache.getInstance().encryption(expression);
-                //加密后赋值
-                expressions.set(i, encryptionExpression);
+                //根据左边是否密文存储来对右边进行处理
+                EncryptorFunctionEnum encryptorFunctionEnum = leftNeedEncrypt ? EncryptorFunctionEnum.UPSTREAM_SECRET : EncryptorFunctionEnum.UPSTREAM_PLAINTEXT;
+                DBDecryptExpressionVisitor sDecryptExpressionVisitor = DBDecryptExpressionVisitor.newInstanceCurLayer(fieldParseTableFromItemVisitor, encryptorFunctionEnum);
+                expression.accept(sDecryptExpressionVisitor);
+                expressions.set(i, Optional.ofNullable(sDecryptExpressionVisitor.getExpression()).orElse(expression));
             }
         }
 
@@ -212,7 +189,7 @@ public class DBDencryptStatementVisitor implements StatementVisitor {
     public void visit(Insert insert) {
         //insert 的表
         Table table = insert.getTable();
-        //1.当前表不需要加密，直接返回，不处理
+        //1.当前sql不涉及加密，直接返回，不处理
         if (StringUtils.notExistEncryptor(insert.toString())) {
             this.resultSql = insert.toString();
             return;
@@ -237,38 +214,19 @@ public class DBDencryptStatementVisitor implements StatementVisitor {
             }
         }
 
-        //3.插入的每一列，进行加密处理
-        //情况1：这里是 insert into table(xxx,xxx) values(),()  这种语法
-        ItemsList itemsList = insert.getItemsList();
-        if (itemsList != null) {
-            DBDecryptItemsListVisitor dBDecryptItemsListVisitor = DBDecryptItemsListVisitor.newInstanceCurLayer(needEncryptIndex);
-            itemsList.accept(dBDecryptItemsListVisitor);
-        }
-
-        //情况2：insert select 语句
+        //3.解析sql
         Select select = insert.getSelect();
-        if (select != null) {
-            //解析当前查询语句的每层表的全部字段
-            FieldParseParseTableSelectVisitor fieldParseTableSelectVisitor = FieldParseParseTableSelectVisitor.newInstanceFirstLayer();
-            select.getSelectBody().accept(fieldParseTableSelectVisitor);
+        FieldParseParseTableSelectVisitor fPSelectVisitor = FieldParseParseTableSelectVisitor.newInstanceFirstLayer();
+        select.accept(fPSelectVisitor);
 
-            //将这个查询语句where 条件后面的进行加解密处理
-            DBDecryptSelectVisitor sDecryptSelectVisitor = DBDecryptSelectVisitor.newInstanceCurLayer(fieldParseTableSelectVisitor, needEncryptIndex);
-            select.getSelectBody().accept(sDecryptSelectVisitor);
-        }
-
-        //4.ON DUPLICATE KEY UPDATE 语法 此语法不用单独处理，即可兼容
-//        List<Column> duplicateUpdateColumns = insert.getDuplicateUpdateColumns();
-//        List<Expression> duplicateUpdateExpressionList = insert.getDuplicateUpdateExpressionList();
+        //4.进行加解密处理
+        DBDecryptSelectVisitor dbDecryptSelectVisitor = DBDecryptSelectVisitor.newInstanceCurLayer(fPSelectVisitor, needEncryptIndex);
+        select.accept(dbDecryptSelectVisitor);
 
         //5.处理好的sql赋值
         this.resultSql = insert.toString();
     }
 
-    @Override
-    public void visit(Replace replace) {
-
-    }
 
     @Override
     public void visit(Drop drop) {
@@ -306,6 +264,11 @@ public class DBDencryptStatementVisitor implements StatementVisitor {
     }
 
     @Override
+    public void visit(RefreshMaterializedViewStatement materializedView) {
+
+    }
+
+    @Override
     public void visit(Alter alter) {
 
     }
@@ -337,6 +300,11 @@ public class DBDencryptStatementVisitor implements StatementVisitor {
     }
 
     @Override
+    public void visit(ShowIndexStatement showIndex) {
+
+    }
+
+    @Override
     public void visit(ShowTablesStatement showTablesStatement) {
 
     }
@@ -358,7 +326,7 @@ public class DBDencryptStatementVisitor implements StatementVisitor {
     public void visit(Select select) {
         //1.解析当前sql拥有的全部字段信息
         FieldParseParseTableSelectVisitor fieldParseTableSelectVisitor = FieldParseParseTableSelectVisitor.newInstanceFirstLayer();
-        select.getSelectBody().accept(fieldParseTableSelectVisitor);
+        select.accept(fieldParseTableSelectVisitor);
 
         //2.如果不是union语句  并且 该sql涉及的表都不需要加解密，则不处理后续逻辑 （union语句没有整个解析到这个结果集中，union语句是分成多次解析的）
         if (!select.toString().toLowerCase().contains(SymbolConstant.UNION) && !JsqlparserUtil.needEncrypt(fieldParseTableSelectVisitor.getLayerSelectTableFieldMap(), fieldParseTableSelectVisitor.getLayerFieldTableMap())) {
@@ -368,7 +336,7 @@ public class DBDencryptStatementVisitor implements StatementVisitor {
 
         //3.将需要加密的字段进行加密处理
         DBDecryptSelectVisitor sDecryptSelectVisitor = DBDecryptSelectVisitor.newInstanceCurLayer(fieldParseTableSelectVisitor);
-        select.getSelectBody().accept(sDecryptSelectVisitor);
+        select.accept(sDecryptSelectVisitor);
 
         //4.处理后的结果赋值
         this.resultSql = sDecryptSelectVisitor.getResultSql();
@@ -389,10 +357,6 @@ public class DBDencryptStatementVisitor implements StatementVisitor {
 
     }
 
-    @Override
-    public void visit(ValuesStatement values) {
-
-    }
 
     @Override
     public void visit(DescribeStatement describe) {
@@ -461,6 +425,11 @@ public class DBDencryptStatementVisitor implements StatementVisitor {
 
     @Override
     public void visit(AlterSystemStatement alterSystemStatement) {
+
+    }
+
+    @Override
+    public void visit(UnsupportedStatement unsupportedStatement) {
 
     }
 

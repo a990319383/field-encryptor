@@ -1,3 +1,4 @@
+/*
 package com.sangsang.visitor.sqltype;
 
 import net.sf.jsqlparser.statement.*;
@@ -29,23 +30,27 @@ import net.sf.jsqlparser.statement.upsert.Upsert;
 import net.sf.jsqlparser.statement.values.ValuesStatement;
 import org.apache.ibatis.mapping.SqlCommandType;
 
+*/
 /**
  * 解析出sql属于 select update insert delete的哪种语句
  *
  * @author liutangqi
  * @date 2024/8/21 13:32
- */
+ *//*
+
 public class SqlTypeStatementVisitor implements StatementVisitor {
 
     private SqlCommandType sqlType = SqlCommandType.UNKNOWN;
 
-    /**
+    */
+/**
      * 获取解析后的sql类型
      *
      * @author liutangqi
      * @date 2024/8/21 13:35
      * @Param []
-     **/
+     **//*
+
     public SqlCommandType getSqlType() {
         return sqlType;
     }
@@ -260,3 +265,4 @@ public class SqlTypeStatementVisitor implements StatementVisitor {
 
     }
 }
+*/

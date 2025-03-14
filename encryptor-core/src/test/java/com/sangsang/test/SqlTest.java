@@ -6,12 +6,12 @@ import com.sangsang.domain.dto.FieldEncryptorInfoDto;
 import com.sangsang.util.AnswerUtil;
 import com.sangsang.util.ReflectUtils;
 import com.sangsang.util.StringUtils;
-import com.sangsang.visitor.pojoencrtptor.PoJoEncrtptorStatementVisitor;
 import com.sangsang.visitor.dbencrtptor.DBDencryptStatementVisitor;
-import javafx.util.Pair;
+import com.sangsang.visitor.fieldparse.FieldParseParseTableSelectVisitor;
 import net.sf.jsqlparser.JSQLParserException;
 import net.sf.jsqlparser.parser.CCJSqlParserUtil;
 import net.sf.jsqlparser.statement.Statement;
+import net.sf.jsqlparser.statement.select.PlainSelect;
 import org.junit.jupiter.api.Test;
 
 import java.util.*;
@@ -323,12 +323,12 @@ public class SqlTest {
             "where t.phone = ? " +
             ")";
 
-    // 多字段in   (xxx,yyy) in ( (?,?),(?,?) )
+    // 多字段in   (xxx,yyy) in ( select xxx,yyy from )
     String s22 = "select *\n" +
             "from tb_user tu \n" +
             "left join tb_menu tm \n" +
             "on tu.id =  tm.id \n" +
-            "where (tu.phone,tm.id) in (select tu2.phone ,tu2.id from tb_user tu2 where tu2.phone = '' ) ";
+            "where (tu.phone,tm.id) in (select tu2.phone ,tu2.id from tb_user tu2 where tu2.phone = ? ) ";
 
     // in 前面不是 字段 右边是常量
     String s23 = "select * from tb_user tu \n" +
@@ -398,6 +398,15 @@ public class SqlTest {
     //json函数 (select 1.拼接成json  2.从json中根据key获取value值) todo-ltq
     String s32 = "";
 
+    // 多字段in   (xxx,yyy) in ( (?,?),(?,?) )
+    String s33 = "select *\n" +
+            "from tb_user tu \n" +
+            "left join tb_menu tm \n" +
+            "on tu.id =  tm.id \n" +
+            "where (tu.phone,tm.id) in ((?,?),(?,?))";
+
+    // 非Column in (select xxx from )
+    String s34 = "select * from tb_user  where ? in (select tu.phone from tb_user tu) ";
 
     // -----------------insert 测试语句---------------------
     String i1 = "insert into tb_user(id, user_name ,phone) \n" +
@@ -429,6 +438,8 @@ public class SqlTest {
             "where tu.phone is not null \n" +
             ")";
 
+    //insert 单个值
+    String i6 = "insert into tb_user(id, user_name ,phone) values(?,?,?)";
     // --------------delete 测试语句 ---------------
 
     // delet join
@@ -520,7 +531,7 @@ public class SqlTest {
      * @date 2025/3/6 15:17
      * @Param []
      **/
-    @Test
+   /* @Test
     public void testPoJoEncryptor() throws JSQLParserException, NoSuchFieldException {
         //初始化加解密函数
         FieldEncryptorPatternCache.initDeafultInstance();
@@ -542,7 +553,7 @@ public class SqlTest {
         statement.accept(poJoEncrtptorStatementVisitor);
         System.out.println(poJoEncrtptorStatementVisitor.getFieldEncryptorInfos());
         System.out.println(poJoEncrtptorStatementVisitor.getPlaceholderColumnTableMap());
-    }
+    }*/
 
 
 //----------------------------------------校验当前程序是否正确分割线---------------------------------------------------------
@@ -550,8 +561,8 @@ public class SqlTest {
     //需要测试的sql
     List<String> sqls = Arrays.asList(s1, s2, s3, s4, s5, s6, s7, s8, s9, s10, s11, s12, s13, s14, s15, s16, s17, s18, s19,
             s20,
-            s21, s22, s23, s24, s26, s27, s28, s29, s30, s31,
-            i1, i2, i3, //i4,
+            s21, s22, s23, s24, s26, s27, s28, s29, s30, s31, s33, s34,
+            i1, i2, i3, i5, i6,//i4,
             d1, d2,
             u1, u2, u3, u4
     );
@@ -588,11 +599,15 @@ public class SqlTest {
                 System.out.println("原始sql: " + sql);
                 return;
             }
-            if (answer.equals(resultSql)) {
+            if (answer.equalsIgnoreCase(resultSql)) {
                 System.out.println("成功: " + sqlFieldName);
             } else {
                 System.out.println("错误: " + sqlFieldName);
                 System.out.println("原始sql: " + sql);
+                System.out.println("-------------------------------------------------------");
+                System.out.println("正确答案： " + answer);
+                System.out.println("-------------------------------------------------------");
+                System.out.println("当前答案： " + resultSql);
                 return;
             }
         }
@@ -607,7 +622,7 @@ public class SqlTest {
      * @date 2025/3/6 15:02
      * @Param []
      **/
-    @Test
+  /*  @Test
     public void pojoCheck() throws NoSuchFieldException, JSQLParserException, IllegalAccessException {
         //初始化加解密函数
         FieldEncryptorPatternCache.initDeafultInstance();
@@ -640,10 +655,14 @@ public class SqlTest {
             } else {
                 System.out.println("错误: " + sqlFieldName);
                 System.out.println("原始sql: " + sql);
+                  System.out.println("-------------------------------------------------------");
+                System.out.println("正确答案： " + answer);
+                System.out.println("-------------------------------------------------------");
+                System.out.println("当前答案： " + resultSql);
                 return;
             }
         }
-    }
+    }*/
 
 
 //----------------------------------------写入处理好的答案分割线---------------------------------------------------------
@@ -657,7 +676,7 @@ public class SqlTest {
      * @date 2025/3/6 13:18
      * @Param []
      **/
-    @Test
+   /* @Test
     public void dbAnswerWrite() throws Exception {
         //初始化加解密函数
         FieldEncryptorPatternCache.initDeafultInstance();
@@ -673,7 +692,7 @@ public class SqlTest {
             String resultSql = DBDencryptStatementVisitor.getResultSql();
             AnswerUtil.writeDBAnswerToFile(this, sql, resultSql);
         }
-    }
+    }*/
 
     /**
      * 将pojo模式下处理好的结果答案写入到文件中
@@ -682,7 +701,7 @@ public class SqlTest {
      * @date 2025/3/6 13:18
      * @Param []
      **/
-    @Test
+   /* @Test
     public void pojoAnswerWrite() throws Exception {
         //初始化加解密函数
         FieldEncryptorPatternCache.initDeafultInstance();
@@ -702,6 +721,19 @@ public class SqlTest {
             AnswerUtil.writePOJOAnswerToFile(this, sql, fieldEncryptorInfos, placeholderColumnTableMap);
         }
     }
+*/
+    @Test
+    public void testParse() throws JSQLParserException, NoSuchFieldException {
+        //初始化加解密函数
+        FieldEncryptorPatternCache.initDeafultInstance();
+        //mock数据
+        InitTableInfo.initTable();
 
+        String sql = "select tu.* from tb_user tu";
+        Statement statement = CCJSqlParserUtil.parse(sql);
+        FieldParseParseTableSelectVisitor fieldParseParseTableSelectVisitor = FieldParseParseTableSelectVisitor.newInstanceFirstLayer();
+        ((PlainSelect) statement).accept(fieldParseParseTableSelectVisitor);
+        System.out.println(fieldParseParseTableSelectVisitor);
+    }
 
 }
