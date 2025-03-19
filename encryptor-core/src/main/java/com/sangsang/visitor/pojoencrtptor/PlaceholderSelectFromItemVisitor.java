@@ -26,7 +26,6 @@ public class PlaceholderSelectFromItemVisitor extends PlaceholderFieldParseTable
 
     @Override
     public void visit(Table table) {
-
     }
 
 

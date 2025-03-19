@@ -196,7 +196,39 @@ field.encryptor.secretKey=7uq?q8g3@q
     - @FieldEncryptor(pojoAlgorithm = PoJoAlgorithmEnum.ALGORITHM_1)
     - @FieldEncryptor 不填的，默认是PoJoAlgorithmEnum.ALGORITHM_DEFAULT 对应的算法
 
-### 3.简化分表写法
+### 3.pojo模式下支持同一#{}入参，拥有不同的值
+
+- 配置
+
+```
+#支持同一#{}入参，拥有不同的值
+field.encryptor.pojoReplaceParameterMapping=true
+
+```
+
+- 栗子
+
+某些情况，比如秘评，需要对加密字段存储多个算法的值到数据库中，但是我们修改程序时，不想新增变量
+
+```
+表信息：
+	tb_user表 有字段phone ,encrypt_phone 两个一个采用SM3 加密，一个采用SM4加密存储
+mapper:
+	int updatePhById(@Param("id") Long id, @Param("ph") String ph);
+xml:
+	update tb_user  set phone = #{ph},   encrypt_phone = #{ph}  where id = #{id}	
+
+```
+
+上述栗子中，同一个入参#{ph}，需要设置到数据库中使用不同的值，此时要兼容这种情况的话，需要开启此配置
+
+- 注意
+
+  此配置会在拦截器中把parameterMapping的字段名进行替换，实现同一个变量拥有不同值的效果
+
+  如果项目中有其它拦截器会对sql入参进行解析的话，开启此配置时需要验证是否存在影响
+
+### 4.简化分表写法
 
 - 当项目中进行了分表时，默认需要在每个分表的表名上面标注上述注解，如果分了100张表需要重复写100次
 
@@ -225,6 +257,14 @@ field.encryptor.secretKey=7uq?q8g3@q
           return SUFFIX.stream().map(suffix -> prefix + suffix).collect(Collectors.toList());
       }
   }
+  ```
+
+  ### 5.pojo模式，select结果有列运算等不支持的语法，但是存在解密的需求
+
+  将下列注解标注在sql响应的类上面
+
+  ```
+  @PoJoResultEncryptor
   ```
 
   

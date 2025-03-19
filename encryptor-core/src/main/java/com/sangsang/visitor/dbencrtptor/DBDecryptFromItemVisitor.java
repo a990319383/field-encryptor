@@ -36,7 +36,6 @@ public class DBDecryptFromItemVisitor extends BaseFieldParseTable implements Fro
 
     @Override
     public void visit(Table table) {
-        table.getName();
     }
 
 

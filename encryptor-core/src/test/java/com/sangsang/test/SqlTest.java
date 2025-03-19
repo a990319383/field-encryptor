@@ -413,6 +413,9 @@ public class SqlTest {
     //非Column 多值in
     String s35 = "select * from tb_user  where (?,?) in (select tu.phone ,tu.user_name from tb_user tu)";
 
+    //join 子查询
+    String s36 = "select * from tb_user tu left join( select * from tb_menu tm where tm.path = ?)tm_new on tu.phone = tm_new.id";
+
     // -----------------insert 测试语句---------------------
     String i1 = "insert into tb_user(id, user_name ,phone) \n" +
             "values(1,?,'18243512315'),(2,'南瓜',?)";
@@ -512,7 +515,7 @@ public class SqlTest {
         InitTableInfo.initTable();
 
         //需要测试的sql
-        String sql = s35;
+        String sql = s36;
         System.out.println("----------------------------------------------------------------------------");
         System.out.println(sql);
         System.out.println("----------------------------------------------------------------------------");
@@ -544,7 +547,7 @@ public class SqlTest {
         InitTableInfo.initTable();
 
         //需要测试的sql
-        String sql = i6;
+        String sql = u4;
         System.out.println("----------------------------------------------------------------------------");
         System.out.println(sql);
         System.out.println("----------------------------------------------------------------------------");
@@ -565,8 +568,8 @@ public class SqlTest {
 
     //需要测试的sql
     List<String> sqls = Arrays.asList(s1, s2, s3, s4, s5, s6, s7, s8, s9, s10, s11, s12, s13, s14, s15, s16, s17, s18, s19,
-            s20, s21, s22, s23, s24, s25, s26, s27, s28, s29, s30, s31, s33, s34, s35,
-            i1, i2, i3, i5, i6,//i4,
+            s20, s21, s22, s23, s24, s25, s26, s27, s28, s29, s30, s31, s33, s34, s35, s36,
+            i1, i2, i3, i5, i6,
             d1, d2,
             u1, u2, u3, u4
     );
