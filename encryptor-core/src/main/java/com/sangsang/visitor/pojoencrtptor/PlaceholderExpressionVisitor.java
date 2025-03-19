@@ -333,49 +333,6 @@ public class PlaceholderExpressionVisitor extends PlaceholderFieldParseTable imp
                     leftExpressionList);
             rightSelect.accept(placeholderSelectVisitor);
         }
-/*
-
-        //1.当前左边表达式是Column
-        if (inExpression.getLeftExpression() instanceof Column) {
-            //1.1 右边是 (aaa,bbb,ccc)  Column in (aaa,bbb,ccc) 这种 如果右边是预编译的参数 将右边的#{} 的关系维护到结果集map中
-            if (inExpression.getRightExpression() != null && inExpression.getRightExpression() instanceof ParenthesedExpressionList) {
-                ParenthesedExpressionList<Expression> rightItemsList = (ParenthesedExpressionList<Expression>) inExpression.getRightExpression();
-                rightItemsList.forEach(f -> JsqlparserUtil.parseWhereColumTable(this.getLayer(),
-                        this.getLayerFieldTableMap(),
-                        inExpression.getLeftExpression(),
-                        f,
-                        this.getPlaceholderColumnTableMap()));
-
-            }
-
-            //1.2 右边是子查询 Column in (select xxx from xxx) 这种: 只需要解析子查询的where 中的占位符
-            if (inExpression.getRightExpression() != null && inExpression.getRightExpression() instanceof ParenthesedSelect) {
-                //1.2.1 取出右边的select语句
-                ParenthesedSelect selectBody = ((ParenthesedSelect) inExpression.getRightExpression());
-                //1.2.2 因为这个sql是一个完全独立的sql，所以单独解析这个sql拥有的字段信息
-                FieldParseParseTableSelectVisitor fieldParseParseTableSelectVisitor = FieldParseParseTableSelectVisitor.newInstanceFirstLayer();
-                selectBody.accept(fieldParseParseTableSelectVisitor);
-                //1.2.3 利用这个单独的sql的解析结果，对这个sql的where的#{}占位符进行分析
-                PlaceholderSelectVisitor placeholderSelectVisitor = PlaceholderSelectVisitor.newInstanceCurLayer(fieldParseParseTableSelectVisitor, this.getPlaceholderColumnTableMap());
-                selectBody.accept(placeholderSelectVisitor);
-            }
-        } else {
-            //2.1 左边不是Column，但是右边是子查询时，需要对子查询的where进行处理  栗子： where  concat(a.phone,b.name) in (select xxx from 表 where  xxx= ?占位符)
-            if (inExpression.getRightExpression() instanceof ParenthesedSelect) {
-                //备注：右边的子查询是一个完全独立的sql，所以不共用一个解析结果，需要单独解析当前sql中涉及的字段
-                FieldParseParseTableSelectVisitor fieldParseParseTableSelectVisitor = FieldParseParseTableSelectVisitor.newInstanceFirstLayer();
-                ((ParenthesedSelect) inExpression.getRightExpression()).accept(fieldParseParseTableSelectVisitor);
-                //基于新解析的表结构信息 和当前存储？占位符的Map 解析其中的where条件
-                PlaceholderExpressionVisitor placeholderWhereExpressionVisitor = PlaceholderExpressionVisitor.newInstanceCurLayer(fieldParseParseTableSelectVisitor, this.getPlaceholderColumnTableMap());
-                inExpression.getRightExpression().accept(placeholderWhereExpressionVisitor);
-            } else {
-                //2.2 当左边的不是Column时（比如左边是列运算，就是Function，不是单纯的列） 栗子： where concat(a.phone,b.name) in ( ?,?)
-                // 这种情况不做处理，这种情况#{}占位符所属的字段信息是一个聚合结果，同时来源多张表，不支持此种写法，两个单独的字段聚合后，单独加密和整体加密密文肯定不同
-                // 写出这种sql的时候请反省一下自己，表结构是不是有问题，硬要用这种写法的，请使用数据库函数加密的db模式
-            }
-        }*/
-
-
     }
 
     @Override

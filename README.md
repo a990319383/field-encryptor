@@ -3,6 +3,7 @@
 ## 技术支持
 
 - 990319383@qq.com
+- bug反馈可通过邮件或者QQ的方式进行联系，QQ的话请备注来意
 
 ## 版本迭代记录
 
@@ -12,6 +13,7 @@
 | 2.0.0 | 增加pojo模式，pojo同时支持多种算法共存 | 2024/9 |
 | 2.1.0 | 将jsqlparser打入项目的jar中，重命名避免版本冲突 | 2025/2 |
 | 3.0.0 | 优化项目结构，减少visitor的重复代码，<br>db模式兼容insert(select)密文存储不同的场景 | 2025/3 |
+| 3.1.0 | jsqlparser升级到4.9版本 | 2025/3 |
 
 ## 使用场景
 
@@ -124,7 +126,7 @@ select phone,user_name from tb_user where phone = ?
 #自定义秘钥，当不自定义加解密算法时，这个值建议自定义
 field.encryptor.secretKey=7uq?q8g3@q
 #加密模式，目前支持pojo/db两种模式
-field.encryptor.patternType=pojo
+field.encryptor.patternType=db
 #指定实体类包路径（项目启动时会扫描指定路径下的实体类，加载到本地缓存中）
 field.encryptor.scanEntityPackage[0]=com.sinoiov.model
 ```
@@ -231,7 +233,7 @@ field.encryptor.secretKey=7uq?q8g3@q
 
 ### 1.全模式均不兼容场景
 
-- 目前jsqlparse仅支持4.4版本，其余版本并未开发，所以此版本不支持的sql语法，无法兼容
+- 项目基于jsqlparse解析，其版本不支持的sql语法，此框架无法兼容
 - INSERT INTO 表名 VALUES (所有字段);   表名后面没有跟具体字段的，无法兼容
 
 ### 2.db模式不兼容场景
