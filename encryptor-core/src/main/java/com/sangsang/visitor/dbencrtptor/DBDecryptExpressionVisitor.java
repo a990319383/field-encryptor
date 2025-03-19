@@ -363,6 +363,7 @@ public class DBDecryptExpressionVisitor extends BaseDEcryptParseTable implements
      * 语法4： (xxx,yyy) in ((?,?),(?,?))
      * 语法5： (xxx,yyy) in (select xxx,yyy from )
      * 语法6： concat("aaa",tu.phone) in (? , ?)
+     * 语法7： (?,?) in (select xxx,yyy from )
      *
      * @author liutangqi
      * @date 2025/3/1 13:54
@@ -384,7 +385,7 @@ public class DBDecryptExpressionVisitor extends BaseDEcryptParseTable implements
                 needEncryptIndex.add(NumberConstant.ZERO);
             }
         }
-        //1.2 左边是多值字段时（对应语法4，语法5）
+        //1.2 左边是多值字段时（对应语法4，语法5，语法7）
         else if (leftExpression instanceof ParenthesedExpressionList) {
             ParenthesedExpressionList leftExpressionList = (ParenthesedExpressionList) inExpression.getLeftExpression();
             for (int i = 0; i < leftExpressionList.size(); i++) {
@@ -431,7 +432,7 @@ public class DBDecryptExpressionVisitor extends BaseDEcryptParseTable implements
                 rightExpressionList.set(i, Optional.ofNullable(sDecryptExpressionVisitor.getExpression()).orElse(rightExpressionList.get(i)));
             }
         }
-        //2.3 当右边是子查询时 （对应语法2，语法3，语法5 ）
+        //2.3 当右边是子查询时 （对应语法2，语法3，语法5，语法7）
         else if (rightExpression instanceof ParenthesedSelect) {
             ParenthesedSelect rightSelect = (ParenthesedSelect) rightExpression;
             //这种情况右边是一个完全独立的sql，单独解析
@@ -956,9 +957,22 @@ public class DBDecryptExpressionVisitor extends BaseDEcryptParseTable implements
         System.out.println("可疑语法出现，请注意" + parenthesedSelect.toString());
     }
 
+    /**
+     * convert函数
+     *
+     * @author liutangqi
+     * @date 2025/3/17 16:51
+     * @Param [transcodingFunction]
+     **/
     @Override
     public void visit(TranscodingFunction transcodingFunction) {
+        //处理表达式
+        Expression expression = transcodingFunction.getExpression();
+        DBDecryptExpressionVisitor dbDecryptExpressionVisitor = DBDecryptExpressionVisitor.newInstanceCurLayer(this);
+        expression.accept(dbDecryptExpressionVisitor);
 
+        //处理后的表达式赋值
+        transcodingFunction.setExpression(Optional.ofNullable(dbDecryptExpressionVisitor.getExpression()).orElse(expression));
     }
 
     @Override

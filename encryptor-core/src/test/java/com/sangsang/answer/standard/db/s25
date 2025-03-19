@@ -1,0 +1,1 @@
+SELECT CONVERT( CAST(AES_DECRYPT(FROM_BASE64(tu.phone), '7uq?q8g3@q') AS CHAR) USING utf8mb4 ) FROM tb_user tu

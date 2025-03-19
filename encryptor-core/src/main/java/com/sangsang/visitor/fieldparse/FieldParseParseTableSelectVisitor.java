@@ -32,6 +32,15 @@ public class FieldParseParseTableSelectVisitor extends BaseFieldParseTable imple
         );
     }
 
+
+    public static FieldParseParseTableSelectVisitor newInstanceFirstLayer(Map<String, Map<String, Set<FieldInfoDto>>> layerSelectTableFieldMap, Map<String, Map<String, Set<FieldInfoDto>>> layerFieldTableMap) {
+        return new FieldParseParseTableSelectVisitor(
+                NumberConstant.ONE,
+                layerSelectTableFieldMap,
+                layerFieldTableMap
+        );
+    }
+
     /**
      * 获取下一层对象
      *

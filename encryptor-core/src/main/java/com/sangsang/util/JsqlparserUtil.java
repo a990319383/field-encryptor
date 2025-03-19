@@ -383,35 +383,19 @@ public class JsqlparserUtil {
                                             Expression rightExpression,
                                             Map<String, ColumnTableDto> placeholderColumnTableMap) {
         //左边是列，右边是我们的占位符
-        if (leftExpression instanceof Column && rightExpression.toString().contains(DecryptConstant.PLACEHOLDER)) {
+        if (leftExpression instanceof Column
+                && rightExpression != null
+                && rightExpression.toString().contains(DecryptConstant.PLACEHOLDER)) {
             ColumnTableDto columnTableDto = JsqlparserUtil.parseColumn((Column) leftExpression, layer, layerFieldTableMap);
             placeholderColumnTableMap.put(rightExpression.toString(), columnTableDto);
         }
 
         //左边是我们的占位符 右边是列
-        if (rightExpression instanceof Column && leftExpression.toString().contains(DecryptConstant.PLACEHOLDER)) {
+        if (rightExpression instanceof Column
+                && leftExpression != null
+                && leftExpression.toString().contains(DecryptConstant.PLACEHOLDER)) {
             ColumnTableDto columnTableDto = JsqlparserUtil.parseColumn((Column) rightExpression, layer, layerFieldTableMap);
             placeholderColumnTableMap.put(leftExpression.toString(), columnTableDto);
         }
-    }
-
-
-    /**
-     * 获取sql的类型
-     *
-     * @author liutangqi
-     * @date 2024/8/21 13:42
-     * @Param [sql]
-     **/
-    public static SqlCommandType getSqlType(String sql) {
-        /*try {
-            Statement statement = CCJSqlParserUtil.parse(sql);
-            SqlTypeStatementVisitor sqlTypeStatementVisitor = new SqlTypeStatementVisitor();
-            statement.accept(sqlTypeStatementVisitor);
-            return sqlTypeStatementVisitor.getSqlType();
-        } catch (JSQLParserException e) {
-            e.printStackTrace();
-        }*///todo-ltq 后续记得放开
-        return SqlCommandType.UNKNOWN;
     }
 }
