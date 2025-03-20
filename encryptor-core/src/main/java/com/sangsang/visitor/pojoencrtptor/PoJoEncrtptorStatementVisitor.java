@@ -12,7 +12,7 @@ import com.sangsang.util.JsqlparserUtil;
 import com.sangsang.visitor.fieldparse.FieldParseParseTableFromItemVisitor;
 import com.sangsang.visitor.fieldparse.FieldParseParseTableSelectVisitor;
 import net.sf.jsqlparser.expression.Expression;
-import net.sf.jsqlparser.expression.operators.relational.ItemsList;
+import net.sf.jsqlparser.expression.operators.relational.ExpressionList;
 import net.sf.jsqlparser.schema.Column;
 import net.sf.jsqlparser.schema.Table;
 import net.sf.jsqlparser.statement.*;
@@ -21,6 +21,7 @@ import net.sf.jsqlparser.statement.alter.AlterSession;
 import net.sf.jsqlparser.statement.alter.AlterSystemStatement;
 import net.sf.jsqlparser.statement.alter.RenameTableStatement;
 import net.sf.jsqlparser.statement.alter.sequence.AlterSequence;
+import net.sf.jsqlparser.statement.analyze.Analyze;
 import net.sf.jsqlparser.statement.comment.Comment;
 import net.sf.jsqlparser.statement.create.index.CreateIndex;
 import net.sf.jsqlparser.statement.create.schema.CreateSchema;
@@ -35,16 +36,16 @@ import net.sf.jsqlparser.statement.execute.Execute;
 import net.sf.jsqlparser.statement.grant.Grant;
 import net.sf.jsqlparser.statement.insert.Insert;
 import net.sf.jsqlparser.statement.merge.Merge;
-import net.sf.jsqlparser.statement.replace.Replace;
+import net.sf.jsqlparser.statement.refresh.RefreshMaterializedViewStatement;
 import net.sf.jsqlparser.statement.select.FromItem;
 import net.sf.jsqlparser.statement.select.Join;
 import net.sf.jsqlparser.statement.select.Select;
+import net.sf.jsqlparser.statement.show.ShowIndexStatement;
 import net.sf.jsqlparser.statement.show.ShowTablesStatement;
 import net.sf.jsqlparser.statement.truncate.Truncate;
 import net.sf.jsqlparser.statement.update.Update;
 import net.sf.jsqlparser.statement.update.UpdateSet;
 import net.sf.jsqlparser.statement.upsert.Upsert;
-import net.sf.jsqlparser.statement.values.ValuesStatement;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -80,6 +81,11 @@ public class PoJoEncrtptorStatementVisitor implements StatementVisitor {
 
     public Map<String, ColumnTableDto> getPlaceholderColumnTableMap() {
         return placeholderColumnTableMap;
+    }
+
+    @Override
+    public void visit(Analyze analyze) {
+
     }
 
     @Override
@@ -170,7 +176,7 @@ public class PoJoEncrtptorStatementVisitor implements StatementVisitor {
         List<UpdateSet> updateSets = update.getUpdateSets();
         for (UpdateSet updateSet : updateSets) {
             List<Column> columns = updateSet.getColumns();
-            List<Expression> expressions = updateSet.getExpressions();
+            ExpressionList<Expression> expressions = (ExpressionList<Expression>) updateSet.getValues();
             for (int i = 0; i < columns.size(); i++) {
                 Column column = columns.get(i);
                 Expression expression = expressions.get(i);
@@ -216,36 +222,22 @@ public class PoJoEncrtptorStatementVisitor implements StatementVisitor {
         //3.存放占位符信息的Map初始化
         this.placeholderColumnTableMap = new HashMap<>();
 
-        //4.插入的每一列，进行加密处理
-        //情况1：这里是 insert into table(xxx,xxx) values(),()  这种语法
-        ItemsList itemsList = insert.getItemsList();
-        if (itemsList != null) {
-            PlaceholderFieldParseTable placeholderFieldParseTable = new PlaceholderFieldParseTable(NumberConstant.ONE, null, layerFieldTableMap, this.getPlaceholderColumnTableMap());
-            PlaceholderInsertItemsListVisitor iDecryptItemsListVisitor = PlaceholderInsertItemsListVisitor.newInstanceCurLayer(placeholderFieldParseTable, columns);
-            itemsList.accept(iDecryptItemsListVisitor);
-        }
 
-        //情况2：insert select 语句  （注意：默认是从明文到明文或者从密文到密文，没有一个明文一个密文的情况，所以这里只有对where条件加解密的情况，没有对select字段的处理）
+        //4.处理select
         Select select = insert.getSelect();
-        if (select != null) {
-            //解析当前查询语句的每层表的全部字段
-            FieldParseParseTableSelectVisitor fieldParseTableSelectVisitor = FieldParseParseTableSelectVisitor.newInstanceFirstLayer();
-            select.getSelectBody().accept(fieldParseTableSelectVisitor);
+        //解析当前查询语句的每层表的全部字段(注意：将insert的表的字段解析结果和select的表字段合并在一起，这样下游根据上游字段进行对比时，才知道占位符对应的具体的字段所属表信息)
+        FieldParseParseTableSelectVisitor fieldParseTableSelectVisitor = FieldParseParseTableSelectVisitor.newInstanceFirstLayer(null, layerFieldTableMap);
+        select.accept(fieldParseTableSelectVisitor);
 
-            //将这个查询语句where 条件后面的进行加解密处理
-            PlaceholderSelectVisitor selectVisitor = PlaceholderSelectVisitor.newInstanceCurLayer(fieldParseTableSelectVisitor, this.getPlaceholderColumnTableMap());
-            select.getSelectBody().accept(selectVisitor);
-        }
+        //5.解析占位符（注意：insert 语句的前后字段有对应关系，所以这里把insert前面的字段传递给后面的visitor）
+        PlaceholderSelectVisitor selectVisitor = PlaceholderSelectVisitor.newInstanceCurLayer(fieldParseTableSelectVisitor, this.getPlaceholderColumnTableMap(), columns);
+        select.accept(selectVisitor);
 
-        //5.ON DUPLICATE KEY UPDATE 语法 此语法不用单独处理，即可兼容
+        //6.ON DUPLICATE KEY UPDATE 语法 此语法不用单独处理，即可兼容
 //        List<Column> duplicateUpdateColumns = insert.getDuplicateUpdateColumns();
 //        List<Expression> duplicateUpdateExpressionList = insert.getDuplicateUpdateExpressionList();
     }
 
-    @Override
-    public void visit(Replace replace) {
-
-    }
 
     @Override
     public void visit(Drop drop) {
@@ -283,6 +275,11 @@ public class PoJoEncrtptorStatementVisitor implements StatementVisitor {
     }
 
     @Override
+    public void visit(RefreshMaterializedViewStatement materializedView) {
+
+    }
+
+    @Override
     public void visit(Alter alter) {
 
     }
@@ -313,6 +310,11 @@ public class PoJoEncrtptorStatementVisitor implements StatementVisitor {
     }
 
     @Override
+    public void visit(ShowIndexStatement showIndex) {
+
+    }
+
+    @Override
     public void visit(ShowTablesStatement showTablesStatement) {
 
     }
@@ -327,8 +329,7 @@ public class PoJoEncrtptorStatementVisitor implements StatementVisitor {
         //1.解析select拥有的字段对应的表结构信息
         //1.1解析当前sql拥有的全部字段信息
         FieldParseParseTableSelectVisitor fieldParseTableSelectVisitor = FieldParseParseTableSelectVisitor.newInstanceFirstLayer();
-        ;
-        select.getSelectBody().accept(fieldParseTableSelectVisitor);
+        select.accept(fieldParseTableSelectVisitor);
 
         //1.2.获取sql 查询的所有字段
         Map<String, Map<String, Set<FieldInfoDto>>> layerSelectTableFieldMap = fieldParseTableSelectVisitor.getLayerSelectTableFieldMap();
@@ -354,7 +355,7 @@ public class PoJoEncrtptorStatementVisitor implements StatementVisitor {
         //2.将#{}占位符和数据库表结构字段对应起来
         //2.1开始解析
         PlaceholderSelectVisitor placeholderSelectVisitor = PlaceholderSelectVisitor.newInstanceCurLayer(fieldParseTableSelectVisitor, null);
-        select.getSelectBody().accept(placeholderSelectVisitor);
+        select.accept(placeholderSelectVisitor);
         //2.2结果赋值
         this.placeholderColumnTableMap = placeholderSelectVisitor.getPlaceholderColumnTableMap();
 
@@ -372,11 +373,6 @@ public class PoJoEncrtptorStatementVisitor implements StatementVisitor {
 
     @Override
     public void visit(Block block) {
-
-    }
-
-    @Override
-    public void visit(ValuesStatement valuesStatement) {
 
     }
 
@@ -448,6 +444,11 @@ public class PoJoEncrtptorStatementVisitor implements StatementVisitor {
 
     @Override
     public void visit(AlterSystemStatement alterSystemStatement) {
+
+    }
+
+    @Override
+    public void visit(UnsupportedStatement unsupportedStatement) {
 
     }
 }

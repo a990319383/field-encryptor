@@ -1,7 +1,6 @@
 package com.sangsang.domain.dto;
 
 
-import com.sangsang.visitor.dbencrtptor.DBDecryptExpressionVisitor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -41,7 +40,7 @@ public class BaseFieldParseTable {
     private Map<String, Map<String, Set<FieldInfoDto>>> layerFieldTableMap;
 
 
-    protected static final Logger log = LoggerFactory.getLogger(DBDecryptExpressionVisitor.class);
+    protected static final Logger log = LoggerFactory.getLogger(BaseFieldParseTable.class);
 
     public BaseFieldParseTable(int layer,
                                Map<String, Map<String, Set<FieldInfoDto>>> layerSelectTableFieldMap,

@@ -1,0 +1,1 @@
+INSERT INTO tb_user (user_name, phone, login_name) (SELECT CAST(AES_DECRYPT(FROM_BASE64(phone), '7uq?q8g3@q') AS CHAR) AS phone, phone, (SELECT CAST(AES_DECRYPT(FROM_BASE64(tu2.phone), '7uq?q8g3@q') AS CHAR) AS phone FROM tb_user tu2 WHERE tu2.id = tu.id) FROM tb_user tu WHERE tu.phone IS NOT NULL)

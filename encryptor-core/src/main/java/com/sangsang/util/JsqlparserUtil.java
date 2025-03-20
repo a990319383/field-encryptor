@@ -6,7 +6,6 @@ import com.sangsang.domain.constants.DecryptConstant;
 import com.sangsang.domain.constants.SymbolConstant;
 import com.sangsang.domain.dto.ColumnTableDto;
 import com.sangsang.domain.dto.FieldInfoDto;
-import com.sangsang.visitor.sqltype.SqlTypeStatementVisitor;
 import net.sf.jsqlparser.JSQLParserException;
 import net.sf.jsqlparser.expression.*;
 import net.sf.jsqlparser.expression.operators.relational.ExpressionList;
@@ -16,7 +15,6 @@ import net.sf.jsqlparser.schema.Table;
 import net.sf.jsqlparser.statement.Statement;
 import net.sf.jsqlparser.statement.select.AllColumns;
 import net.sf.jsqlparser.statement.select.AllTableColumns;
-import net.sf.jsqlparser.statement.select.SelectExpressionItem;
 import net.sf.jsqlparser.statement.select.SelectItem;
 import org.apache.ibatis.mapping.SqlCommandType;
 
@@ -53,9 +51,8 @@ public class JsqlparserUtil {
         toBase64Function.setName("TO_BASE64");
         toBase64Function.setParameters(new ExpressionList(aesEncryptFunction));
 
-        SelectItem newSelectItem = new SelectExpressionItem(toBase64Function);
-        ((SelectExpressionItem) newSelectItem).setAlias(alias == null ? new Alias(columnName) : alias);
-        return newSelectItem;
+        alias = alias == null ? new Alias(columnName) : alias;
+        return SelectItem.from(toBase64Function, alias);
     }
 
     /**
@@ -68,31 +65,33 @@ public class JsqlparserUtil {
      **/
     public static List<SelectItem> perfectAllColumns(SelectItem selectItem, Map<String, Set<FieldInfoDto>> layerFieldTableMap) {
         //只有查询的这张表有需要加密的字段才将* 转换为每个字段，避免不必要的性能损耗
-        if (layerFieldTableMap.values().stream().flatMap(Collection::stream).filter(f -> TableCache.getFieldEncryptTable().contains(f.getSourceTableName())).count() == 0) {
+        if (layerFieldTableMap.values().stream().flatMap(Collection::stream)
+                .filter(f -> TableCache.getFieldEncryptTable().contains(f.getSourceTableName())).count() == 0) {
             return Arrays.asList(selectItem);
         }
+        Expression expression = selectItem.getExpression();
 
-        // select *  未指定别名，表示当前层只有一张表，直接将当前层的全部字段作为结果集返回
-        if (selectItem instanceof AllColumns) {
-            return layerFieldTableMap
-                    .values()
-                    .stream()
-                    .flatMap(Collection::stream)
-                    .map(m -> new SelectExpressionItem(new Column(m.getColumnName())))
-                    .collect(Collectors.toList());
-        }
-
-        //select 别名.*
-        if (selectItem instanceof AllTableColumns) {
-            String tableName = ((AllTableColumns) selectItem).getTable().getName().toLowerCase();
+        //select 别名.*  （注意：AllColumns AllTableColumns 有继承关系，这里判断顺序不能改）
+        if (expression instanceof AllTableColumns) {
+            String tableName = ((AllTableColumns) expression).getTable().getName().toLowerCase();
             return Optional.ofNullable(layerFieldTableMap.get(tableName))
                     .orElse(new HashSet<>())
                     .stream()
                     .map(m -> {
                         Column column = new Column(m.getColumnName());
                         column.setTable(new Table(tableName));
-                        return new SelectExpressionItem(column);
+                        return SelectItem.from(column);
                     }).collect(Collectors.toList());
+        }
+
+        // select *  未指定别名，表示当前层只有一张表，直接将当前层的全部字段作为结果集返回
+        if (expression instanceof AllColumns) {
+            return layerFieldTableMap
+                    .values()
+                    .stream()
+                    .flatMap(Collection::stream)
+                    .map(m -> SelectItem.from(new Column(m.getColumnName())))
+                    .collect(Collectors.toList());
         }
 
         //不包含*
@@ -384,35 +383,19 @@ public class JsqlparserUtil {
                                             Expression rightExpression,
                                             Map<String, ColumnTableDto> placeholderColumnTableMap) {
         //左边是列，右边是我们的占位符
-        if (leftExpression instanceof Column && rightExpression.toString().contains(DecryptConstant.PLACEHOLDER)) {
+        if (leftExpression instanceof Column
+                && rightExpression != null
+                && rightExpression.toString().contains(DecryptConstant.PLACEHOLDER)) {
             ColumnTableDto columnTableDto = JsqlparserUtil.parseColumn((Column) leftExpression, layer, layerFieldTableMap);
             placeholderColumnTableMap.put(rightExpression.toString(), columnTableDto);
         }
 
         //左边是我们的占位符 右边是列
-        if (rightExpression instanceof Column && leftExpression.toString().contains(DecryptConstant.PLACEHOLDER)) {
+        if (rightExpression instanceof Column
+                && leftExpression != null
+                && leftExpression.toString().contains(DecryptConstant.PLACEHOLDER)) {
             ColumnTableDto columnTableDto = JsqlparserUtil.parseColumn((Column) rightExpression, layer, layerFieldTableMap);
             placeholderColumnTableMap.put(leftExpression.toString(), columnTableDto);
         }
-    }
-
-
-    /**
-     * 获取sql的类型
-     *
-     * @author liutangqi
-     * @date 2024/8/21 13:42
-     * @Param [sql]
-     **/
-    public static SqlCommandType getSqlType(String sql) {
-        try {
-            Statement statement = CCJSqlParserUtil.parse(sql);
-            SqlTypeStatementVisitor sqlTypeStatementVisitor = new SqlTypeStatementVisitor();
-            statement.accept(sqlTypeStatementVisitor);
-            return sqlTypeStatementVisitor.getSqlType();
-        } catch (JSQLParserException e) {
-            e.printStackTrace();
-        }
-        return SqlCommandType.UNKNOWN;
     }
 }

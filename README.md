@@ -3,6 +3,7 @@
 ## 技术支持
 
 - 990319383@qq.com
+- bug反馈可通过邮件或者QQ的方式进行联系，QQ的话请备注来意
 
 ## 版本迭代记录
 
@@ -12,6 +13,7 @@
 | 2.0.0 | 增加pojo模式，pojo同时支持多种算法共存 | 2024/9 |
 | 2.1.0 | 将jsqlparser打入项目的jar中，重命名避免版本冲突 | 2025/2 |
 | 3.0.0 | 优化项目结构，减少visitor的重复代码，<br>db模式兼容insert(select)密文存储不同的场景 | 2025/3 |
+| 3.1.0 | jsqlparser升级到4.9版本 | 2025/3 |
 
 ## 使用场景
 
@@ -124,7 +126,7 @@ select phone,user_name from tb_user where phone = ?
 #自定义秘钥，当不自定义加解密算法时，这个值建议自定义
 field.encryptor.secretKey=7uq?q8g3@q
 #加密模式，目前支持pojo/db两种模式
-field.encryptor.patternType=pojo
+field.encryptor.patternType=db
 #指定实体类包路径（项目启动时会扫描指定路径下的实体类，加载到本地缓存中）
 field.encryptor.scanEntityPackage[0]=com.sinoiov.model
 ```
@@ -194,7 +196,39 @@ field.encryptor.secretKey=7uq?q8g3@q
     - @FieldEncryptor(pojoAlgorithm = PoJoAlgorithmEnum.ALGORITHM_1)
     - @FieldEncryptor 不填的，默认是PoJoAlgorithmEnum.ALGORITHM_DEFAULT 对应的算法
 
-### 3.简化分表写法
+### 3.pojo模式下支持同一#{}入参，拥有不同的值
+
+- 配置
+
+```
+#支持同一#{}入参，拥有不同的值
+field.encryptor.pojoReplaceParameterMapping=true
+
+```
+
+- 栗子
+
+某些情况，比如秘评，需要对加密字段存储多个算法的值到数据库中，但是我们修改程序时，不想新增变量
+
+```
+表信息：
+	tb_user表 有字段phone ,encrypt_phone 两个一个采用SM3 加密，一个采用SM4加密存储
+mapper:
+	int updatePhById(@Param("id") Long id, @Param("ph") String ph);
+xml:
+	update tb_user  set phone = #{ph},   encrypt_phone = #{ph}  where id = #{id}	
+
+```
+
+上述栗子中，同一个入参#{ph}，需要设置到数据库中使用不同的值，此时要兼容这种情况的话，需要开启此配置
+
+- 注意
+
+  此配置会在拦截器中把parameterMapping的字段名进行替换，实现同一个变量拥有不同值的效果
+
+  如果项目中有其它拦截器会对sql入参进行解析的话，开启此配置时需要验证是否存在影响
+
+### 4.简化分表写法
 
 - 当项目中进行了分表时，默认需要在每个分表的表名上面标注上述注解，如果分了100张表需要重复写100次
 
@@ -225,13 +259,21 @@ field.encryptor.secretKey=7uq?q8g3@q
   }
   ```
 
+  ### 5.pojo模式，select结果有列运算等不支持的语法，但是存在解密的需求
+
+  将下列注解标注在sql响应的类上面
+
+  ```
+  @PoJoResultEncryptor
+  ```
+
   
 
 ## 不兼容场景
 
 ### 1.全模式均不兼容场景
 
-- 目前jsqlparse仅支持4.4版本，其余版本并未开发，所以此版本不支持的sql语法，无法兼容
+- 项目基于jsqlparse解析，其版本不支持的sql语法，此框架无法兼容
 - INSERT INTO 表名 VALUES (所有字段);   表名后面没有跟具体字段的，无法兼容
 
 ### 2.db模式不兼容场景

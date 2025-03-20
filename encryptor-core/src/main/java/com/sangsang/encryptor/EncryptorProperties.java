@@ -25,7 +25,7 @@ public class EncryptorProperties {
     private List<String> scanEntityPackage;
 
     /**
-     * 加解密的模式类型，默认使用数据库的库函数进行加解密
+     * 加解密的模式类型
      *
      * @see PatternTypeConstant
      */
@@ -35,7 +35,7 @@ public class EncryptorProperties {
      * pojo模式下，是否支持同一#{}入参，拥有不同的值
      * 栗子： select * from tb_user where phone = #{ph} and encrypt_phone = #{ph} 其中 phone 和 encrypt_phone 两个字段加密算法不同，或者一个加密，一个不加密
      * 如果需要兼容上述场景的话，则将此配置设置为true
-     * 注意：设置为true会在拦截器中将parameterMappings 里面的字段名进行修改，如果其它拦截器有对这个进行应用的话，可能会导致不兼容
+     * 注意：设置为true会在拦截器中将parameterMappings 里面的字段名进行修改，执行完毕后会将字段名给改回去，是否需要开启看自己项目具体情况，是否会造成其它影响
      */
     private boolean pojoReplaceParameterMapping = false;
 
