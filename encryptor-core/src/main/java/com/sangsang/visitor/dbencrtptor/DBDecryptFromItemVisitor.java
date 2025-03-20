@@ -6,6 +6,7 @@ import net.sf.jsqlparser.schema.Table;
 import net.sf.jsqlparser.statement.select.*;
 
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 
 
@@ -35,8 +36,8 @@ public class DBDecryptFromItemVisitor extends BaseFieldParseTable implements Fro
 
     @Override
     public void visit(Table table) {
-        table.getName();
     }
+
 
     /**
      * 嵌套子查询 再解析里层的内容
@@ -46,16 +47,10 @@ public class DBDecryptFromItemVisitor extends BaseFieldParseTable implements Fro
      * @Param [subSelect]
      **/
     @Override
-    public void visit(SubSelect subSelect) {
-        SelectBody selectBody = subSelect.getSelectBody();
-        //解密子查询内容
-        DBDecryptSelectVisitor sDecryptSelectVisitor = DBDecryptSelectVisitor.newInstanceNextLayer(this);
-        selectBody.accept(sDecryptSelectVisitor);
-    }
-
-    @Override
-    public void visit(SubJoin subjoin) {
-
+    public void visit(ParenthesedSelect subSelect) {
+        //解密子查询内容（注意：这里是下一层的）
+        Optional.ofNullable(subSelect.getPlainSelect())
+                .ifPresent(p -> p.accept(DBDecryptSelectVisitor.newInstanceNextLayer(this)));
     }
 
     @Override
@@ -63,10 +58,6 @@ public class DBDecryptFromItemVisitor extends BaseFieldParseTable implements Fro
 
     }
 
-    @Override
-    public void visit(ValuesList valuesList) {
-
-    }
 
     @Override
     public void visit(TableFunction tableFunction) {
@@ -74,7 +65,8 @@ public class DBDecryptFromItemVisitor extends BaseFieldParseTable implements Fro
     }
 
     @Override
-    public void visit(ParenthesisFromItem aThis) {
+    public void visit(ParenthesedFromItem aThis) {
 
     }
+
 }

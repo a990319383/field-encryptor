@@ -6,12 +6,14 @@ import com.sangsang.domain.dto.FieldEncryptorInfoDto;
 import com.sangsang.util.AnswerUtil;
 import com.sangsang.util.ReflectUtils;
 import com.sangsang.util.StringUtils;
-import com.sangsang.visitor.pojoencrtptor.PoJoEncrtptorStatementVisitor;
 import com.sangsang.visitor.dbencrtptor.DBDencryptStatementVisitor;
+import com.sangsang.visitor.fieldparse.FieldParseParseTableSelectVisitor;
+import com.sangsang.visitor.pojoencrtptor.PoJoEncrtptorStatementVisitor;
 import javafx.util.Pair;
 import net.sf.jsqlparser.JSQLParserException;
 import net.sf.jsqlparser.parser.CCJSqlParserUtil;
 import net.sf.jsqlparser.statement.Statement;
+import net.sf.jsqlparser.statement.select.PlainSelect;
 import org.junit.jupiter.api.Test;
 
 import java.util.*;
@@ -323,12 +325,12 @@ public class SqlTest {
             "where t.phone = ? " +
             ")";
 
-    // 多字段in   (xxx,yyy) in ( (?,?),(?,?) )
+    // 多字段in   (xxx,yyy) in ( select xxx,yyy from )
     String s22 = "select *\n" +
             "from tb_user tu \n" +
             "left join tb_menu tm \n" +
             "on tu.id =  tm.id \n" +
-            "where (tu.phone,tm.id) in (select tu2.phone ,tu2.id from tb_user tu2 where tu2.phone = '' ) ";
+            "where (tu.phone,tm.id) in (select tu2.phone ,tu2.id from tb_user tu2 where tu2.phone = ? ) ";
 
     // in 前面不是 字段 右边是常量
     String s23 = "select * from tb_user tu \n" +
@@ -351,7 +353,7 @@ public class SqlTest {
             "            )";
 
     // 测试convert函数如何拼接的 (JsqlParse 4.4 不支持 convert函数！！！)
-//    String s25 = "SELECT \n" + "convert(tu.phone using utf8mb4)\n" + "from tb_user tu";
+    String s25 = "SELECT \n" + "convert(tu.phone using utf8mb4)\n" + "from tb_user tu";
 
     //使用 cast 函数 某些场景下平替 convert 函数 （说的场景就是 AES_DECRYPT 中文解密乱码，点名批评一下）
     String s26 = "select cast(tu.phone as char) ,cast(tu.phone as char) as ppp from tb_user tu";
@@ -398,6 +400,21 @@ public class SqlTest {
     //json函数 (select 1.拼接成json  2.从json中根据key获取value值) todo-ltq
     String s32 = "";
 
+    // 多字段in   (xxx,yyy) in ( (?,?),(?,?) )
+    String s33 = "select *\n" +
+            "from tb_user tu \n" +
+            "left join tb_menu tm \n" +
+            "on tu.id =  tm.id \n" +
+            "where (tu.phone,tm.id) in ((?,?),(?,?))";
+
+    // 非Column in (select xxx from )
+    String s34 = "select * from tb_user  where ? in (select tu.phone from tb_user tu) ";
+
+    //非Column 多值in
+    String s35 = "select * from tb_user  where (?,?) in (select tu.phone ,tu.user_name from tb_user tu)";
+
+    //join 子查询
+    String s36 = "select * from tb_user tu left join( select * from tb_menu tm where tm.path = ?)tm_new on tu.phone = tm_new.id";
 
     // -----------------insert 测试语句---------------------
     String i1 = "insert into tb_user(id, user_name ,phone) \n" +
@@ -429,6 +446,8 @@ public class SqlTest {
             "where tu.phone is not null \n" +
             ")";
 
+    //insert 单个值
+    String i6 = "insert into tb_user(id, user_name ,phone) values(?,?,?)";
     // --------------delete 测试语句 ---------------
 
     // delet join
@@ -496,7 +515,7 @@ public class SqlTest {
         InitTableInfo.initTable();
 
         //需要测试的sql
-        String sql = i5;
+        String sql = s36;
         System.out.println("----------------------------------------------------------------------------");
         System.out.println(sql);
         System.out.println("----------------------------------------------------------------------------");
@@ -549,9 +568,8 @@ public class SqlTest {
 
     //需要测试的sql
     List<String> sqls = Arrays.asList(s1, s2, s3, s4, s5, s6, s7, s8, s9, s10, s11, s12, s13, s14, s15, s16, s17, s18, s19,
-            s20,
-            s21, s22, s23, s24, s26, s27, s28, s29, s30, s31,
-            i1, i2, i3, //i4,
+            s20, s21, s22, s23, s24, s25, s26, s27, s28, s29, s30, s31, s33, s34, s35, s36,
+            i1, i2, i3, i5, i6,
             d1, d2,
             u1, u2, u3, u4
     );
@@ -584,15 +602,19 @@ public class SqlTest {
             String answer = AnswerUtil.readDBAnswerToFile(this, sql);
             String sqlFieldName = ReflectUtils.getFieldNameByValue(this, sql);
             if (StringUtils.isBlank(answer)) {
-                System.out.println("这个sql没答案，自己检查，然后把正确答案给录到com.sangsang.answer.standard下面 i:" + sqlFieldName);
+                System.out.println("这个sql没答案，自己检查，然后把正确答案给录到com.sangsang.answer.standard下面 :" + sqlFieldName);
                 System.out.println("原始sql: " + sql);
                 return;
             }
-            if (answer.equals(resultSql)) {
+            if (answer.equalsIgnoreCase(resultSql)) {
                 System.out.println("成功: " + sqlFieldName);
             } else {
                 System.out.println("错误: " + sqlFieldName);
                 System.out.println("原始sql: " + sql);
+                System.out.println("-------------------------------------------------------");
+                System.out.println("正确答案： " + answer);
+                System.out.println("-------------------------------------------------------");
+                System.out.println("当前答案： " + resultSql);
                 return;
             }
         }
@@ -630,7 +652,7 @@ public class SqlTest {
             Pair<String, String> answer = AnswerUtil.readPOJOAnswerToFile(this, sql);
             String sqlFieldName = ReflectUtils.getFieldNameByValue(this, sql);
             if (answer == null) {
-                System.out.println("这个sql没答案，自己检查，然后把正确答案给录到com.sangsang.answer.standard下面 i:" + sqlFieldName);
+                System.out.println("这个sql没答案，自己检查，然后把正确答案给录到com.sangsang.answer.standard下面 :" + sqlFieldName);
                 System.out.println("原始sql: " + sql);
                 return;
             }
@@ -640,6 +662,16 @@ public class SqlTest {
             } else {
                 System.out.println("错误: " + sqlFieldName);
                 System.out.println("原始sql: " + sql);
+                System.out.println("-------------------------------------------------------");
+                if (!Objects.equals(answer.getKey(), fieldEncryptorInfos.toString())) {
+                    System.out.println("正确答案list： " + answer.getKey());
+                    System.out.println("当前答案list： " + fieldEncryptorInfos.toString());
+                    System.out.println("-------------------------------------------------------");
+                }
+                if (!Objects.equals(answer.getValue(), placeholderColumnTableMap.toString())) {
+                    System.out.println("正确答案Map： " + answer.getValue());
+                    System.out.println("当前答案Map： " + placeholderColumnTableMap.toString());
+                }
                 return;
             }
         }
@@ -703,5 +735,18 @@ public class SqlTest {
         }
     }
 
+    @Test
+    public void testParse() throws JSQLParserException, NoSuchFieldException {
+        //初始化加解密函数
+        FieldEncryptorPatternCache.initDeafultInstance();
+        //mock数据
+        InitTableInfo.initTable();
+
+        String sql = "select tu.* from tb_user tu";
+        Statement statement = CCJSqlParserUtil.parse(sql);
+        FieldParseParseTableSelectVisitor fieldParseParseTableSelectVisitor = FieldParseParseTableSelectVisitor.newInstanceFirstLayer();
+        ((PlainSelect) statement).accept(fieldParseParseTableSelectVisitor);
+        System.out.println(fieldParseParseTableSelectVisitor);
+    }
 
 }

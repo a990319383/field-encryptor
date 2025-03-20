@@ -7,9 +7,6 @@ import net.sf.jsqlparser.expression.Expression;
 import net.sf.jsqlparser.expression.Function;
 import net.sf.jsqlparser.expression.StringValue;
 import net.sf.jsqlparser.expression.operators.relational.ExpressionList;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
-import org.springframework.stereotype.Component;
 
 
 /**
@@ -50,7 +47,8 @@ public class DefaultDBFieldEncryptorPattern implements DBFieldEncryptorPattern {
         //类型转换，避免上面解密函数出现中文乱码
         CastExpression castExpression = new CastExpression();
         castExpression.setLeftExpression(decryptFunction);
-        castExpression.setType(SymbolConstant.COLDATATYPE_HCAR);
+        castExpression.setColDataType(SymbolConstant.COLDATATYPE_HCAR);
+//        castExpression.setType(SymbolConstant.COLDATATYPE_HCAR);
         return castExpression;
     }
 }

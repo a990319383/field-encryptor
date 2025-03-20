@@ -16,7 +16,8 @@ import net.sf.jsqlparser.expression.operators.relational.*;
 import net.sf.jsqlparser.schema.Column;
 import net.sf.jsqlparser.statement.select.AllColumns;
 import net.sf.jsqlparser.statement.select.AllTableColumns;
-import net.sf.jsqlparser.statement.select.SubSelect;
+import net.sf.jsqlparser.statement.select.ParenthesedSelect;
+import net.sf.jsqlparser.statement.select.Select;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -188,6 +189,11 @@ public class FieldParseParseExpressionVisitor extends BaseFieldParseTable implem
     }
 
     @Override
+    public void visit(OverlapsCondition overlapsCondition) {
+
+    }
+
+    @Override
     public void visit(EqualsTo equalsTo) {
 
     }
@@ -243,6 +249,26 @@ public class FieldParseParseExpressionVisitor extends BaseFieldParseTable implem
     }
 
     @Override
+    public void visit(DoubleAnd doubleAnd) {
+
+    }
+
+    @Override
+    public void visit(Contains contains) {
+
+    }
+
+    @Override
+    public void visit(ContainedBy containedBy) {
+
+    }
+
+    @Override
+    public void visit(ParenthesedSelect parenthesedSelect) {
+
+    }
+
+    @Override
     public void visit(Column tableColumn) {
         //1.解析当前字段所属的表信息
         ColumnTableDto columnTableDto = JsqlparserUtil.parseColumn(tableColumn, this.getLayer(), this.getLayerFieldTableMap());
@@ -263,47 +289,6 @@ public class FieldParseParseExpressionVisitor extends BaseFieldParseTable implem
         }
     }
 
-    /**
-     * select
-     * (select 字段 from xxx where)
-     * from
-     * 这种语法
-     * 这种语法内层肯定只能有一个值，这个值的别名有点特殊，不是来自内层select的别名，那个是无意义的，真正的别名是整个内层select的别名
-     * 备注：内层的select 查询的字段现在已经兼容可以查询内层关联的表字段，但是这种写法不建议，甚至有点呆
-     *
-     * @author liutangqi
-     * @date 2024/3/6 13:27
-     * @Param [subSelect]
-     **/
-    @Override
-    public void visit(SubSelect subSelect) {
-
-        //1.采用独立存储空间单独解析当前子查询的语法
-        FieldParseParseTableSelectVisitor sFieldSelectItemVisitor = FieldParseParseTableSelectVisitor.newInstanceIndividualMap(this);
-        subSelect.getSelectBody().accept(sFieldSelectItemVisitor);
-
-        //2.找出上面新解析出的结果，只取这一层的，其它层的结果不需要关心（因为这个结果需要单独处理别名 这种语法下select （select ） 内层select的别名是没有意义的，是以外层的select语句为准的,select 的内层关联的表字段也是没有意义的）
-        Map<String, Set<FieldInfoDto>> newSelectTableFieldMap = JsqlparserUtil.parseNewlyIncreased(this.getLayerSelectTableFieldMap().getOrDefault(String.valueOf(this.getLayer()),
-                new HashMap<>()),
-                sFieldSelectItemVisitor.getLayerSelectTableFieldMap().getOrDefault(String.valueOf(this.getLayer()), new HashMap<>()));
-
-        //3.结果合并 (注意：新增加的结果的别名需要修改成外层select的别名)
-        for (Map.Entry<String, Set<FieldInfoDto>> fieldInfoEntry : newSelectTableFieldMap.entrySet()) {
-            //4.1将这个字段的别名重新设置（这种语法下select （select ） 内层select的别名是没有意义的，是以外层的select语句为准的）
-            Set<FieldInfoDto> fieldInfoDtos = fieldInfoEntry.getValue()
-                    .stream()
-                    .map(m -> FieldInfoDto.builder()
-                            .sourceTableName(m.getSourceTableName())
-                            .sourceColumn(m.getSourceColumn())
-                            .fromSourceTable(m.isFromSourceTable())
-                            .columnName(Optional.ofNullable(this.alias).map(Alias::getName).orElse(subSelect.toString()))
-                            .build())
-                    .collect(Collectors.toSet());
-            //4.2 结果合并
-            JsqlparserUtil.putFieldInfo(this.getLayerSelectTableFieldMap(), this.getLayer(), fieldInfoEntry.getKey(), fieldInfoDtos);
-        }
-    }
-
     @Override
     public void visit(CaseExpression caseExpression) {
         // 解析当前sql的查询字段不用管 case
@@ -317,6 +302,11 @@ public class FieldParseParseExpressionVisitor extends BaseFieldParseTable implem
     @Override
     public void visit(ExistsExpression existsExpression) {
         // 解析当前sql的查询字段不用管 exists
+    }
+
+    @Override
+    public void visit(MemberOfExpression memberOfExpression) {
+
     }
 
 
@@ -352,11 +342,6 @@ public class FieldParseParseExpressionVisitor extends BaseFieldParseTable implem
 
     @Override
     public void visit(CastExpression cast) {
-
-    }
-
-    @Override
-    public void visit(TryCastExpression tryCastExpression) {
 
     }
 
@@ -401,11 +386,6 @@ public class FieldParseParseExpressionVisitor extends BaseFieldParseTable implem
     }
 
     @Override
-    public void visit(RegExpMySQLOperator regExpMySQLOperator) {
-
-    }
-
-    @Override
     public void visit(UserVariable var) {
 
     }
@@ -426,7 +406,7 @@ public class FieldParseParseExpressionVisitor extends BaseFieldParseTable implem
     }
 
     @Override
-    public void visit(ValueListExpression valueList) {
+    public void visit(ExpressionList<?> expressionList) {
 
     }
 
@@ -520,14 +500,50 @@ public class FieldParseParseExpressionVisitor extends BaseFieldParseTable implem
 
     }
 
+    /**
+     * select *
+     * 当没有别名直接* 的时候，此时同层肯定只有一张表，找同层的表的全部字段，作为查询的全部字段
+     *
+     * @author liutangqi
+     * @date 2024/3/5 11:01
+     * @Param [allColumns]
+     **/
     @Override
     public void visit(AllColumns allColumns) {
+        //本层的全部字段
+        Map<String, Set<FieldInfoDto>> fieldMap = Optional.ofNullable(this.getLayerFieldTableMap().get(String.valueOf(this.getLayer()))).orElse(new HashMap<>());
+
+        //将本层全部字段放到 select的map中
+        for (Map.Entry<String, Set<FieldInfoDto>> fieldInfoEntry : fieldMap.entrySet()) {
+            JsqlparserUtil.putFieldInfo(this.getLayerSelectTableFieldMap(), this.getLayer(), fieldInfoEntry.getKey(), fieldInfoEntry.getValue());
+        }
 
     }
 
+    /**
+     * select 别名.*
+     * 从本层中找到别名的这张表的全部字段
+     *
+     * @author liutangqi
+     * @date 2024/3/5 11:01
+     * @Param [allTableColumns]
+     **/
     @Override
     public void visit(AllTableColumns allTableColumns) {
+        //获取本层涉及到的表的全部字段
+        Map<String, Map<String, Set<FieldInfoDto>>> layerFieldTableMap = this.getLayerFieldTableMap();
+        Map<String, Set<FieldInfoDto>> fieldTableMap = Optional.ofNullable(layerFieldTableMap.get(String.valueOf(this.getLayer()))).orElse(new HashMap<>());
 
+        //获取其中叫这个别名的全部字段
+        String tableName = allTableColumns.getTable().getName().toLowerCase();
+        Map<String, Set<FieldInfoDto>> fieldMap = fieldTableMap.entrySet().stream()
+                .filter(f -> Objects.equals(f.getKey(), tableName))
+                .collect(Collectors.toMap(m -> m.getKey(), m -> m.getValue()));
+
+        //将本层全部字段放到 select的map中
+        for (Map.Entry<String, Set<FieldInfoDto>> fieldInfoEntry : fieldMap.entrySet()) {
+            JsqlparserUtil.putFieldInfo(this.getLayerSelectTableFieldMap(), this.getLayer(), fieldInfoEntry.getKey(), fieldInfoEntry.getValue());
+        }
     }
 
     @Override
@@ -542,6 +558,71 @@ public class FieldParseParseExpressionVisitor extends BaseFieldParseTable implem
 
     @Override
     public void visit(GeometryDistance geometryDistance) {
+
+    }
+
+    /**
+     * select
+     * (select 字段 from xxx where)
+     * from
+     * 这种语法
+     * 这种语法内层肯定只能有一个值，这个值的别名有点特殊，不是来自内层select的别名，那个是无意义的，真正的别名是整个内层select的别名
+     * 备注：内层的select 查询的字段现在已经兼容可以查询内层关联的表字段，但是这种写法不建议，甚至有点呆
+     *
+     * @author liutangqi
+     * @date 2025/3/10 9:58
+     * @Param [select]
+     **/
+    @Override
+    public void visit(Select subSelect) {
+        //1.采用独立存储空间单独解析当前子查询的语法
+        FieldParseParseTableSelectVisitor sFieldSelectItemVisitor = FieldParseParseTableSelectVisitor.newInstanceIndividualMap(this);
+        subSelect.getPlainSelect().accept(sFieldSelectItemVisitor);
+
+        //2.找出上面新解析出的结果，只取这一层的，其它层的结果不需要关心（因为这个结果需要单独处理别名 这种语法下select （select ） 内层select的别名是没有意义的，是以外层的select语句为准的,select 的内层关联的表字段也是没有意义的）
+        Map<String, Set<FieldInfoDto>> newSelectTableFieldMap = JsqlparserUtil.parseNewlyIncreased(this.getLayerSelectTableFieldMap().getOrDefault(String.valueOf(this.getLayer()),
+                new HashMap<>()),
+                sFieldSelectItemVisitor.getLayerSelectTableFieldMap().getOrDefault(String.valueOf(this.getLayer()), new HashMap<>()));
+
+        //3.结果合并 (注意：新增加的结果的别名需要修改成外层select的别名)
+        for (Map.Entry<String, Set<FieldInfoDto>> fieldInfoEntry : newSelectTableFieldMap.entrySet()) {
+            //4.1将这个字段的别名重新设置（这种语法下select （select ） 内层select的别名是没有意义的，是以外层的select语句为准的）
+            Set<FieldInfoDto> fieldInfoDtos = fieldInfoEntry.getValue()
+                    .stream()
+                    .map(m -> FieldInfoDto.builder()
+                            .sourceTableName(m.getSourceTableName())
+                            .sourceColumn(m.getSourceColumn())
+                            .fromSourceTable(m.isFromSourceTable())
+                            .columnName(Optional.ofNullable(this.alias).map(Alias::getName).orElse(subSelect.toString()))
+                            .build())
+                    .collect(Collectors.toSet());
+            //4.2 结果合并
+            JsqlparserUtil.putFieldInfo(this.getLayerSelectTableFieldMap(), this.getLayer(), fieldInfoEntry.getKey(), fieldInfoDtos);
+        }
+    }
+
+    @Override
+    public void visit(TranscodingFunction transcodingFunction) {
+
+    }
+
+    @Override
+    public void visit(TrimFunction trimFunction) {
+
+    }
+
+    @Override
+    public void visit(RangeExpression rangeExpression) {
+
+    }
+
+    @Override
+    public void visit(TSQLLeftJoin tsqlLeftJoin) {
+
+    }
+
+    @Override
+    public void visit(TSQLRightJoin tsqlRightJoin) {
 
     }
 }

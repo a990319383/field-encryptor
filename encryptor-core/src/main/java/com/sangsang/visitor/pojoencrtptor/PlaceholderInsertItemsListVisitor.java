@@ -1,3 +1,4 @@
+/*
 package com.sangsang.visitor.pojoencrtptor;
 
 import com.sangsang.domain.dto.ColumnTableDto;
@@ -16,26 +17,32 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+*/
 /**
  * 处理Insert语句中占位符#{} 对应的表字段信息
  *
  * @author liutangqi
  * @date 2024/8/14 13:23
- */
+ *//*
+
 public class PlaceholderInsertItemsListVisitor extends PlaceholderFieldParseTable implements ItemsListVisitor {
 
-    /**
+    */
+/**
      * 当前insert语句的所有字段
-     */
+     *//*
+
     private List<Column> columns;
 
-    /**
+    */
+/**
      * 获取当前层的解析对象
      *
      * @author liutangqi
      * @date 2025/3/5 15:19
      * @Param []
-     **/
+     **//*
+
     public static PlaceholderInsertItemsListVisitor newInstanceCurLayer(PlaceholderFieldParseTable placeholderFieldParseTable, List<Column> columns) {
         return new PlaceholderInsertItemsListVisitor(columns,
                 placeholderFieldParseTable.getLayer(),
@@ -59,13 +66,15 @@ public class PlaceholderInsertItemsListVisitor extends PlaceholderFieldParseTabl
 
     }
 
-    /**
+    */
+/**
      * insert单个值
      *
      * @author liutangqi
      * @date 2024/8/14 15:14
      * @Param [expressionList]
-     **/
+     **//*
+
     @Override
     public void visit(ExpressionList expressionList) {
         List<Expression> expressions = expressionList.getExpressions();
@@ -86,13 +95,15 @@ public class PlaceholderInsertItemsListVisitor extends PlaceholderFieldParseTabl
 
     }
 
-    /**
+    */
+/**
      * insert多个值
      *
      * @author liutangqi
      * @date 2024/8/14 15:58
      * @Param [multiExprList]
-     **/
+     **//*
+
     @Override
     public void visit(MultiExpressionList multiExprList) {
         List<ExpressionList> exprList = multiExprList.getExprList();
@@ -103,3 +114,4 @@ public class PlaceholderInsertItemsListVisitor extends PlaceholderFieldParseTabl
 
 
 }
+*/

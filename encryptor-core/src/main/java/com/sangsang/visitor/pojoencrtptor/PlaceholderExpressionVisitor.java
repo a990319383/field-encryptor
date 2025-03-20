@@ -16,9 +16,11 @@ import net.sf.jsqlparser.expression.operators.relational.*;
 import net.sf.jsqlparser.schema.Column;
 import net.sf.jsqlparser.statement.select.AllColumns;
 import net.sf.jsqlparser.statement.select.AllTableColumns;
-import net.sf.jsqlparser.statement.select.SelectBody;
-import net.sf.jsqlparser.statement.select.SubSelect;
+import net.sf.jsqlparser.statement.select.ParenthesedSelect;
+import net.sf.jsqlparser.statement.select.Select;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -218,6 +220,11 @@ public class PlaceholderExpressionVisitor extends PlaceholderFieldParseTable imp
 
     }
 
+    @Override
+    public void visit(OverlapsCondition overlapsCondition) {
+
+    }
+
     /**
      * 左右表达式，当有一边表达式是 我们替换的占位符，有一边是Column，则将他们对应关系维护进结果集中
      *
@@ -245,49 +252,87 @@ public class PlaceholderExpressionVisitor extends PlaceholderFieldParseTable imp
     }
 
 
+    /**
+     * in的处理比较复杂，主要将左右两边表达式进行匹配，处理其中的占位符信息
+     * 语法1： xxx in (?,?)
+     * 语法2： xxx in (select xxx from )
+     * 语法3： ? in (select xxx from)
+     * 语法4： (xxx,yyy) in ((?,?),(?,?))
+     * 语法5： (xxx,yyy) in (select xxx,yyy from )
+     * 语法6： concat("aaa",tu.phone) in (? , ?)
+     * 语法7： (?,?) in (select xxx,yyy from )
+     *
+     * @author liutangqi
+     * @date 2025/3/17 14:49
+     * @Param [inExpression]
+     **/
     @Override
     public void visit(InExpression inExpression) {
-        //1.当前左边表达式是Column
-        if (inExpression.getLeftExpression() instanceof Column) {
-            //1.1 右边是 (aaa,bbb,ccc)  Column in (aaa,bbb,ccc) 这种 如果右边是预编译的参数 将右边的#{} 的关系维护到结果集map中
-            if (inExpression.getRightItemsList() != null && inExpression.getRightItemsList() instanceof ExpressionList) {
-                ExpressionList rightItemsList = (ExpressionList) inExpression.getRightItemsList();
-                rightItemsList.getExpressions().forEach(f -> JsqlparserUtil.parseWhereColumTable(this.getLayer(),
-                        this.getLayerFieldTableMap(),
-                        inExpression.getLeftExpression(),
-                        f,
-                        this.getPlaceholderColumnTableMap()));
+        Expression leftExpression = inExpression.getLeftExpression();
+        Expression rightExpression = inExpression.getRightExpression();
+        List<Expression> leftExpressionList = new ArrayList<>();
 
-            }
-
-            //1.2 右边是子查询 Column in (select xxx from xxx) 这种: 只需要解析子查询的where 中的占位符
-            if (inExpression.getRightExpression() != null && inExpression.getRightExpression() instanceof SubSelect) {
-                //1.2.1 取出右边的select语句
-                SelectBody selectBody = ((SubSelect) inExpression.getRightExpression()).getSelectBody();
-                //1.2.2 因为这个sql是一个完全独立的sql，所以单独解析这个sql拥有的字段信息
-                FieldParseParseTableSelectVisitor fieldParseParseTableSelectVisitor = FieldParseParseTableSelectVisitor.newInstanceFirstLayer();
-                selectBody.accept(fieldParseParseTableSelectVisitor);
-                //1.2.3 利用这个单独的sql的解析结果，对这个sql的where的#{}占位符进行分析
-                PlaceholderSelectVisitor placeholderSelectVisitor = PlaceholderSelectVisitor.newInstanceCurLayer(fieldParseParseTableSelectVisitor, this.getPlaceholderColumnTableMap());
-                selectBody.accept(placeholderSelectVisitor);
-            }
-        } else {
-            //2.1 左边不是Column，但是右边是子查询时，需要对子查询的where进行处理  栗子： wher  concat(a.phone,b.name) in (select xxx from 表 where  xxx= ?占位符)
-            if (inExpression.getRightExpression() instanceof SubSelect) {
-                //备注：右边的子查询是一个完全独立的sql，所以不共用一个解析结果，需要单独解析当前sql中涉及的字段
-                FieldParseParseTableSelectVisitor fieldParseParseTableSelectVisitor = FieldParseParseTableSelectVisitor.newInstanceFirstLayer();
-                ((SubSelect) inExpression.getRightExpression()).getSelectBody().accept(fieldParseParseTableSelectVisitor);
-                //基于新解析的表结构信息 和当前存储？占位符的Map 解析其中的where条件
-                PlaceholderExpressionVisitor placeholderWhereExpressionVisitor = PlaceholderExpressionVisitor.newInstanceCurLayer(fieldParseParseTableSelectVisitor, this.getPlaceholderColumnTableMap());
-                inExpression.getRightExpression().accept(placeholderWhereExpressionVisitor);
-            } else {
-                //2.2 当左边的不是Column时（比如左边是列运算，就是Function，不是单纯的列） 栗子： where concat(a.phone,b.name) in ( ?,?)
-                // 这种情况不做处理，这种情况#{}占位符所属的字段信息是一个聚合结果，同时来源多张表，不支持此种写法，两个单独的字段聚合后，单独加密和整体加密密文肯定不同
-                // 写出这种sql的时候请反省一下自己，表结构是不是有问题，硬要用这种写法的，请使用数据库函数加密的db模式
+        //1.记录左边的表达式,用于后面右边和左边对应时，解析占位符
+        //1.1 左边是单列的常量或者是字段列时（对应语法1，语法2，语法3）
+        if ((leftExpression instanceof Column) || (inExpression.getLeftExpression() instanceof JdbcParameter)) {
+            leftExpressionList.add(leftExpression);
+        }
+        //1.2 左边是多值字段时（对应语法4，语法5）
+        else if (leftExpression instanceof ParenthesedExpressionList) {
+            ParenthesedExpressionList<Expression> leftParenthesedExpressionList = (ParenthesedExpressionList<Expression>) leftExpression;
+            for (Expression expression : leftParenthesedExpressionList) {
+                leftExpressionList.add(expression);
             }
         }
+        //1.3 左边是其它情况时（对应语法6）
+        else {
+            //这种情况不做处理，这种情况#{}占位符所属的字段信息是一个聚合结果，同时来源多张表，不支持此种写法，两个单独的字段聚合后，单独加密和整体加密密文肯定不同
+            // 写出这种sql的时候请反省一下自己，表结构是不是有问题，硬要用这种写法的，请使用数据库函数加密的db模式
+        }
 
-
+        //2.解析右边的表达式，和左边做对应，解析对应的占位符信息
+        //2.1 当右边是多列，并且右边也是多列的集合时（对应语法4）
+        if ((rightExpression instanceof ParenthesedExpressionList) && (((ParenthesedExpressionList) rightExpression).get(0)) instanceof ExpressionList) {
+            ParenthesedExpressionList<ExpressionList> rightExpressionList = (ParenthesedExpressionList<ExpressionList>) rightExpression;
+            for (ExpressionList<Expression> expList : rightExpressionList) {
+                for (int i = 0; i < expList.size(); i++) {
+                    //找出对应的左边的表达式
+                    Expression leftExp = leftExpressionList.get(i);
+                    //解析占位符
+                    JsqlparserUtil.parseWhereColumTable(this.getLayer(),
+                            this.getLayerFieldTableMap(),
+                            leftExp,
+                            expList.get(i),
+                            this.getPlaceholderColumnTableMap());
+                }
+            }
+        }
+        //2.2 当右边是多列的其它情况（对应语法1,语法6）注意：此时左边肯定只有1列，所以左边如果存在密文存储的字段，则右边全部都需要处理
+        else if ((rightExpression instanceof ParenthesedExpressionList)) {
+            ParenthesedExpressionList<Expression> rightExpressionList = (ParenthesedExpressionList<Expression>) rightExpression;
+            for (int i = 0; i < rightExpressionList.size(); i++) {
+                //找出对应的左边的表达式（语法1中左表达式集合长度肯定为1，所以get(0)，语法6这种不兼容，所以直接返回null）
+                Expression leftExp = CollectionUtils.isNotEmpty(leftExpressionList) ? leftExpressionList.get(0) : null;
+                //解析占位符
+                JsqlparserUtil.parseWhereColumTable(this.getLayer(),
+                        this.getLayerFieldTableMap(),
+                        leftExp,
+                        rightExpressionList.get(i),
+                        this.getPlaceholderColumnTableMap());
+            }
+        }
+        //2.3 当右边是子查询时 （对应语法2，语法3，语法5 ）
+        else if (rightExpression instanceof ParenthesedSelect) {
+            ParenthesedSelect rightSelect = (ParenthesedSelect) rightExpression;
+            //这种情况右边是一个完全独立的sql，单独解析
+            FieldParseParseTableSelectVisitor fPTableSelectVisitor = FieldParseParseTableSelectVisitor.newInstanceFirstLayer();
+            rightSelect.accept(fPTableSelectVisitor);
+            //用这个解析的结果集解析where后面的占位符
+            PlaceholderSelectVisitor placeholderSelectVisitor = PlaceholderSelectVisitor.newInstanceCurLayer(fPTableSelectVisitor,
+                    this.getPlaceholderColumnTableMap(),
+                    leftExpressionList);
+            rightSelect.accept(placeholderSelectVisitor);
+        }
     }
 
     @Override
@@ -334,8 +379,35 @@ public class PlaceholderExpressionVisitor extends PlaceholderFieldParseTable imp
     }
 
     @Override
-    public void visit(Column column) {
+    public void visit(DoubleAnd doubleAnd) {
 
+    }
+
+    @Override
+    public void visit(Contains contains) {
+
+    }
+
+    @Override
+    public void visit(ContainedBy containedBy) {
+
+    }
+
+    @Override
+    public void visit(ParenthesedSelect selectBody) {
+
+    }
+
+    @Override
+    public void visit(Column column) {
+        //当上游字段不为空时，说明这个列和上游字段是相互对应的，所以处理他们的占位符对应关系
+        if (this.upstreamExpression != null) {
+            JsqlparserUtil.parseWhereColumTable(this.getLayer(),
+                    this.getLayerFieldTableMap(),
+                    this.upstreamExpression,
+                    column,
+                    this.getPlaceholderColumnTableMap());
+        }
     }
 
     /**
@@ -347,9 +419,9 @@ public class PlaceholderExpressionVisitor extends PlaceholderFieldParseTable imp
      * @Param [subSelect]
      **/
     @Override
-    public void visit(SubSelect subSelect) {
+    public void visit(Select subSelect) {
         //注意：exist这种情况，层数不需要加1，这里使用的字段和上级是同一层的
-        subSelect.getSelectBody().accept(PlaceholderSelectVisitor.newInstanceCurLayer(this));
+        subSelect.accept(PlaceholderSelectVisitor.newInstanceCurLayer(this));
     }
 
     /**
@@ -434,6 +506,11 @@ public class PlaceholderExpressionVisitor extends PlaceholderFieldParseTable imp
     }
 
     @Override
+    public void visit(MemberOfExpression memberOfExpression) {
+
+    }
+
+    @Override
     public void visit(AnyComparisonExpression anyComparisonExpression) {
 
     }
@@ -465,11 +542,6 @@ public class PlaceholderExpressionVisitor extends PlaceholderFieldParseTable imp
 
     @Override
     public void visit(CastExpression castExpression) {
-
-    }
-
-    @Override
-    public void visit(TryCastExpression tryCastExpression) {
 
     }
 
@@ -513,13 +585,6 @@ public class PlaceholderExpressionVisitor extends PlaceholderFieldParseTable imp
 
     }
 
-    @Override
-    public void visit(RegExpMySQLOperator regExpMySQLOperator) {
-        JsqlparserUtil.parseWhereColumTable(this.getLayer(),
-                this.getLayerFieldTableMap(),
-                regExpMySQLOperator,
-                this.getPlaceholderColumnTableMap());
-    }
 
     @Override
     public void visit(UserVariable userVariable) {
@@ -542,9 +607,10 @@ public class PlaceholderExpressionVisitor extends PlaceholderFieldParseTable imp
     }
 
     @Override
-    public void visit(ValueListExpression valueListExpression) {
+    public void visit(ExpressionList<?> expressionList) {
 
     }
+
 
     @Override
     public void visit(RowConstructor rowConstructor) {
@@ -658,6 +724,31 @@ public class PlaceholderExpressionVisitor extends PlaceholderFieldParseTable imp
 
     @Override
     public void visit(GeometryDistance geometryDistance) {
+
+    }
+
+    @Override
+    public void visit(TranscodingFunction transcodingFunction) {
+
+    }
+
+    @Override
+    public void visit(TrimFunction trimFunction) {
+
+    }
+
+    @Override
+    public void visit(RangeExpression rangeExpression) {
+
+    }
+
+    @Override
+    public void visit(TSQLLeftJoin tsqlLeftJoin) {
+
+    }
+
+    @Override
+    public void visit(TSQLRightJoin tsqlRightJoin) {
 
     }
 }

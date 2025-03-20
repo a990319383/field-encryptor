@@ -6,7 +6,6 @@ import com.sangsang.util.CollectionUtils;
 import com.sangsang.domain.dto.BaseFieldParseTable;
 import com.sangsang.domain.dto.FieldInfoDto;
 import net.sf.jsqlparser.statement.select.*;
-import net.sf.jsqlparser.statement.values.ValuesStatement;
 
 import java.util.*;
 
@@ -30,6 +29,15 @@ public class FieldParseParseTableSelectVisitor extends BaseFieldParseTable imple
                 NumberConstant.ONE,
                 null,
                 null
+        );
+    }
+
+
+    public static FieldParseParseTableSelectVisitor newInstanceFirstLayer(Map<String, Map<String, Set<FieldInfoDto>>> layerSelectTableFieldMap, Map<String, Map<String, Set<FieldInfoDto>>> layerFieldTableMap) {
+        return new FieldParseParseTableSelectVisitor(
+                NumberConstant.ONE,
+                layerSelectTableFieldMap,
+                layerFieldTableMap
         );
     }
 
@@ -72,6 +80,18 @@ public class FieldParseParseTableSelectVisitor extends BaseFieldParseTable imple
         super(layer, layerSelectTableFieldMap, layerFieldTableMap);
     }
 
+    /**
+     * in (select xxx from ) -- (子查询)这部分
+     *
+     * @author liutangqi
+     * @date 2025/3/12 15:53
+     * @Param [parenthesedSelect]
+     **/
+    @Override
+    public void visit(ParenthesedSelect parenthesedSelect) {
+        parenthesedSelect.getSelect().accept(this);
+    }
+
     @Override
     public void visit(PlainSelect plainSelect) {
         // from 的表
@@ -91,7 +111,7 @@ public class FieldParseParseTableSelectVisitor extends BaseFieldParseTable imple
         }
 
         //查询的全部字段
-        List<SelectItem> selectItems = plainSelect.getSelectItems();
+        List<SelectItem<?>> selectItems = plainSelect.getSelectItems();
         for (SelectItem selectItem : selectItems) {
             FieldParseParseSelectItemVisitor fieldParseSelectItemVisitor = FieldParseParseSelectItemVisitor.newInstanceCurLayer(this);
             selectItem.accept(fieldParseSelectItemVisitor);
@@ -110,11 +130,11 @@ public class FieldParseParseTableSelectVisitor extends BaseFieldParseTable imple
      **/
     @Override
     public void visit(SetOperationList setOpList) {
-        List<SelectBody> selects = setOpList.getSelects();
+        List<Select> selects = setOpList.getSelects();
         if (CollectionUtils.isEmpty(selects)) {
             return;
         }
-        SelectBody selectBody = selects.get(0);
+        Select selectBody = selects.get(0);
         selectBody.accept(this);
     }
 
@@ -124,7 +144,17 @@ public class FieldParseParseTableSelectVisitor extends BaseFieldParseTable imple
     }
 
     @Override
-    public void visit(ValuesStatement aThis) {
+    public void visit(Values aThis) {
+
+    }
+
+    @Override
+    public void visit(LateralSubSelect lateralSubSelect) {
+
+    }
+
+    @Override
+    public void visit(TableStatement tableStatement) {
 
     }
 }

@@ -69,6 +69,7 @@ public class FieldParseParseTableFromItemVisitor extends BaseFieldParseTable imp
         JsqlparserUtil.putFieldInfo(this.getLayerFieldTableMap(), this.getLayer(), aliasTable, fieldInfoSet);
     }
 
+
     /**
      * 子查询当前层的表的全部字段，就是下一层的select的全部字段
      *
@@ -77,14 +78,14 @@ public class FieldParseParseTableFromItemVisitor extends BaseFieldParseTable imp
      * @Param [subSelect]
      **/
     @Override
-    public void visit(SubSelect subSelect) {
+    public void visit(ParenthesedSelect subSelect) {
 //        int layer = this.getLayer(); 注意：这里不能使用这样写，必须用this.getLayer() 存在类似递归的操作，这里的变量layer可能是上一层的，而另外两个Map是所有层级共享的
         //子查询的别名，作为当前层字段的表名
         String aliasTable = subSelect.getAlias().getName().toLowerCase();
 
         //1.解析子查询下一层，层数 + 1
         FieldParseParseTableSelectVisitor fieldParseTableSelectVisitor = FieldParseParseTableSelectVisitor.newInstanceNextLayer(this);
-        subSelect.getSelectBody().accept(fieldParseTableSelectVisitor);
+        subSelect.getPlainSelect().accept(fieldParseTableSelectVisitor);
 
         //2.解析这一层涉及到的表的全部字段，子查询的时，本层的表的全部字段就是下一层的全部select的字段，本层的表名就是别名
         Map<String, Set<FieldInfoDto>> selectTableFieldMap = this.getLayerSelectTableFieldMap().getOrDefault(String.valueOf(this.getLayer() + 1), new HashMap<>());
@@ -105,18 +106,9 @@ public class FieldParseParseTableFromItemVisitor extends BaseFieldParseTable imp
         JsqlparserUtil.putFieldInfo(this.getLayerFieldTableMap(), this.getLayer(), aliasTable, fieldInfoSet);
     }
 
-    @Override
-    public void visit(SubJoin subjoin) {
-        System.out.println("当前语法未适配");
-    }
 
     @Override
     public void visit(LateralSubSelect lateralSubSelect) {
-        System.out.println("当前语法未适配");
-    }
-
-    @Override
-    public void visit(ValuesList valuesList) {
         System.out.println("当前语法未适配");
     }
 
@@ -138,7 +130,7 @@ public class FieldParseParseTableFromItemVisitor extends BaseFieldParseTable imp
     }
 
     @Override
-    public void visit(ParenthesisFromItem aThis) {
-        System.out.println("当前语法未适配");
+    public void visit(ParenthesedFromItem aThis) {
+
     }
 }

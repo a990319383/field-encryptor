@@ -16,18 +16,18 @@ import java.util.Map;
  */
 public class PlaceholderSelectFromItemVisitor extends PlaceholderFieldParseTable implements FromItemVisitor {
 
-    public PlaceholderSelectFromItemVisitor(BaseFieldParseTable baseFieldParseTable, Map<String, ColumnTableDto> placeholderColumnTableMap) {
+    private PlaceholderSelectFromItemVisitor(BaseFieldParseTable baseFieldParseTable, Map<String, ColumnTableDto> placeholderColumnTableMap) {
         super(baseFieldParseTable, placeholderColumnTableMap);
     }
 
-    public PlaceholderSelectFromItemVisitor(PlaceholderFieldParseTable placeholderFieldParseTable) {
-        super(placeholderFieldParseTable, placeholderFieldParseTable.getPlaceholderColumnTableMap());
+    public static PlaceholderSelectFromItemVisitor newInstanceCurLayer(PlaceholderFieldParseTable placeholderFieldParseTable) {
+        return new PlaceholderSelectFromItemVisitor(placeholderFieldParseTable, placeholderFieldParseTable.getPlaceholderColumnTableMap());
     }
 
     @Override
     public void visit(Table table) {
-
     }
+
 
     /**
      * 子查询
@@ -37,25 +37,17 @@ public class PlaceholderSelectFromItemVisitor extends PlaceholderFieldParseTable
      * @Param [subSelect]
      **/
     @Override
-    public void visit(SubSelect subSelect) {
+    public void visit(ParenthesedSelect subSelect) {
         PlaceholderSelectVisitor placeholderSelectVisitor = PlaceholderSelectVisitor.newInstanceNextLayer(this);
-        subSelect.getSelectBody().accept(placeholderSelectVisitor);
+        subSelect.getSelect().accept(placeholderSelectVisitor);
     }
 
-    @Override
-    public void visit(SubJoin subJoin) {
-
-    }
 
     @Override
     public void visit(LateralSubSelect lateralSubSelect) {
 
     }
 
-    @Override
-    public void visit(ValuesList valuesList) {
-
-    }
 
     @Override
     public void visit(TableFunction tableFunction) {
@@ -63,7 +55,7 @@ public class PlaceholderSelectFromItemVisitor extends PlaceholderFieldParseTable
     }
 
     @Override
-    public void visit(ParenthesisFromItem parenthesisFromItem) {
+    public void visit(ParenthesedFromItem aThis) {
 
     }
 }

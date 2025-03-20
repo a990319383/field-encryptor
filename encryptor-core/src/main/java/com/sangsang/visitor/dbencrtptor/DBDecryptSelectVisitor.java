@@ -1,5 +1,6 @@
 package com.sangsang.visitor.dbencrtptor;
 
+import com.sangsang.cache.FieldEncryptorPatternCache;
 import com.sangsang.domain.constants.NumberConstant;
 import com.sangsang.domain.dto.BaseFieldParseTable;
 import com.sangsang.domain.dto.FieldInfoDto;
@@ -8,8 +9,8 @@ import com.sangsang.util.CollectionUtils;
 import com.sangsang.util.JsqlparserUtil;
 import com.sangsang.visitor.fieldparse.FieldParseParseTableSelectVisitor;
 import net.sf.jsqlparser.expression.Expression;
+import net.sf.jsqlparser.expression.operators.relational.ExpressionList;
 import net.sf.jsqlparser.statement.select.*;
-import net.sf.jsqlparser.statement.values.ValuesStatement;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -22,8 +23,8 @@ import java.util.stream.Collectors;
  * @date 2024/2/29 15:43
  */
 public class DBDecryptSelectVisitor extends BaseFieldParseTable implements SelectVisitor {
-
     private String resultSql;
+
 
     /**
      * 当涉及到上游不同字段需要进行不同的加解密场景时。这个字段传上游的需要加密的项的索引下标
@@ -94,6 +95,25 @@ public class DBDecryptSelectVisitor extends BaseFieldParseTable implements Selec
     }
 
     /**
+     * 场景1：
+     * select
+     * (select xx from tb)as xxx -- 这种语法
+     * from tb
+     * 场景2：
+     * xxx in (select xxx from) -- 括号里面的这种语法
+     *
+     * @author liutangqi
+     * @date 2025/3/12 13:58
+     * @Param [subSelect]
+     **/
+    @Override
+    public void visit(ParenthesedSelect subSelect) {
+        //解密子查询内容（注意：这里层数是当前层，这个的解析结果需要和外层在同一层级）
+        Optional.ofNullable(subSelect.getPlainSelect())
+                .ifPresent(p -> p.accept(DBDecryptSelectVisitor.newInstanceCurLayer(this, this.upstreamNeedEncryptIndex)));
+    }
+
+    /**
      * 普通的select 查询
      *
      * @author liutangqi
@@ -116,23 +136,22 @@ public class DBDecryptSelectVisitor extends BaseFieldParseTable implements Selec
                 .collect(Collectors.toList());
 
         //3.将其中的 select 的每一项 如果需要解密的进行解密处理 （不需要处理的 * ，别名.* 原样返回）
+        List<SelectItem<?>> itemRes = new ArrayList<>();
         for (int i = 0; i < selectItems.size(); i++) {
             SelectItem sItem = selectItems.get(i);
-            if (sItem instanceof SelectExpressionItem) {
-                SelectExpressionItem se = (SelectExpressionItem) sItem;
-                Expression expression = se.getExpression();
-                //根据当前项对应的上游字段是否密文存储来决定下游使用加密还是使用解密
-                EncryptorFunctionEnum encryptorFunctionEnum = this.upstreamNeedEncryptIndex.contains(i) ? EncryptorFunctionEnum.UPSTREAM_SECRET : EncryptorFunctionEnum.UPSTREAM_PLAINTEXT;
-                DBDecryptExpressionVisitor sDecryptExpressionVisitor = DBDecryptExpressionVisitor.newInstanceCurLayer(this, encryptorFunctionEnum);
-                expression.accept(sDecryptExpressionVisitor);
-                //之前有别名就用之前的，之前没有的话，采用处理后的别名
-                se.setAlias(Optional.ofNullable(se.getAlias()).orElse(sDecryptExpressionVisitor.getAlias()));
-                se.setExpression(Optional.ofNullable(sDecryptExpressionVisitor.getExpression()).orElse(expression));
-            }
+            Expression expression = sItem.getExpression();
+            //根据当前项对应的上游字段是否密文存储来决定下游使用加密还是使用解密
+            EncryptorFunctionEnum encryptorFunctionEnum = this.upstreamNeedEncryptIndex.contains(i) ? EncryptorFunctionEnum.UPSTREAM_SECRET : EncryptorFunctionEnum.UPSTREAM_PLAINTEXT;
+            DBDecryptExpressionVisitor sDecryptExpressionVisitor = DBDecryptExpressionVisitor.newInstanceCurLayer(this, encryptorFunctionEnum);
+            expression.accept(sDecryptExpressionVisitor);
+            //之前有别名就用之前的，之前没有的话，采用处理后的别名
+            sItem.setAlias(Optional.ofNullable(sItem.getAlias()).orElse(sDecryptExpressionVisitor.getAlias()));
+            sItem.setExpression(Optional.ofNullable(sDecryptExpressionVisitor.getExpression()).orElse(expression));
+            itemRes.add(sItem);
         }
 
         //4.修改原sql查询项
-        plainSelect.setSelectItems(selectItems);
+        plainSelect.setSelectItems(itemRes);
 
         //5.对where条件后的进行解密
         if (plainSelect.getWhere() != null) {
@@ -143,10 +162,15 @@ public class DBDecryptSelectVisitor extends BaseFieldParseTable implements Selec
             plainSelect.setWhere(Optional.ofNullable(sDecryptExpressionVisitor.getExpression()).orElse(where));
         }
 
-        //6.对join  的on后面的参数进行加解密处理
+        //6.处理join
         List<Join> joins = plainSelect.getJoins();
         if (CollectionUtils.isNotEmpty(joins)) {
+            DBDecryptFromItemVisitor sDecryptFromItemVisitor = DBDecryptFromItemVisitor.newInstanceCurLayer(this);
             for (Join join : joins) {
+                //6.1 处理join的表
+                FromItem joinRightItem = join.getRightItem();
+                joinRightItem.accept(sDecryptFromItemVisitor);
+                //6.2 处理 on
                 List<Expression> dencryptExpressions = new ArrayList<>();
                 for (Expression expression : join.getOnExpressions()) {
                     DBDecryptExpressionVisitor sDecryptExpressionVisitor = DBDecryptExpressionVisitor.newInstanceCurLayer(this, EncryptorFunctionEnum.DEFAULT_DECRYPTION);
@@ -171,11 +195,11 @@ public class DBDecryptSelectVisitor extends BaseFieldParseTable implements Selec
      **/
     @Override
     public void visit(SetOperationList setOpList) {
-        List<SelectBody> selects = setOpList.getSelects();
+        List<Select> selects = setOpList.getSelects();
 
-        List<SelectBody> resSelectBody = new ArrayList<>();
+        List<Select> resSelectBody = new ArrayList<>();
         for (int i = 0; i < selects.size(); i++) {
-            SelectBody select = selects.get(i);
+            Select select = selects.get(i);
             //解析每个union的语句自己拥有的字段信息
             FieldParseParseTableSelectVisitor fieldParseTableSelectVisitor = FieldParseParseTableSelectVisitor.newInstanceFirstLayer();
             select.accept(fieldParseTableSelectVisitor);
@@ -196,8 +220,50 @@ public class DBDecryptSelectVisitor extends BaseFieldParseTable implements Selec
 
     }
 
+    /**
+     * insert 语句 values后面的处理逻辑
+     *
+     * @author liutangqi
+     * @date 2025/3/12 17:45
+     * @Param [aThis]
+     **/
     @Override
-    public void visit(ValuesStatement aThis) {
+    public void visit(Values aThis) {
+        ExpressionList<Expression> expressions = (ExpressionList<Expression>) aThis.getExpressions();
+        for (Expression expressionList : expressions) {
+            //1. insert 语句后面的值 (xxx,xxx),(xxx,xxx)这种list
+            if (expressionList instanceof ExpressionList) {
+                ExpressionList eList = (ExpressionList) expressionList;
+                for (int i = 0; i < eList.size(); i++) {
+                    Expression exp = (Expression) eList.get(i);
+                    if (this.upstreamNeedEncryptIndex.contains(i)) {
+                        exp = FieldEncryptorPatternCache.getInstance().encryption(exp);
+                    }
+                    eList.set(i, exp);
+                }
+            }
+        }
+
+        //2. insert 语句后面的值 (xxx,xxx) 这种单个的值
+        if (!(expressions.get(0) instanceof ExpressionList)) {
+            for (int i = 0; i < expressions.size(); i++) {
+                Expression exp = (Expression) expressions.get(i);
+                if (this.upstreamNeedEncryptIndex.contains(i)) {
+                    exp = FieldEncryptorPatternCache.getInstance().encryption(exp);
+                }
+                expressions.set(i, exp);
+            }
+        }
+    }
+
+    @Override
+    public void visit(LateralSubSelect lateralSubSelect) {
 
     }
+
+    @Override
+    public void visit(TableStatement tableStatement) {
+
+    }
+
 }
