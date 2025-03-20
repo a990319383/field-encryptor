@@ -398,6 +398,21 @@ public class SqlTest {
     //json函数 (select 1.拼接成json  2.从json中根据key获取value值) todo-ltq
     String s32 = "";
 
+    // 多字段in   (xxx,yyy) in ( (?,?),(?,?) )  备注：3.0.0版本 pojo 不支持此语法，改造复杂，升级到3.1.0版本即可
+    String s33 = "select *\n" +
+            "from tb_user tu \n" +
+            "left join tb_menu tm \n" +
+            "on tu.id =  tm.id \n" +
+            "where (tu.phone,tm.id) in ((?,?),(?,?))";
+
+    // 非Column in (select xxx from )  备注：3.0.0版本 pojo 不支持此语法，改造复杂，升级到3.1.0版本即可
+    String s34 = "select * from tb_user  where ? in (select tu.phone from tb_user tu) ";
+
+    //非Column 多值in   备注：3.0.0版本 pojo 不支持此语法，改造复杂，升级到3.1.0版本即可
+    String s35 = "select * from tb_user  where (?,?) in (select tu.phone ,tu.user_name from tb_user tu)";
+
+    //join 子查询
+    String s36 = "select * from tb_user tu left join( select * from tb_menu tm where tm.path = ?)tm_new on tu.phone = tm_new.id";
 
     // -----------------insert 测试语句---------------------
     String i1 = "insert into tb_user(id, user_name ,phone) \n" +
@@ -550,7 +565,8 @@ public class SqlTest {
     //需要测试的sql
     List<String> sqls = Arrays.asList(s1, s2, s3, s4, s5, s6, s7, s8, s9, s10, s11, s12, s13, s14, s15, s16, s17, s18, s19,
             s20,
-            s21, s22, s23, s24, s26, s27, s28, s29, s30, s31,
+            s21, s22, s23, s24, s26, s27, s28, s29, s30, s31, //s33,s34,s35,
+            s36,
             i1, i2, i3, //i4,
             d1, d2,
             u1, u2, u3, u4

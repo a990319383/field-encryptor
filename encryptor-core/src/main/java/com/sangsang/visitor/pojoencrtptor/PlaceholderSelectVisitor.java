@@ -92,10 +92,14 @@ public class PlaceholderSelectVisitor extends PlaceholderFieldParseTable impleme
             where.accept(placeholderWhereExpressionVisitor);
         }
 
-        //4.解析join on后面写死的#{}占位符
+        //4.解析join
         List<Join> joins = plainSelect.getJoins();
         if (CollectionUtils.isNotEmpty(joins)) {
+            PlaceholderSelectFromItemVisitor placeholderSelectFromItemVisitor = new PlaceholderSelectFromItemVisitor(this);
             for (Join join : joins) {
+                //4.1 处理join
+                join.getRightItem().accept(placeholderSelectFromItemVisitor);
+                //4.2处理on
                 for (Expression expression : join.getOnExpressions()) {
                     expression.accept(PlaceholderExpressionVisitor.newInstanceCurLayer(this));
                 }

@@ -143,10 +143,15 @@ public class DBDecryptSelectVisitor extends BaseFieldParseTable implements Selec
             plainSelect.setWhere(Optional.ofNullable(sDecryptExpressionVisitor.getExpression()).orElse(where));
         }
 
-        //6.对join  的on后面的参数进行加解密处理
+        //6.处理join
         List<Join> joins = plainSelect.getJoins();
         if (CollectionUtils.isNotEmpty(joins)) {
+            DBDecryptFromItemVisitor sDecryptFromItemVisitor = DBDecryptFromItemVisitor.newInstanceCurLayer(this);
             for (Join join : joins) {
+                //6.1 处理join的表
+                FromItem joinRightItem = join.getRightItem();
+                joinRightItem.accept(sDecryptFromItemVisitor);
+                //6.2 处理on
                 List<Expression> dencryptExpressions = new ArrayList<>();
                 for (Expression expression : join.getOnExpressions()) {
                     DBDecryptExpressionVisitor sDecryptExpressionVisitor = DBDecryptExpressionVisitor.newInstanceCurLayer(this, EncryptorFunctionEnum.DEFAULT_DECRYPTION);
