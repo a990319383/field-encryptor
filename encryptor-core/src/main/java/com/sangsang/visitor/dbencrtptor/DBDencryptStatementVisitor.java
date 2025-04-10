@@ -1,10 +1,10 @@
 package com.sangsang.visitor.dbencrtptor;
 
-import com.sangsang.domain.enums.EncryptorFunctionEnum;
-import com.sangsang.util.CollectionUtils;
 import com.sangsang.cache.TableCache;
 import com.sangsang.domain.annos.FieldEncryptor;
 import com.sangsang.domain.constants.SymbolConstant;
+import com.sangsang.domain.enums.EncryptorFunctionEnum;
+import com.sangsang.util.CollectionUtils;
 import com.sangsang.util.JsqlparserUtil;
 import com.sangsang.util.StringUtils;
 import com.sangsang.visitor.fieldparse.FieldParseParseTableFromItemVisitor;

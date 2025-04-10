@@ -3,7 +3,6 @@ package com.sangsang.encryptor;
 import com.sangsang.domain.constants.PatternTypeConstant;
 import com.sangsang.domain.constants.SymbolConstant;
 import org.springframework.boot.context.properties.ConfigurationProperties;
-import org.springframework.stereotype.Component;
 
 import java.util.List;
 
@@ -32,13 +31,19 @@ public class EncryptorProperties {
     private String patternType;
 
     /**
-     * pojo模式下，是否支持同一#{}入参，拥有不同的值
-     * 栗子： select * from tb_user where phone = #{ph} and encrypt_phone = #{ph} 其中 phone 和 encrypt_phone 两个字段加密算法不同，或者一个加密，一个不加密
-     * 如果需要兼容上述场景的话，则将此配置设置为true
-     * 注意：设置为true会在拦截器中将parameterMappings 里面的字段名进行修改，执行完毕后会将字段名给改回去，是否需要开启看自己项目具体情况，是否会造成其它影响
+     * 是否开启字段脱敏功能
+     * 默认关闭
      */
-    private boolean pojoReplaceParameterMapping = false;
+    private boolean fieldDesensitize = false;
 
+
+    public boolean isFieldDesensitize() {
+        return fieldDesensitize;
+    }
+
+    public void setFieldDesensitize(boolean fieldDesensitize) {
+        this.fieldDesensitize = fieldDesensitize;
+    }
 
     public List<String> getScanEntityPackage() {
         return scanEntityPackage;
@@ -64,11 +69,4 @@ public class EncryptorProperties {
         this.patternType = patternType;
     }
 
-    public boolean isPojoReplaceParameterMapping() {
-        return pojoReplaceParameterMapping;
-    }
-
-    public void setPojoReplaceParameterMapping(boolean pojoReplaceParameterMapping) {
-        this.pojoReplaceParameterMapping = pojoReplaceParameterMapping;
-    }
 }

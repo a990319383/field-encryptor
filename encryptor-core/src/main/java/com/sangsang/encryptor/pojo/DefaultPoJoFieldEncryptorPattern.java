@@ -6,9 +6,6 @@ import com.sangsang.domain.enums.PoJoAlgorithmEnum;
 import com.sangsang.encryptor.EncryptorProperties;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
-import org.springframework.stereotype.Component;
 
 /**
  * java pojo 加密方式下的默认加解密算法
@@ -35,6 +32,11 @@ public class DefaultPoJoFieldEncryptorPattern implements PoJoFieldEncryptorPatte
 
     @Override
     public String encryption(String cleartext) {
+        //注意：这里值处理null的情况，空字符串也需要进行加密处理
+        if (cleartext == null) {
+            return cleartext;
+        }
+
         String ciphertext = cleartext;
         try {
             if (des == null) {
@@ -50,6 +52,11 @@ public class DefaultPoJoFieldEncryptorPattern implements PoJoFieldEncryptorPatte
 
     @Override
     public String decryption(String ciphertext) {
+        //注意：这里值处理null的情况，空字符串也需要进行加密处理
+        if (ciphertext == null) {
+            return ciphertext;
+        }
+
         String cleartext = ciphertext;
         try {
             if (des == null) {

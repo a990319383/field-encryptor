@@ -20,10 +20,6 @@ public @interface PoJoResultEncryptor {
 
     /**
      * POJO 模式下的加解密算法
-     *
-     * @author liutangqi
-     * @date 2024/9/18 14:07
-     * @Param []
      **/
     PoJoAlgorithmEnum pojoAlgorithm() default PoJoAlgorithmEnum.ALGORITHM_DEFAULT;
 }

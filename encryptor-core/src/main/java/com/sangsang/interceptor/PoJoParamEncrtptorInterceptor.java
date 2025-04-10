@@ -88,10 +88,7 @@ public class PoJoParamEncrtptorInterceptor implements Interceptor, BeanPostProce
         //5.执行sql
         Object proceed = invocation.proceed();
 
-        //6.将反射修改了property的给改回去，避免一级缓存导致找不到getter方法报错
-        revivificationParam(propertyMap, boundSql);
-
-        //7.返回结果
+        //6.返回结果
         return proceed;
     }
 
@@ -130,7 +127,7 @@ public class PoJoParamEncrtptorInterceptor implements Interceptor, BeanPostProce
         String placeholderSql = StringUtils.question2Placeholder(sql);
 
         //2.解析sql的响应结果，和占位符对应的表字段关系
-        Statement statement = CCJSqlParserUtil.parse(placeholderSql);
+        Statement statement = CCJSqlParserUtil.parse(StringUtils.replaceLineBreak(placeholderSql));
         PoJoEncrtptorStatementVisitor poJoEncrtptorStatementVisitor = new PoJoEncrtptorStatementVisitor();
         statement.accept(poJoEncrtptorStatementVisitor);
 
@@ -174,28 +171,33 @@ public class PoJoParamEncrtptorInterceptor implements Interceptor, BeanPostProce
         }
 
         //3.将处理好的结果集进行设置值
-        //3.1 配置了允许替换parameterMappings的变量名 并且sql中一个占位符出现多次，则将入参变量名进行替换
-        if (this.encryptorProperties.isPojoReplaceParameterMapping()
-                && parameterMappings.size() != parameterMappings.stream().map(ParameterMapping::getProperty).distinct().count()) {
-            for (int i = 0; i < parameterMappings.size(); i++) {
-                //设置的新变量名的名字
-                String newParamPlaceholder = DecryptConstant.NEW_PARAM_PLACEHOLDER + i;
-                //记录修改的property 新旧值对应关系
-                propertyMap.put(newParamPlaceholder, parameterMappings.get(i).getProperty());
-                //反射修改property
-                ReflectUtils.setFieldValue(parameterMappings.get(i), "property", newParamPlaceholder);
-                //给新的字段名设置值
-                boundSql.setAdditionalParameter(newParamPlaceholder, parameterValue.get(String.valueOf(i)));
-            }
-        } else {
-            //3.2 没有开启配置，或者sql中一个入参只出现了一次，则不修改原parameterMappings的变量名
-            for (int i = 0; i < parameterMappings.size(); i++) {
-                boundSql.setAdditionalParameter(parameterMappings.get(i).getProperty(), parameterValue.get(String.valueOf(i)));
-            }
+        for (int i = 0; i < parameterMappings.size(); i++) {
+            boundSql.setAdditionalParameter(parameterMappings.get(i).getProperty(), parameterValue.get(String.valueOf(i)));
         }
         return propertyMap;
     }
 
+
+    /**
+     * 判断当前映射的值是否存在一个入参，有多个不同值的情况 （比如一个入参，对应不同的表字段，这些表字段的加密算法或者明文，密文存储方式不同）
+     *
+     * @author liutangqi
+     * @date 2025/4/10 9:46
+     * @Param [parameterMappings, parameterValue]
+     **/
+    private boolean oneDataMuchValue(List<ParameterMapping> parameterMappings, Map<String, Object> parameterValue) {
+        Map<String, Object> tmpMap = new HashMap<>();
+        for (int i = 0; i < parameterMappings.size(); i++) {
+            String property = parameterMappings.get(i).getProperty();
+            Object curValue = parameterValue.get(String.valueOf(i));
+            Object tmpValue = tmpMap.get(property);
+            if (tmpValue != null && !Objects.equals(tmpValue, curValue)) {
+                return true;
+            }
+            tmpMap.put(property, curValue);
+        }
+        return false;
+    }
 
     /**
      * 根据占位符名字获取sql解析结果集中字段上的注解
