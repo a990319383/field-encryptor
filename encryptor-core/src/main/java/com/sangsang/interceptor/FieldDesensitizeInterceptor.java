@@ -136,13 +136,18 @@ public class FieldDesensitizeInterceptor implements Interceptor, BeanPostProcess
     }
 
     /**
-     * 对需要加密的对象属性进行加密
+     * 将响应结果进行脱敏处理
      *
      * @author liutangqi
      * @date 2025/4/8 9:53
      * @Param [res :sql执行的结果,  mapperFieldDesensitize:这个sql的mapper上面标注的@FieldDesensitize 注解]
      **/
     private Object desensitize(Object res, MapperDesensitize mapperFieldDesensitize) throws IllegalAccessException, InstantiationException {
+        //0.整个对象都为null，直接返回
+        if (res == null) {
+            return res;
+        }
+
         //1.基础数据类型对应的包装类或字符串或时间类型
         if (DecryptConstant.FUNDAMENTAL.contains(res.getClass())) {
             //1.1 响应类型不是字符串，或者mapper上面标注的脱敏字段为空则不处理直接返回

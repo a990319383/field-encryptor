@@ -125,13 +125,18 @@ public class PoJoResultEncrtptorInterceptor implements Interceptor, BeanPostProc
     }
 
     /**
-     * 对需要加密的对象属性进行加密
+     * 对需要密文存储的对象属性进行解密
      *
      * @author liutangqi
      * @date 2024/7/26 16:24
      * @Param [res, fieldInfos]
      **/
     private Object decryptor(Object res, List<FieldEncryptorInfoDto> fieldInfos) throws IllegalAccessException {
+        //0.整个对象都为null，直接返回
+        if (res == null) {
+            return res;
+        }
+
         //1.基础数据类型对应的包装类或字符串或时间类型
         if (DecryptConstant.FUNDAMENTAL.contains(res.getClass())) {
             //1.1 响应类型是字符串，并且该sql 查询结果只有一个字段
