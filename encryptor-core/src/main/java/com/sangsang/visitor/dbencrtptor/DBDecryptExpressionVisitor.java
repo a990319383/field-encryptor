@@ -1,6 +1,5 @@
 package com.sangsang.visitor.dbencrtptor;
 
-import cn.hutool.core.util.ObjectUtil;
 import com.sangsang.cache.FieldEncryptorPatternCache;
 import com.sangsang.domain.constants.NumberConstant;
 import com.sangsang.domain.dto.BaseDEcryptParseTable;
@@ -18,7 +17,10 @@ import net.sf.jsqlparser.expression.operators.conditional.OrExpression;
 import net.sf.jsqlparser.expression.operators.conditional.XorExpression;
 import net.sf.jsqlparser.expression.operators.relational.*;
 import net.sf.jsqlparser.schema.Column;
-import net.sf.jsqlparser.statement.select.*;
+import net.sf.jsqlparser.statement.select.AllColumns;
+import net.sf.jsqlparser.statement.select.AllTableColumns;
+import net.sf.jsqlparser.statement.select.ParenthesedSelect;
+import net.sf.jsqlparser.statement.select.Select;
 
 import java.util.*;
 import java.util.stream.Collectors;

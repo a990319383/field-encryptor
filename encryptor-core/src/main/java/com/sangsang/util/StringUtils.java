@@ -165,4 +165,27 @@ public class StringUtils {
         //都不含需要加解密的表，则当前sql一定不需要加解密
         return true;
     }
+
+    /**
+     * 将字符串中的换行符替换为空格
+     *
+     * @author liutangqi
+     * @date 2025/4/8 15:17
+     * @Param [str]
+     **/
+    public static String replaceLineBreak(String str) {
+        if (StringUtils.isBlank(str)) {
+            return str;
+        }
+        StringBuilder sb = new StringBuilder();
+        for (char c : str.toCharArray()) {
+            if (c != '\n' && c != '\r') {
+                sb.append(c);
+            } else {
+                sb.append(" ");
+            }
+        }
+        return sb.toString();
+    }
+
 }

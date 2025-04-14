@@ -6,17 +6,13 @@ import com.sangsang.domain.constants.DecryptConstant;
 import com.sangsang.domain.constants.SymbolConstant;
 import com.sangsang.domain.dto.ColumnTableDto;
 import com.sangsang.domain.dto.FieldInfoDto;
-import net.sf.jsqlparser.JSQLParserException;
 import net.sf.jsqlparser.expression.*;
 import net.sf.jsqlparser.expression.operators.relational.ExpressionList;
-import net.sf.jsqlparser.parser.CCJSqlParserUtil;
 import net.sf.jsqlparser.schema.Column;
 import net.sf.jsqlparser.schema.Table;
-import net.sf.jsqlparser.statement.Statement;
 import net.sf.jsqlparser.statement.select.AllColumns;
 import net.sf.jsqlparser.statement.select.AllTableColumns;
 import net.sf.jsqlparser.statement.select.SelectItem;
-import org.apache.ibatis.mapping.SqlCommandType;
 
 import java.util.*;
 import java.util.concurrent.atomic.AtomicBoolean;

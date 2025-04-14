@@ -3,10 +3,10 @@ package com.sangsang.cache;
 import com.sangsang.domain.constants.SymbolConstant;
 import com.sangsang.domain.enums.PoJoAlgorithmEnum;
 import com.sangsang.domain.exception.FieldEncryptorException;
-import com.sangsang.encryptor.pojo.PoJoFieldEncryptorPattern;
-import com.sangsang.encryptor.db.DefaultDBFieldEncryptorPattern;
 import com.sangsang.encryptor.EncryptorProperties;
 import com.sangsang.encryptor.db.DBFieldEncryptorPattern;
+import com.sangsang.encryptor.db.DefaultDBFieldEncryptorPattern;
+import com.sangsang.encryptor.pojo.PoJoFieldEncryptorPattern;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.config.BeanPostProcessor;
 

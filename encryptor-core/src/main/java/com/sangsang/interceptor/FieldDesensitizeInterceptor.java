@@ -1,15 +1,13 @@
 package com.sangsang.interceptor;
 
 import cn.hutool.core.lang.Pair;
-import cn.hutool.core.util.StrUtil;
-import com.sangsang.cache.FieldEncryptorPatternCache;
-import com.sangsang.domain.annos.FieldEncryptor;
-import com.sangsang.domain.annos.PoJoResultEncryptor;
+import com.sangsang.domain.annos.FieldDesensitize;
+import com.sangsang.domain.annos.MapperDesensitize;
 import com.sangsang.domain.constants.DecryptConstant;
-import com.sangsang.domain.constants.SymbolConstant;
 import com.sangsang.domain.dto.ColumnTableDto;
 import com.sangsang.domain.dto.FieldEncryptorInfoDto;
-import com.sangsang.domain.enums.PoJoAlgorithmEnum;
+import com.sangsang.util.CollectionUtils;
+import com.sangsang.util.DesensitizeUtil;
 import com.sangsang.util.ReflectUtils;
 import com.sangsang.util.StringUtils;
 import com.sangsang.visitor.pojoencrtptor.PoJoEncrtptorStatementVisitor;
@@ -28,54 +26,71 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.config.BeanPostProcessor;
-import org.springframework.util.CollectionUtils;
 
 import java.lang.reflect.Field;
 import java.util.*;
 
 /**
- * 采用java 函数对pojo处理的加解密模式
- * 处理select的 响应语句
+ * 数据脱敏的拦截器
  *
  * @author liutangqi
- * @date 2024/7/9 14:06
+ * @date 2025/4/8 9:51
  */
 @Intercepts({
         @Signature(type = Executor.class, method = "query", args = {MappedStatement.class, Object.class, RowBounds.class, ResultHandler.class, CacheKey.class, BoundSql.class}),
         @Signature(type = Executor.class, method = "query", args = {MappedStatement.class, Object.class, RowBounds.class, ResultHandler.class})
 })
-public class PoJoResultEncrtptorInterceptor implements Interceptor, BeanPostProcessor {
-    private static final Logger log = LoggerFactory.getLogger(PoJoResultEncrtptorInterceptor.class);
+public class FieldDesensitizeInterceptor implements Interceptor, BeanPostProcessor {
+    private static final Logger log = LoggerFactory.getLogger(FieldDesensitizeInterceptor.class);
 
     @Override
     public Object intercept(Invocation invocation) throws Throwable {
         //1.获取核心类(@Signature 后面的args顺序和下面获取的一致)
         MappedStatement statement = (MappedStatement) invocation.getArgs()[0];
-        Object parameter = invocation.getArgs()[1];
-        BoundSql boundSql = statement.getBoundSql(parameter);
-        String originalSql = boundSql.getSql();
 
-        //2.当前sql如果肯定不需要加解密，则不解析sql，直接返回
-        if (StringUtils.notExistEncryptor(originalSql)) {
-            return invocation.proceed();
-        }
+        //2.解析mapper上面的@FieldDesensitize注解
+        MapperDesensitize mapperFieldDesensitize = parseMapperAnno(statement);
 
-        //3.解析sql,获取入参和响应对应的表字段关系
-        Pair<Map<String, ColumnTableDto>, List<FieldEncryptorInfoDto>> pair = parseSql(originalSql);
-
-        //4.执行sql
+        //3.执行sql
         Object result = invocation.proceed();
 
         //5.处理响应
-        return disposeResult(result, pair);
+        return disposeResult(result, mapperFieldDesensitize);
     }
 
+
+    /**
+     * 获取mapper上面的注解
+     *
+     * @author liutangqi
+     * @date 2025/4/8 10:01
+     * @Param [statement]
+     **/
+    private MapperDesensitize parseMapperAnno(MappedStatement statement) {
+        MapperDesensitize mapperDesensitize = null;
+
+        String id = statement.getId();
+        try {
+            Class<?> classType = Class.forName(id.substring(0, id.lastIndexOf(".")));
+            String methodName = id.substring(id.lastIndexOf(".") + 1);
+            mapperDesensitize = Arrays.asList(classType.getMethods())
+                    .stream()
+                    .filter(f -> f.getName().equals(methodName) && f.isAnnotationPresent(MapperDesensitize.class))
+                    .map(m -> m.getAnnotation(MapperDesensitize.class))
+                    .findAny()
+                    .orElse(null);
+        } catch (ClassNotFoundException e) {
+            log.error("【field-encryptor】字段脱敏解析mapper异常", e);
+        }
+
+        return mapperDesensitize;
+    }
 
     /**
      * 解析sql,获取入参和响应对应的表字段关系
      *
      * @author liutangqi
-     * @date 2024/7/18 14:55
+     * @date 2025/4/8 9:52
      * @Param [sql]
      **/
     private Pair<Map<String, ColumnTableDto>, List<FieldEncryptorInfoDto>> parseSql(String sql) throws JSQLParserException {
@@ -98,40 +113,37 @@ public class PoJoResultEncrtptorInterceptor implements Interceptor, BeanPostProc
      * 将响应结果中需要解密的进行解密处理
      *
      * @author liutangqi
-     * @date 2024/7/26 15:52
-     * @Param [result, pair]
+     * @date 2025/4/8 9:52
+     * @Param [result :sql执行的结果, mapperFieldDesensitize:这个sql的mapper上面标注的@FieldDesensitize 注解]
      **/
-    private Object disposeResult(Object result, Pair<Map<String, ColumnTableDto>, List<FieldEncryptorInfoDto>> pair) throws IllegalAccessException {
-        //0.sql执行结果不是Collection直接返回(update insert语句执行时，结果不是Collection)
+    private Object disposeResult(Object result, MapperDesensitize mapperFieldDesensitize) throws IllegalAccessException, InstantiationException {
+        //1.sql执行结果不是Collection直接返回(update insert语句执行时，结果不是Collection)
         if (!(result instanceof Collection)) {
             return result;
         }
 
-        //1.sql执行结果为空，直接返回
+        //2.sql执行结果为空，直接返回
         Collection<Object> resList = (Collection<Object>) result;
         if (CollectionUtils.isEmpty(resList)) {
             return resList;
         }
 
-        //2.当前执行的sql 查询的所有字段信息
-        List<FieldEncryptorInfoDto> fieldInfos = pair.getValue();
-
         //3.依次对结果的每一个字段进行处理
-        List decryptorRes = new ArrayList();
+        List desensitizeRes = new ArrayList();
         for (Object res : resList) {
-            decryptorRes.add(decryptor(res, fieldInfos));
+            desensitizeRes.add(desensitize(res, mapperFieldDesensitize));
         }
-        return decryptorRes;
+        return desensitizeRes;
     }
 
     /**
-     * 对需要密文存储的对象属性进行解密
+     * 将响应结果进行脱敏处理
      *
      * @author liutangqi
-     * @date 2024/7/26 16:24
-     * @Param [res, fieldInfos]
+     * @date 2025/4/8 9:53
+     * @Param [res :sql执行的结果,  mapperFieldDesensitize:这个sql的mapper上面标注的@FieldDesensitize 注解]
      **/
-    private Object decryptor(Object res, List<FieldEncryptorInfoDto> fieldInfos) throws IllegalAccessException {
+    private Object desensitize(Object res, MapperDesensitize mapperFieldDesensitize) throws IllegalAccessException, InstantiationException {
         //0.整个对象都为null，直接返回
         if (res == null) {
             return res;
@@ -139,38 +151,51 @@ public class PoJoResultEncrtptorInterceptor implements Interceptor, BeanPostProc
 
         //1.基础数据类型对应的包装类或字符串或时间类型
         if (DecryptConstant.FUNDAMENTAL.contains(res.getClass())) {
-            //1.1 响应类型是字符串，并且该sql 查询结果只有一个字段
-            if (res instanceof String && fieldInfos.size() == 1) {
-                FieldEncryptor fieldEncryptor = fieldInfos.get(0).getFieldEncryptor();
-                if (fieldEncryptor != null) {
-                    res = FieldEncryptorPatternCache.getPoJoInstance(fieldEncryptor.pojoAlgorithm()).decryption((String) res);
-                    return res;
-                }
+            //1.1 响应类型不是字符串，或者mapper上面标注的脱敏字段为空则不处理直接返回
+            if (!(res instanceof String)
+                    || Optional.ofNullable(mapperFieldDesensitize).map(MapperDesensitize::value).orElse(new FieldDesensitize[]{}).length != 1) {
+                return res;
             }
+            //1.2 根据注解上面标注的脱敏方法进行脱敏，然后返回
+            return DesensitizeUtil.desensitize(mapperFieldDesensitize.value()[0].value(), (String) res, res);
+        }
 
-            //2.响应类型是Map
-        } else if (res instanceof Map) {
+        //2.响应类型是Map
+        else if (res instanceof Map) {
+            //2.1 mapper上面没有标注注解，或者标注的注解上面没有标注具体需要脱敏的字段则直接返回
+            if (Optional.ofNullable(mapperFieldDesensitize).map(MapperDesensitize::value).orElse(new FieldDesensitize[]{}).length == 0) {
+                return res;
+            }
+            //2.2 将mapper上面注解标注的字段key进行脱敏处理
             Map resMap = (Map) res;
-            for (Map.Entry<String, Object> entry : (Set<Map.Entry<String, Object>>) resMap.entrySet()) {
-                FieldEncryptor fieldEncryptor = getFieldEncryptorByFieldName(entry.getKey(), fieldInfos);
-                if (fieldEncryptor != null) {
-                    entry.setValue(FieldEncryptorPatternCache.getPoJoInstance(fieldEncryptor.pojoAlgorithm()).decryption((String) entry.getValue()));
+            FieldDesensitize[] fieldDesensitizes = mapperFieldDesensitize.value();
+            for (int i = 0; i < fieldDesensitizes.length; i++) {
+                //2.2.1 没有指定Map的key,跳过这个，并输出警告日志
+                FieldDesensitize fieldDesensitize = fieldDesensitizes[i];
+                if (StringUtils.isBlank(fieldDesensitize.fieldName())) {
+                    log.warn("【field-encryptor】响应类型为Map，脱敏时请指定字段名");
+                    continue;
                 }
+                //2.2.2 将指定的key从结果集中取值，并进行脱敏处理后放到结果集中
+                resMap.put(fieldDesensitize.fieldName(),
+                        DesensitizeUtil.desensitize(fieldDesensitize.value(),
+                                Optional.ofNullable(resMap.get(fieldDesensitize.fieldName())).map(Object::toString).orElse(null),
+                                res));
             }
+        }
 
-            //3.响应类型是其它实体类
-        } else {
+        //3.响应类型是其它实体类
+        else {
             List<Field> allFields = ReflectUtils.getNotStaticFinalFields(res.getClass());
             for (Field field : allFields) {
-                //优先取响应实体类字段上面的@PoJoResultEncryptor 的信息 ，取不到再根据实体类上面标注的信息取
-                PoJoResultEncryptor poJoResultEncryptor = field.getAnnotation(PoJoResultEncryptor.class);
-                FieldEncryptor fieldEncryptor = getFieldEncryptorByFieldName(field.getName(), fieldInfos);
-                PoJoAlgorithmEnum poJoAlgorithmEnum = Optional.ofNullable(poJoResultEncryptor)
-                        .map(PoJoResultEncryptor::pojoAlgorithm)
-                        .orElse(Optional.ofNullable(fieldEncryptor).map(FieldEncryptor::pojoAlgorithm).orElse(null));
-                if (poJoResultEncryptor != null || fieldEncryptor != null) {
+                //获取字段上面标注的@FieldDesensitize
+                FieldDesensitize fieldDesensitize = field.getAnnotation(FieldDesensitize.class);
+                if (fieldDesensitize != null) {
                     field.setAccessible(true);
-                    field.set(res, FieldEncryptorPatternCache.getPoJoInstance(poJoAlgorithmEnum).decryption((String) field.get(res)));
+                    field.set(res,
+                            DesensitizeUtil.desensitize(fieldDesensitize.value(),
+                                    Optional.ofNullable(field.get(res)).map(Object::toString).orElse(null),
+                                    res));
                 }
             }
         }
@@ -178,30 +203,10 @@ public class PoJoResultEncrtptorInterceptor implements Interceptor, BeanPostProc
     }
 
     /**
-     * 根据字段名字从sql解析结果中，找到该实体类上面标准的注解信息
-     * 注意：fieldName是驼峰的，fieldInfos 中的别名也可能是驼峰，可能是下划线，这里做个自动转
-     *
-     * @author liutangqi
-     * @date 2024/7/26 16:07
-     * @Param [fieldName, fieldInfos]
-     **/
-    private FieldEncryptor getFieldEncryptorByFieldName(String fieldName, List<FieldEncryptorInfoDto> fieldInfos) {
-        //从所有字段中查到这个字段的信息（理论上只会存在一个）
-        return fieldInfos.stream()
-                .filter(f -> Objects.equals(fieldName, f.getColumnName())
-                        || Objects.equals(fieldName, StrUtil.toCamelCase(f.getColumnName()))
-                        || Objects.equals(fieldName, f.getColumnName().replaceAll(SymbolConstant.DOUBLE_QUOTES, SymbolConstant.BLANK))
-                        || Objects.equals(fieldName, f.getColumnName().replaceAll(SymbolConstant.FLOAT, SymbolConstant.BLANK)))
-                .findAny()
-                .map(FieldEncryptorInfoDto::getFieldEncryptor)
-                .orElse(null);
-    }
-
-    /**
      * 低版本mybatis 这个方法不是default 方法，会报错找不到实现方法，所以这里实现默认的方法
      *
      * @author liutangqi
-     * @date 2024/9/9 17:38
+     * @date 2025/4/8 9:53
      * @Param [target]
      **/
     @Override
@@ -218,7 +223,7 @@ public class PoJoResultEncrtptorInterceptor implements Interceptor, BeanPostProc
      * 实现父类default方法，避免低版本不兼容，找不到实现类
      *
      * @author liutangqi
-     * @date 2024/9/10 11:36
+     * @date 2025/4/8 9:53
      * @Param [bean, beanName]
      **/
     @Override
@@ -230,7 +235,7 @@ public class PoJoResultEncrtptorInterceptor implements Interceptor, BeanPostProc
      * 实现父类default方法，避免低版本不兼容，找不到实现类
      *
      * @author liutangqi
-     * @date 2024/9/10 11:36
+     * @date 2025/4/8 9:53
      * @Param [bean, beanName]
      **/
     @Override
@@ -241,14 +246,13 @@ public class PoJoResultEncrtptorInterceptor implements Interceptor, BeanPostProc
             SqlSessionFactory sessionFactory = (SqlSessionFactory) bean;
             if (sessionFactory.getConfiguration().getInterceptors()
                     .stream()
-                    .filter(f -> PoJoResultEncrtptorInterceptor.class.isAssignableFrom(f.getClass()))
+                    .filter(f -> FieldDesensitizeInterceptor.class.isAssignableFrom(f.getClass()))
                     .findAny()
                     .orElse(null) == null) {
-                sessionFactory.getConfiguration().addInterceptor(new PoJoResultEncrtptorInterceptor());
-                log.info("【field-encryptor】手动注册拦截器 PoJoResultEncrtptorInterceptor");
+                sessionFactory.getConfiguration().addInterceptor(new FieldDesensitizeInterceptor());
+                log.info("【field-encryptor】手动注册拦截器 FieldDesensitizeInterceptor");
             }
         }
         return bean;
     }
-
 }

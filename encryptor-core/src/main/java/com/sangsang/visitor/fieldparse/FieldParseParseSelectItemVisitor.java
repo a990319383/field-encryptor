@@ -7,7 +7,8 @@ import net.sf.jsqlparser.expression.Expression;
 import net.sf.jsqlparser.statement.select.SelectItem;
 import net.sf.jsqlparser.statement.select.SelectItemVisitor;
 
-import java.util.*;
+import java.util.Map;
+import java.util.Set;
 
 /**
  * 维护当前层所有的查询字段

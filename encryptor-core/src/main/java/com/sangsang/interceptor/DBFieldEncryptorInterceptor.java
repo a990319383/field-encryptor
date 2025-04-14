@@ -48,7 +48,7 @@ public class DBFieldEncryptorInterceptor implements Interceptor, BeanPostProcess
         //4.将原sql进行加解密处理
         String newSql = oldSql;
         try {
-            Statement statement = CCJSqlParserUtil.parse(oldSql);
+            Statement statement = CCJSqlParserUtil.parse(StringUtils.replaceLineBreak(oldSql));
             DBDencryptStatementVisitor DBDencryptStatementVisitor = new DBDencryptStatementVisitor();
             statement.accept(DBDencryptStatementVisitor);
             if (StringUtils.isNotBlank(DBDencryptStatementVisitor.getResultSql())) {

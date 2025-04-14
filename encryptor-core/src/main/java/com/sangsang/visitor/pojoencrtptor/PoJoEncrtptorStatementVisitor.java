@@ -1,13 +1,12 @@
 package com.sangsang.visitor.pojoencrtptor;
 
 import cn.hutool.core.map.MapUtil;
-import com.sangsang.domain.dto.PlaceholderFieldParseTable;
-import com.sangsang.util.CollectionUtils;
 import com.sangsang.cache.TableCache;
 import com.sangsang.domain.constants.NumberConstant;
 import com.sangsang.domain.dto.ColumnTableDto;
 import com.sangsang.domain.dto.FieldEncryptorInfoDto;
 import com.sangsang.domain.dto.FieldInfoDto;
+import com.sangsang.util.CollectionUtils;
 import com.sangsang.util.JsqlparserUtil;
 import com.sangsang.visitor.fieldparse.FieldParseParseTableFromItemVisitor;
 import com.sangsang.visitor.fieldparse.FieldParseParseTableSelectVisitor;

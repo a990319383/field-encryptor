@@ -2,9 +2,9 @@ package com.sangsang.visitor.fieldparse;
 
 import cn.hutool.core.util.ObjectUtil;
 import com.sangsang.domain.constants.NumberConstant;
-import com.sangsang.util.CollectionUtils;
 import com.sangsang.domain.dto.BaseFieldParseTable;
 import com.sangsang.domain.dto.FieldInfoDto;
+import com.sangsang.util.CollectionUtils;
 import net.sf.jsqlparser.statement.select.*;
 
 import java.util.*;

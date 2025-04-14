@@ -8,6 +8,7 @@ import com.sangsang.encryptor.db.DBFieldEncryptorPattern;
 import com.sangsang.encryptor.db.DefaultDBFieldEncryptorPattern;
 import com.sangsang.encryptor.pojo.DefaultPoJoFieldEncryptorPattern;
 import com.sangsang.encryptor.pojo.PoJoFieldEncryptorPattern;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
@@ -137,5 +138,20 @@ public class RegisterConfig {
         return fieldEncryptorPatternCache;
     }
 
+
+    /**
+     * 注册开启脱敏功能的拦截器
+     * 注意：这里两个入参是为了使者两个bean加载完毕后才加载这个bean,使这个拦截器晚于这两个注册，所以看到这两个入参的bean并没有被使用
+     *
+     * @author liutangqi
+     * @date 2025/4/8 10:48
+     * @Param [poJoResultEncrtptorInterceptor, dbFieldEncryptorInterceptor]
+     **/
+    @Bean
+    @ConditionalOnProperty(name = "field.encryptor.fieldDesensitize", havingValue = "true")
+    public FieldDesensitizeInterceptor fieldDesensitizeInterceptor(@Autowired(required = false) PoJoResultEncrtptorInterceptor poJoResultEncrtptorInterceptor,
+                                                                   @Autowired(required = false) DBFieldEncryptorInterceptor dbFieldEncryptorInterceptor) {
+        return new FieldDesensitizeInterceptor();
+    }
 
 }
