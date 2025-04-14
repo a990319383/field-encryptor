@@ -1,7 +1,6 @@
 package com.sangsang.visitor.dbencrtptor;
 
 import com.sangsang.cache.FieldEncryptorPatternCache;
-import com.sangsang.domain.constants.NumberConstant;
 import com.sangsang.domain.dto.BaseFieldParseTable;
 import com.sangsang.domain.dto.FieldInfoDto;
 import com.sangsang.domain.enums.EncryptorFunctionEnum;

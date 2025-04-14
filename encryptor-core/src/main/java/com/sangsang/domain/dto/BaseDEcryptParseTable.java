@@ -1,7 +1,6 @@
 package com.sangsang.domain.dto;
 
 import com.sangsang.domain.enums.EncryptorFunctionEnum;
-import com.sangsang.domain.function.EncryptorFunction;
 
 import java.util.Map;
 import java.util.Set;

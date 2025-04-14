@@ -19,10 +19,6 @@ import java.lang.annotation.Target;
 public @interface ShardingTableEncryptor {
     /**
      * 通过分表前的原始表名能获取到所有分表后的表名
-     *
-     * @author liutangqi
-     * @date 2024/10/11 11:02
-     * @Param []
      **/
     Class<? extends ShardingTableInterface> value();
 }

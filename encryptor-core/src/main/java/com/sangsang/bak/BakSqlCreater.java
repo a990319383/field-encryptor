@@ -7,7 +7,9 @@ import com.sangsang.encryptor.db.DBFieldEncryptorPattern;
 import com.sangsang.util.StringUtils;
 import net.sf.jsqlparser.schema.Column;
 
-import java.util.*;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 /**

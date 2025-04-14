@@ -13,11 +13,13 @@
 | 2.0.0 | 增加pojo模式，pojo同时支持多种算法共存 | 2024/9 |
 | 2.1.0 | 将jsqlparser打入项目的jar中，重命名避免版本冲突 | 2025/2 |
 | 3.0.0 | 优化项目结构，减少visitor的重复代码，<br>db模式兼容insert(select)密文存储不同的场景 | 2025/3 |
-| 3.1.0 | jsqlparser升级到4.9版本 | 2025/3 |
+| 3.1.0 | jsqlparser升级到4.9版本<br />增加脱敏功能支持 | 2025/4 |
 
 ## 使用场景
 
-> 解决等保，数据安全等场景下，数据库需要进行加密存储，但是项目已经存在，改造复杂的问题
+> 1.解决等保，数据安全等场景下，数据库需要进行加密存储
+>
+> 2.数据响应有脱敏需求
 
 ## 简介
 
@@ -52,7 +54,7 @@
   - 缺点
     - 加解密场景适配弱，仅对sql入参响应进行加解密，无法针对列运算做处理
     - 历史数据清洗麻烦
-    - 一般情况下不支持模糊查询，如果以牺牲存储空间的方式选择特定算法，可以支持模糊搜索
+    - 一般情况下不支持模糊查询
 
 ### 2.大致处理逻辑
 
@@ -129,9 +131,11 @@ field.encryptor.secretKey=7uq?q8g3@q
 field.encryptor.patternType=db
 #指定实体类包路径（项目启动时会扫描指定路径下的实体类，加载到本地缓存中）
 field.encryptor.scanEntityPackage[0]=com.sinoiov.model
+#开启脱敏支持（如果不需要，则不需要加这个配置）
+field.encryptor.fieldDesensitize=true
 ```
 
-### 3.标注需要加解密的字段
+### 3.数据库加密存储使用
 
 找到实体类(<font color='red'>@TableName标注的</font>)，在其中需要加解密的字段上面标注<font color='red'>@FieldEncryptor</font>
 
@@ -151,6 +155,48 @@ public class BasicTicketEntity extends SupperEntity {
 ​	有些项目没有使用mybatis-plus，使用的是mybatis的老项目，项目中可能没有“实体类”这个概念
 
 ​	这种情况下可以用第三方工具，把项目数据库中的表都导出标注好@TableName的实体类，扔到项目的一个指定包下面即可
+
+### 4.响应脱敏使用
+
+- 自定义脱敏算法
+  - 注意：相比于常规的序列化时进行脱敏，这里可以根据当前对象的不同情况进行不同的脱敏
+
+```
+public class CustomerDesensitize implements DesensitizeInterface {
+    /**
+    * cleartext :原字符串
+    * obj：当前整个对象
+    */
+    @Override
+    public String desensitize(String cleartext, Object obj) {
+       return "xxx";
+    }
+}
+```
+
+- 在sql的响应处标注哪些需要脱敏
+
+  - 响应是实体类：在具体字段上面标注@FieldDesensitize 并指定算法
+
+    ```
+        @FieldDesensitize(CustomerDesensitize.class)
+        private String name;
+    ```
+
+  - 响应是String：在mapper上标注@MapperDesensitize 并指定算法
+
+    ```
+       @MapperDesensitize(@FieldDesensitize(CustomerDesensitize.class))
+        List<String> getListResult(String name);
+    ```
+
+  - 响应是Map：在mapper上标注@MapperDesensitize 并指定算法，字段名
+
+    ```java
+       @MapperDesensitize({@FieldDesensitize(value = CustomerDesensitize.class, fieldName = "name"),
+                @FieldDesensitize(value = CustomerDesensitize.class, fieldName = "remark")})
+        Map getResultMap(String name);
+    ```
 
 ## 个性化配置
 
@@ -196,39 +242,7 @@ field.encryptor.secretKey=7uq?q8g3@q
     - @FieldEncryptor(pojoAlgorithm = PoJoAlgorithmEnum.ALGORITHM_1)
     - @FieldEncryptor 不填的，默认是PoJoAlgorithmEnum.ALGORITHM_DEFAULT 对应的算法
 
-### 3.pojo模式下支持同一#{}入参，拥有不同的值
-
-- 配置
-
-```
-#支持同一#{}入参，拥有不同的值
-field.encryptor.pojoReplaceParameterMapping=true
-
-```
-
-- 栗子
-
-某些情况，比如秘评，需要对加密字段存储多个算法的值到数据库中，但是我们修改程序时，不想新增变量
-
-```
-表信息：
-	tb_user表 有字段phone ,encrypt_phone 两个一个采用SM3 加密，一个采用SM4加密存储
-mapper:
-	int updatePhById(@Param("id") Long id, @Param("ph") String ph);
-xml:
-	update tb_user  set phone = #{ph},   encrypt_phone = #{ph}  where id = #{id}	
-
-```
-
-上述栗子中，同一个入参#{ph}，需要设置到数据库中使用不同的值，此时要兼容这种情况的话，需要开启此配置
-
-- 注意
-
-  此配置会在拦截器中把parameterMapping的字段名进行替换，实现同一个变量拥有不同值的效果
-
-  如果项目中有其它拦截器会对sql入参进行解析的话，开启此配置时需要验证是否存在影响
-
-### 4.简化分表写法
+### 3.简化分表写法
 
 - 当项目中进行了分表时，默认需要在每个分表的表名上面标注上述注解，如果分了100张表需要重复写100次
 
@@ -259,7 +273,7 @@ xml:
   }
   ```
 
-  ### 5.pojo模式，select结果有列运算等不支持的语法，但是存在解密的需求
+  ### 4.pojo模式，select结果有列运算等不支持的语法，但是存在解密的需求
 
   将下列注解标注在sql响应的类上面
 
@@ -267,7 +281,6 @@ xml:
   @PoJoResultEncryptor
   ```
 
-  
 
 ## 不兼容场景
 
@@ -283,6 +296,7 @@ xml:
 - mybatis-plus  service层自带的saveBatch()方法不支持
 - 列运算的结果集和sql的入参响应需要做对应的
   - 例如： select  concat(phone,"---")  as ph from tb_user;  无法将ph变量做自动的解密映射
+- 同一个#{}入参，sql中对应不同的字段，想要拥有不同的值
 
 ## 其它扩展
 
