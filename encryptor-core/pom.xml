@@ -36,6 +36,12 @@
         </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-configuration-processor</artifactId>
+            <version>${spring-boot.version}</version>
+            <optional>true</optional>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>
             <version>${spring-boot.version}</version>
             <scope>test</scope>
@@ -87,6 +93,7 @@
                                 <!-- 只把指定的包打入我们自己的jar中 -->
                                 <includes>
                                     <include>com.github.jsqlparser:jsqlparser</include>
+                                    <include>cn.hutool:hutool-all</include>
                                 </includes>
                                 <!--   也可以配置只排除某些包不打入自己的jar中  <excludes>
                                        <exclude>cn.hutool:hutool-all</exclude>
@@ -99,6 +106,11 @@
                                     <!-- 将jsqlparse的包打入jar包中，并进行重命名，避免jar包冲突 -->
                                     <pattern>net.sf.jsqlparser</pattern>
                                     <shadedPattern>com.shade.net.sf.jsqlparser</shadedPattern>
+                                </relocation>
+                                <relocation>
+                                    <!-- 将hutool的包打入jar包中，并进行重命名，避免jar包冲突 -->
+                                    <pattern>cn.hutool</pattern>
+                                    <shadedPattern>com.shade.cn.hutool</shadedPattern>
                                 </relocation>
                             </relocations>
                         </configuration>
