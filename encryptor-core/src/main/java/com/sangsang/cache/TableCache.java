@@ -34,14 +34,14 @@ public class TableCache implements BeanPostProcessor {
 
     private EncryptorProperties encryptorProperties;
 
-    public TableCache(EncryptorProperties encryptorProperties) {
-        this.encryptorProperties = encryptorProperties;
-    }
-
     /**
      * key: 表名小写  value: (key:字段名小写  value: 实体类上标注的@FieldEncryptor注解)
      */
     private static final Map<String, Map<String, FieldEncryptor>> TABLE_ENTITY_CACHE = new HashMap<>();
+
+    public TableCache(EncryptorProperties encryptorProperties) {
+        this.encryptorProperties = encryptorProperties;
+    }
 
     /**
      * 有字段需要加解密的表名的集合（小写）
@@ -67,12 +67,12 @@ public class TableCache implements BeanPostProcessor {
 
         //1.如果指定扫描路径，则从指定路径获取当前项目表的实体类结构信息
         if (!CollectionUtils.isEmpty(encryptorProperties.getScanEntityPackage())) {
-            log.info("【field-encryptor】初始化表字段加密信息，开始扫描指定包路径 :{}", encryptorProperties.getScanEntityPackage());
             tableInfoDtos = encryptorProperties.getScanEntityPackage()
                     .stream()
                     .map(m -> parseTableInfoByScanEntityPackage(m))
                     .flatMap(Collection::stream)
                     .collect(Collectors.toList());
+            log.info("【field-encryptor】初始化表字段加密信息，扫描指定包路径 :{} 合计表数量：{}", encryptorProperties.getScanEntityPackage(), tableInfoDtos.size());
         }
 
         //2.如果没有指定扫描路径，则从mybatis-plus提供的工具，获取当前项目模块加载的表的实体类信息
