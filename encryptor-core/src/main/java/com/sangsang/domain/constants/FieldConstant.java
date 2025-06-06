@@ -10,11 +10,17 @@ import java.util.List;
  * @author liutangqi
  * @date 2024/3/15 11:27
  */
-public interface DecryptConstant {
+public interface FieldConstant {
     /**
      * 解析sql的字段时，如果function处理了字段，处理后这个字段别名放到这个名字的虚拟别名表的结果中
+     * 如果当前列属于常量，也会挂在这个虚拟表中
      */
     String FUNCTION_TMP = "function_tmp";
+
+    /**
+     * 当某些子表没有别名时，将这个前缀 + 层数 作为表别名
+     */
+    String VIRTUAL_TABLE_ALIAS  = "VIRTUAL_TABLE_ALIAS_";
 
     /**
      * 对于？ 占位符的替换，后面拼接自增序号，从0开始

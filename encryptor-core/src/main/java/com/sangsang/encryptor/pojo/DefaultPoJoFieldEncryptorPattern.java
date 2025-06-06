@@ -2,8 +2,8 @@ package com.sangsang.encryptor.pojo;
 
 import cn.hutool.core.util.HexUtil;
 import cn.hutool.crypto.symmetric.DES;
+import com.sangsang.config.properties.FieldProperties;
 import com.sangsang.domain.enums.PoJoAlgorithmEnum;
-import com.sangsang.encryptor.EncryptorProperties;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -17,10 +17,10 @@ import org.slf4j.LoggerFactory;
 public class DefaultPoJoFieldEncryptorPattern implements PoJoFieldEncryptorPattern {
     private static final Logger log = LoggerFactory.getLogger(DefaultPoJoFieldEncryptorPattern.class);
 
-    private EncryptorProperties encryptorProperties;
+    private FieldProperties fieldProperties;
 
-    public DefaultPoJoFieldEncryptorPattern(EncryptorProperties encryptorProperties) {
-        this.encryptorProperties = encryptorProperties;
+    public DefaultPoJoFieldEncryptorPattern(FieldProperties fieldProperties) {
+        this.fieldProperties = fieldProperties;
     }
 
     private DES des;
@@ -40,7 +40,7 @@ public class DefaultPoJoFieldEncryptorPattern implements PoJoFieldEncryptorPatte
         String ciphertext = cleartext;
         try {
             if (des == null) {
-                des = new DES(encryptorProperties.getSecretKey().getBytes());
+                des = new DES(fieldProperties.getEncryptor().getSecretKey().getBytes());
             }
             byte[] encryptBytes = des.encrypt(cleartext.getBytes());
             ciphertext = HexUtil.encodeHexStr(encryptBytes);
@@ -60,7 +60,7 @@ public class DefaultPoJoFieldEncryptorPattern implements PoJoFieldEncryptorPatte
         String cleartext = ciphertext;
         try {
             if (des == null) {
-                des = new DES(encryptorProperties.getSecretKey().getBytes());
+                des = new DES(fieldProperties.getEncryptor().getSecretKey().getBytes());
             }
 
             byte[] decryptBytes = des.decrypt(HexUtil.decodeHex(ciphertext));

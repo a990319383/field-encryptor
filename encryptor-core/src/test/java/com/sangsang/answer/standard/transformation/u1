@@ -1,0 +1,1 @@
+UPDATE tb_user SET "phone" = (CASE "phone" WHEN '1' THEN '18111111111' ELSE "phone" END) WHERE "id" = 5

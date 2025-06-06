@@ -1,9 +1,10 @@
 package com.sangsang.cache;
 
+import com.sangsang.config.properties.EncryptorProperties;
+import com.sangsang.config.properties.FieldProperties;
 import com.sangsang.domain.constants.SymbolConstant;
 import com.sangsang.domain.enums.PoJoAlgorithmEnum;
 import com.sangsang.domain.exception.FieldEncryptorException;
-import com.sangsang.encryptor.EncryptorProperties;
 import com.sangsang.encryptor.db.DBFieldEncryptorPattern;
 import com.sangsang.encryptor.db.DefaultDBFieldEncryptorPattern;
 import com.sangsang.encryptor.pojo.PoJoFieldEncryptorPattern;
@@ -114,9 +115,11 @@ public class FieldEncryptorPatternCache implements BeanPostProcessor {
      **/
     public static void initDeafultInstance() {
         if (dbFieldEncryptorPatternCache == null) {
+            FieldProperties fieldProperties = new FieldProperties();
             EncryptorProperties encryptorProperties = new EncryptorProperties();
             encryptorProperties.setSecretKey(SymbolConstant.DEFAULT_SECRET_KEY);
-            dbFieldEncryptorPatternCache = new DefaultDBFieldEncryptorPattern(encryptorProperties);
+            fieldProperties.setEncryptor(encryptorProperties);
+            dbFieldEncryptorPatternCache = new DefaultDBFieldEncryptorPattern(fieldProperties);
         }
     }
 

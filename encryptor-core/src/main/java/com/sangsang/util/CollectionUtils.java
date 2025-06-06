@@ -1,6 +1,7 @@
 package com.sangsang.util;
 
 import cn.hutool.core.collection.CollUtil;
+import com.sangsang.domain.constants.SymbolConstant;
 
 import java.util.*;
 
@@ -62,4 +63,56 @@ public class CollectionUtils {
 
         return true;
     }
+
+    /**
+     * 在原有的List中，每个间隔插入分隔符
+     *
+     * @author liutangqi
+     * @date 2025/5/30 16:44
+     * @Param [lists, separator]
+     **/
+    public static <T> List<T> join(List<T> lists, T separator) {
+        List<T> res = new ArrayList<>();
+        for (int i = 0; i < lists.size(); i++) {
+            res.add(lists.get(i));
+            if (i != lists.size() - 1) {
+                res.add(separator);
+            }
+        }
+        return res;
+    }
+
+
+    /**
+     * 忽略 ` 和 " ，从map中获取值
+     *
+     * @author liutangqi
+     * @date 2025/5/30 11:24
+     * @Param [map, key]
+     **/
+    public static <T> T getValueIgnoreFloat(Map<String, T> map, String key) {
+        T value = map.get(key);
+        //1.找到了直接返回
+        if (value != null) {
+            return value;
+        }
+
+        //2.去除 ` 和 " 进行查询
+        if (key.startsWith(SymbolConstant.FLOAT)) {
+            return map.get(StringUtils.trim(key, SymbolConstant.FLOAT));
+        }
+        if (key.startsWith(SymbolConstant.DOUBLE_QUOTES)) {
+            return map.get(StringUtils.trim(key, SymbolConstant.DOUBLE_QUOTES));
+        }
+
+        //3.按照添加` " 的方式去查询
+        if (value == null) {
+            value = map.get(SymbolConstant.FLOAT + key.trim() + SymbolConstant.FLOAT);
+        }
+        if (value == null) {
+            value = map.get(SymbolConstant.DOUBLE_QUOTES + key.trim() + SymbolConstant.DOUBLE_QUOTES);
+        }
+        return value;
+    }
+
 }

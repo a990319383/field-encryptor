@@ -1,7 +1,7 @@
 package com.sangsang.domain.exception;
 
 /**
- * 自定义异常
+ * 字段加解密异常
  *
  * @author liutangqi
  * @date 2024/9/19 9:13

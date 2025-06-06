@@ -1,16 +1,12 @@
-package com.sangsang.encryptor;
+package com.sangsang.config.properties;
 
-import com.sangsang.domain.constants.PatternTypeConstant;
+import com.sangsang.domain.constants.EncryptorPatternTypeConstant;
 import com.sangsang.domain.constants.SymbolConstant;
-import org.springframework.boot.context.properties.ConfigurationProperties;
-
-import java.util.List;
 
 /**
  * @author liutangqi
  * @date 2024/4/8 15:22
  */
-@ConfigurationProperties(prefix = "field.encryptor")
 public class EncryptorProperties {
     /**
      * 秘钥，下面是默认值
@@ -18,15 +14,9 @@ public class EncryptorProperties {
     private String secretKey = SymbolConstant.DEFAULT_SECRET_KEY;
 
     /**
-     * 扫描的实体类的包路径
-     * 如果没有配置此路径的话，就默认取当前myabtis-plus加载的所有实体类
-     */
-    private List<String> scanEntityPackage;
-
-    /**
      * 加解密的模式类型
      *
-     * @see PatternTypeConstant
+     * @see EncryptorPatternTypeConstant
      */
     private String patternType;
 
@@ -43,14 +33,6 @@ public class EncryptorProperties {
 
     public void setFieldDesensitize(boolean fieldDesensitize) {
         this.fieldDesensitize = fieldDesensitize;
-    }
-
-    public List<String> getScanEntityPackage() {
-        return scanEntityPackage;
-    }
-
-    public void setScanEntityPackage(List<String> scanEntityPackage) {
-        this.scanEntityPackage = scanEntityPackage;
     }
 
     public String getSecretKey() {

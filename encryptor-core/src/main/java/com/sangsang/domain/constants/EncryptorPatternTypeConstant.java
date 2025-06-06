@@ -6,7 +6,7 @@ package com.sangsang.domain.constants;
  * @author liutangqi
  * @date 2024/7/26 9:17
  */
-public interface PatternTypeConstant {
+public interface EncryptorPatternTypeConstant {
     /**
      * 利用数据库本身的库函数进行加解密
      */

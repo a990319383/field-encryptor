@@ -11,7 +11,7 @@
 
     <artifactId>encryptor-annos</artifactId>
 
-    <description>加解密注解包，某些场景模块只需要注解，不需要mybatis-plus，所以将注解模块独立开来</description>
+    <description>注解包，某些场景模块只需要注解，不需要mybatis-plus，所以将注解模块独立开来</description>
 
     <dependencies>
         <!-- mybatis-plus 的注解 -->

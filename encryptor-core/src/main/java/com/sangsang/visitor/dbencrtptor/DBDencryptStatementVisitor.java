@@ -125,9 +125,9 @@ public class DBDencryptStatementVisitor implements StatementVisitor {
         //4.将where 条件进行解密
         DBDecryptExpressionVisitor sDecryptExpressionVisitor = DBDecryptExpressionVisitor.newInstanceCurLayer(fieldParseTableFromItemVisitor, EncryptorFunctionEnum.DEFAULT_DECRYPTION);
         where.accept(sDecryptExpressionVisitor);
+        delete.setWhere(Optional.ofNullable(sDecryptExpressionVisitor.getExpression()).orElse(where));
 
         //5.结果赋值
-        delete.setWhere(Optional.ofNullable(sDecryptExpressionVisitor.getExpression()).orElse(where));
         this.resultSql = delete.toString();
     }
 
@@ -195,7 +195,7 @@ public class DBDencryptStatementVisitor implements StatementVisitor {
             return;
         }
 
-        Map<String, FieldEncryptor> fieldEncryptMap = TableCache.getTableFieldEncryptInfo().get(table.getName().toLowerCase());
+        Map<String, FieldEncryptor> fieldEncryptMap = CollectionUtils.getValueIgnoreFloat(TableCache.getTableFieldEncryptInfo(), table.getName().toLowerCase());
 
         //2.获取当前第几个字段是需要加密的
         // 需要加密的字段的索引
@@ -209,7 +209,7 @@ public class DBDencryptStatementVisitor implements StatementVisitor {
 
         for (int i = 0; i < columns.size(); i++) {
             Column column = columns.get(i);
-            if (JsqlparserUtil.getValueIgnoreFloat(fieldEncryptMap, column.getColumnName().toLowerCase()) != null) {
+            if (CollectionUtils.getValueIgnoreFloat(fieldEncryptMap, column.getColumnName().toLowerCase()) != null) {
                 needEncryptIndex.add(i);
             }
         }

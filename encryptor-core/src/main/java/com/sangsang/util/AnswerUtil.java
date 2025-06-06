@@ -65,6 +65,26 @@ public class AnswerUtil {
     }
 
     /**
+     * 将语法转换处理好的sql写入到文件中
+     *
+     * @author liutangqi
+     * @date 2025/6/6 15:34
+     * @Param [obj, oldSql, fieldEncryptorInfos, placeholderColumnTableMap]
+     **/
+    public static void writeTfAnswerToFile(Object obj,
+                                           String oldSql,
+                                           String resSql) throws IllegalAccessException {
+        //项目路径
+        String projectRoot = System.getProperty("user.dir");
+        //获取变量名作为文件名
+        String fileName = ReflectUtils.getFieldNameByValue(obj, oldSql);
+        String path = projectRoot + answerBasePath + "/transformation/" + fileName;
+        FileWriter writer = new FileWriter(path);
+        writer.write(resSql, false);
+    }
+
+
+    /**
      * 读取db模式的这个sql的答案
      *
      * @author liutangqi
@@ -114,4 +134,27 @@ public class AnswerUtil {
         return new Pair(listFileReader.readString(), mapFileReader.readString());
     }
 
+
+    /**
+     * 读取语法转换这个sql的答案
+     *
+     * @author liutangqi
+     * @date 2025/3/6 14:46
+     * @Param [obj:存放sql的对象 ，oldSql]
+     **/
+    public static String readTfAnswerToFile(Object obj,
+                                            String oldSql) throws IllegalAccessException {
+        //项目路径
+        String projectRoot = System.getProperty("user.dir");
+        //获取变量名作为文件名
+        String fileName = ReflectUtils.getFieldNameByValue(obj, oldSql);
+        String path = projectRoot + standardBasePath + "/transformation/" + fileName;
+        FileReader fileReader = null;
+        try {
+            fileReader = new FileReader(path);
+        } catch (Exception e) {
+            return null;
+        }
+        return fileReader.readString();
+    }
 }

@@ -2,14 +2,13 @@ package com.sangsang.interceptor;
 
 import cn.hutool.core.lang.Pair;
 import com.sangsang.domain.annos.FieldDesensitize;
+import com.sangsang.domain.annos.FieldInterceptorOrder;
 import com.sangsang.domain.annos.MapperDesensitize;
-import com.sangsang.domain.constants.DecryptConstant;
+import com.sangsang.domain.constants.FieldConstant;
+import com.sangsang.domain.constants.InterceptorOrderConstant;
 import com.sangsang.domain.dto.ColumnTableDto;
 import com.sangsang.domain.dto.FieldEncryptorInfoDto;
-import com.sangsang.util.CollectionUtils;
-import com.sangsang.util.DesensitizeUtil;
-import com.sangsang.util.ReflectUtils;
-import com.sangsang.util.StringUtils;
+import com.sangsang.util.*;
 import com.sangsang.visitor.pojoencrtptor.PoJoEncrtptorStatementVisitor;
 import net.sf.jsqlparser.JSQLParserException;
 import net.sf.jsqlparser.parser.CCJSqlParserUtil;
@@ -36,6 +35,7 @@ import java.util.*;
  * @author liutangqi
  * @date 2025/4/8 9:51
  */
+@FieldInterceptorOrder(InterceptorOrderConstant.DESENSITIZE)
 @Intercepts({
         @Signature(type = Executor.class, method = "query", args = {MappedStatement.class, Object.class, RowBounds.class, ResultHandler.class, CacheKey.class, BoundSql.class}),
         @Signature(type = Executor.class, method = "query", args = {MappedStatement.class, Object.class, RowBounds.class, ResultHandler.class})
@@ -150,7 +150,7 @@ public class FieldDesensitizeInterceptor implements Interceptor, BeanPostProcess
         }
 
         //1.基础数据类型对应的包装类或字符串或时间类型
-        if (DecryptConstant.FUNDAMENTAL.contains(res.getClass())) {
+        if (FieldConstant.FUNDAMENTAL.contains(res.getClass())) {
             //1.1 响应类型不是字符串，或者mapper上面标注的脱敏字段为空则不处理直接返回
             if (!(res instanceof String)
                     || Optional.ofNullable(mapperFieldDesensitize).map(MapperDesensitize::value).orElse(new FieldDesensitize[]{}).length != 1) {
@@ -250,7 +250,10 @@ public class FieldDesensitizeInterceptor implements Interceptor, BeanPostProcess
                     .findAny()
                     .orElse(null) == null) {
                 sessionFactory.getConfiguration().addInterceptor(new FieldDesensitizeInterceptor());
-                log.info("【field-encryptor】手动注册拦截器 FieldDesensitizeInterceptor");
+                log.info("【desensitize】手动注册拦截器 FieldDesensitizeInterceptor");
+
+                //修改拦截器顺序
+                InterceptorUtil.sort(sessionFactory.getConfiguration());
             }
         }
         return bean;

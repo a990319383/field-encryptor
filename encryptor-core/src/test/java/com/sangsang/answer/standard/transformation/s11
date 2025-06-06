@@ -1,0 +1,1 @@
+SELECT DATEADD(DAY, 7, "create_time") FROM tb_user

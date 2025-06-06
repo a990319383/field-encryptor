@@ -1,0 +1,1 @@
+SELECT CASE WHEN 2 = 0 THEN '' WHEN 2 > 0 THEN CASE WHEN INSTR('www.example.com', '.', 1, 2) = 0 THEN 'www.example.com' ELSE SUBSTR('www.example.com', 1, INSTR('www.example.com', '.', 1, 2) - 1) END ELSE CASE WHEN INSTR('www.example.com', '.', -1, ABS(2)) = 0 THEN 'www.example.com' ELSE SUBSTR('www.example.com', INSTR('www.example.com', '.', -1, ABS(2)) + LENGTH('.')) END END
