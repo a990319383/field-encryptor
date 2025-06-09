@@ -415,11 +415,18 @@ public class JsqlparserUtil {
      * @Param [phExpressionVisitor, expression]
      **/
     public static void visitPojoBinaryExpression(PlaceholderExpressionVisitor phExpressionVisitor, BinaryExpression expression) {
+        //visitor中上游的表达式不为空的话，则这个visitor不能复用
+        PlaceholderExpressionVisitor phVisitor = phExpressionVisitor;
+        if (phExpressionVisitor.getUpstreamExpression() != null) {
+            phVisitor = PlaceholderExpressionVisitor.newInstanceCurLayer(phExpressionVisitor);
+        }
+
+        //开始解析左右表达式
         Expression leftExpression = expression.getLeftExpression();
-        leftExpression.accept(phExpressionVisitor);
+        leftExpression.accept(phVisitor);
 
         Expression rightExpression = expression.getRightExpression();
-        rightExpression.accept(phExpressionVisitor);
+        rightExpression.accept(phVisitor);
     }
 
 }

@@ -75,6 +75,10 @@ public class PlaceholderExpressionVisitor extends PlaceholderFieldParseTable imp
         this.upstreamExpression = upstreamExpression;
     }
 
+    public Expression getUpstreamExpression() {
+        return upstreamExpression;
+    }
+
     @Override
     public void visit(BitwiseRightShift bitwiseRightShift) {
 
