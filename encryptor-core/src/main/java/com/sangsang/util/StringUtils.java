@@ -188,25 +188,55 @@ public class StringUtils {
     }
 
     /**
-     * 将字符串中的换行符替换为空格
+     * 将字符串中的整行的空白去除
      *
      * @author liutangqi
      * @date 2025/4/8 15:17
      * @Param [str]
      **/
-    public static String replaceLineBreak(String str) {
-        if (StringUtils.isBlank(str)) {
-            return str;
+    public static String replaceLineBreak(String input) {
+        if (input == null || input.isEmpty()) {
+            return input;
         }
-        StringBuilder sb = new StringBuilder();
-        for (char c : str.toCharArray()) {
-            if (c != '\n' && c != '\r') {
-                sb.append(c);
-            } else {
-                sb.append(" ");
+        StringBuilder result = new StringBuilder();
+        StringBuilder lineBuilder = new StringBuilder();
+        boolean lineIsBlank = true;
+        boolean hasContent = false; // 标记是否已有非空白内容
+        for (int i = 0; i < input.length(); i++) {
+            char c = input.charAt(i);
+            // 检查换行符（支持 \n、\r、\r\n）
+            if (c == '\n' || c == '\r') {
+                // 处理 \r\n 组合的情况
+                if (c == '\r' && i + 1 < input.length() && input.charAt(i + 1) == '\n') {
+                    i++; // 跳过 \n
+                }
+                // 若非空白行则保留
+                if (!lineIsBlank) {
+                    result.append(lineBuilder);
+                    result.append(c);
+                }
+                // 重置行状态
+                lineBuilder.setLength(0);
+                lineIsBlank = true;
+                hasContent = true;
+                continue;
             }
+            // 检查非空白字符
+            if (!Character.isWhitespace(c)) {
+                lineIsBlank = false;
+            }
+            // 添加到当前行
+            lineBuilder.append(c);
         }
-        return sb.toString();
+        // 处理最后一行无换行符的情况
+        if (!lineIsBlank) {
+            result.append(lineBuilder);
+        }
+        // 处理纯空白输入的情况
+        else if (!hasContent && lineBuilder.length() > 0) {
+            result.append(lineBuilder);
+        }
+        return result.toString();
     }
 
     /**
