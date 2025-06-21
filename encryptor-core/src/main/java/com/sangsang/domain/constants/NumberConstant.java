@@ -1,5 +1,7 @@
 package com.sangsang.domain.constants;
 
+import net.sf.jsqlparser.expression.LongValue;
+
 /**
  * @author liutangqi
  * @date 2024/3/4 10:28
@@ -7,4 +9,8 @@ package com.sangsang.domain.constants;
 public interface NumberConstant {
     int ZERO = 0;
     int ONE = 1;
+
+    LongValue NEGATIVE_ONE_LONG_VALUE = new LongValue(-1);
+    LongValue ZERO_LONG_VALUE = new LongValue(ZERO);
+    LongValue ONE_LONG_VALUE = new LongValue(ONE);
 }

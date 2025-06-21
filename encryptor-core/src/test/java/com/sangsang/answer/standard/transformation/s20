@@ -1,0 +1,1 @@
+SELECT TO_DATE(create_time, 'YYYY-MM-DD HH24:MI:SS') FROM tb_user

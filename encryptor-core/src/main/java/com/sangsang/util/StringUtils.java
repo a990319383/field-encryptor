@@ -1,9 +1,13 @@
 package com.sangsang.util;
 
+import cn.hutool.crypto.digest.DigestUtil;
 import com.sangsang.cache.TableCache;
-import com.sangsang.domain.constants.DecryptConstant;
+import com.sangsang.domain.constants.FieldConstant;
 import com.sangsang.domain.constants.SymbolConstant;
 
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.Set;
 
 /**
@@ -103,7 +107,7 @@ public class StringUtils {
         //找出原sql中的 ？个数
         int wordCount = StringUtils.wordCount(sql, SymbolConstant.QUESTION_MARK);
         for (int i = 0; i < wordCount; i++) {
-            sql = sql.replaceFirst(SymbolConstant.ESC_QUESTION_MARK, DecryptConstant.PLACEHOLDER + i);
+            sql = sql.replaceFirst(SymbolConstant.ESC_QUESTION_MARK, FieldConstant.PLACEHOLDER + i);
         }
         return sql;
     }
@@ -118,9 +122,9 @@ public class StringUtils {
      **/
     public static String placeholder2Question(String sql) {
         //找出原sql中的 DecryptConstant.PLACEHOLDER个数
-        int wordCount = StringUtils.wordCount(sql, DecryptConstant.PLACEHOLDER);
+        int wordCount = StringUtils.wordCount(sql, FieldConstant.PLACEHOLDER);
         for (int i = 0; i < wordCount; i++) {
-            sql = sql.replaceFirst(DecryptConstant.PLACEHOLDER + i, SymbolConstant.ESC_QUESTION_MARK);
+            sql = sql.replaceFirst(FieldConstant.PLACEHOLDER + i, SymbolConstant.ESC_QUESTION_MARK);
         }
         return sql;
     }
@@ -137,6 +141,23 @@ public class StringUtils {
             return false;
         }
         return a.toLowerCase().equals(b.toLowerCase());
+    }
+
+    /**
+     * 忽略大小写，忽略开头结尾的 `  " 判断两个字段是否相等
+     *
+     * @author liutangqi
+     * @date 2025/5/27 13:11
+     * @Param [a, b]
+     **/
+    public static boolean equalIgnoreFieldSymbol(String a, String b) {
+        if (StringUtils.isBlank(a) || StringUtils.isBlank(b)) {
+            return false;
+        }
+        //去掉首尾的 ` 、 "
+        String clearA = trim(trim(a, SymbolConstant.FLOAT), SymbolConstant.DOUBLE_QUOTES);
+        String clearB = trim(trim(b, SymbolConstant.FLOAT), SymbolConstant.DOUBLE_QUOTES);
+        return equalCaseInsensitive(clearA, clearB);
     }
 
     /**
@@ -167,25 +188,138 @@ public class StringUtils {
     }
 
     /**
-     * 将字符串中的换行符替换为空格
+     * 将字符串中的整行的空白去除
      *
      * @author liutangqi
      * @date 2025/4/8 15:17
      * @Param [str]
      **/
-    public static String replaceLineBreak(String str) {
-        if (StringUtils.isBlank(str)) {
-            return str;
+    public static String replaceLineBreak(String input) {
+        if (input == null || input.isEmpty()) {
+            return input;
         }
-        StringBuilder sb = new StringBuilder();
-        for (char c : str.toCharArray()) {
-            if (c != '\n' && c != '\r') {
-                sb.append(c);
-            } else {
-                sb.append(" ");
+        StringBuilder result = new StringBuilder();
+        StringBuilder lineBuilder = new StringBuilder();
+        boolean lineIsBlank = true;
+        boolean hasContent = false; // 标记是否已有非空白内容
+        for (int i = 0; i < input.length(); i++) {
+            char c = input.charAt(i);
+            // 检查换行符（支持 \n、\r、\r\n）
+            if (c == '\n' || c == '\r') {
+                // 处理 \r\n 组合的情况
+                if (c == '\r' && i + 1 < input.length() && input.charAt(i + 1) == '\n') {
+                    i++; // 跳过 \n
+                }
+                // 若非空白行则保留
+                if (!lineIsBlank) {
+                    result.append(lineBuilder);
+                    result.append(c);
+                }
+                // 重置行状态
+                lineBuilder.setLength(0);
+                lineIsBlank = true;
+                hasContent = true;
+                continue;
             }
+            // 检查非空白字符
+            if (!Character.isWhitespace(c)) {
+                lineIsBlank = false;
+            }
+            // 添加到当前行
+            lineBuilder.append(c);
         }
-        return sb.toString();
+        // 处理最后一行无换行符的情况
+        if (!lineIsBlank) {
+            result.append(lineBuilder);
+        }
+        // 处理纯空白输入的情况
+        else if (!hasContent && lineBuilder.length() > 0) {
+            result.append(lineBuilder);
+        }
+        return result.toString();
     }
 
+    /**
+     * 获取字符串的md5值
+     *
+     * @author liutangqi
+     * @date 2025/5/21 14:54
+     * @Param [input]
+     **/
+    public static String getMD5(String input) {
+        try {
+            MessageDigest md = MessageDigest.getInstance("MD5");
+            byte[] digest = md.digest(input.getBytes(StandardCharsets.UTF_8));
+            StringBuilder hexString = new StringBuilder();
+            for (byte b : digest) {
+                String hex = Integer.toHexString(0xff & b);
+                if (hex.length() == 1) hexString.append('0');
+                hexString.append(hex);
+            }
+            return hexString.toString();
+        } catch (NoSuchAlgorithmException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    /**
+     * 获取sha256值
+     *
+     * @author liutangqi
+     * @date 2025/5/27 11:03
+     * @Param [input]
+     **/
+    public static String getSha256(String input) {
+        return DigestUtil.sha256Hex(input);
+    }
+
+
+    /**
+     * 去除字符串str的首尾的 c
+     *
+     * @author liutangqi
+     * @date 2025/5/27 18:00
+     * @Param [str, c]
+     **/
+    public static String trim(String str, String c) {
+        if (str == null || c == null || c.isEmpty() || str.isEmpty()) {
+            return str;
+        }
+
+        int str1Len = str.length();
+        int str2Len = c.length();
+
+        // 如果 str2 比 str1 长，不可能匹配
+        if (str2Len > str1Len) {
+            return str;
+        }
+
+        int start = 0;
+        int end = str1Len;
+
+        // 处理开头的 str2 重复匹配
+        while (start <= end - str2Len && str.startsWith(c, start)) {
+            start += str2Len;
+        }
+
+        // 处理结尾的 str2 重复匹配
+        while (end >= start + str2Len && str.startsWith(c, end - str2Len)) {
+            end -= str2Len;
+        }
+
+        return (start > 0 || end < str1Len) ? str.substring(start, end) : str;
+    }
+
+
+    /**
+     * 获取sql可以标识唯一的串
+     * 原sql长度_sha256
+     *
+     * @author liutangqi
+     * @date 2025/5/29 14:22
+     * @Param [sql]
+     **/
+    public static String getSqlUniqueKey(String sql) {
+        return sql.length() + SymbolConstant.UNDERLINE + getSha256(sql);
+    }
 }

@@ -1,0 +1,1 @@
+SELECT LOWER(md5("user_name")) FROM tb_user

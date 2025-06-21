@@ -1,0 +1,1 @@
+SELECT * FROM tb_user WHERE "phone" IN (SELECT "phone" FROM tb_user WHERE "phone" LIKE concat('%', 'xxx', '%'))

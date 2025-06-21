@@ -1,0 +1,1 @@
+SELECT * FROM tb_user WHERE ("phone", "user_name") IN (('18555555555', '西'), ('18777777777', '瓜'))

@@ -13,16 +13,24 @@ public interface SymbolConstant {
      * 句号
      */
     String FULL_STOP = ".";
+    /**
+     * 逗号
+     */
+    String COMMA = ",";
+    /**
+     * 下划线
+     */
+    String UNDERLINE = "_";
+    /**
+     * 单引号
+     */
+    String SINGLE_QUOTES = "'";
 
     /**
      * 带转义符的句号
      */
     String ESC_FULL_STOP = "\\.";
 
-    /**
-     * 单引号
-     */
-    String SINGLE_QUOTES = "'";
     /**
      * 双引号
      */

@@ -4,12 +4,15 @@ import cn.hutool.core.lang.Pair;
 import cn.hutool.core.util.StrUtil;
 import com.sangsang.cache.FieldEncryptorPatternCache;
 import com.sangsang.domain.annos.FieldEncryptor;
+import com.sangsang.domain.annos.FieldInterceptorOrder;
 import com.sangsang.domain.annos.PoJoResultEncryptor;
-import com.sangsang.domain.constants.DecryptConstant;
+import com.sangsang.domain.constants.FieldConstant;
+import com.sangsang.domain.constants.InterceptorOrderConstant;
 import com.sangsang.domain.constants.SymbolConstant;
 import com.sangsang.domain.dto.ColumnTableDto;
 import com.sangsang.domain.dto.FieldEncryptorInfoDto;
 import com.sangsang.domain.enums.PoJoAlgorithmEnum;
+import com.sangsang.util.InterceptorUtil;
 import com.sangsang.util.ReflectUtils;
 import com.sangsang.util.StringUtils;
 import com.sangsang.visitor.pojoencrtptor.PoJoEncrtptorStatementVisitor;
@@ -40,6 +43,7 @@ import java.util.*;
  * @author liutangqi
  * @date 2024/7/9 14:06
  */
+@FieldInterceptorOrder(InterceptorOrderConstant.ENCRYPTOR)
 @Intercepts({
         @Signature(type = Executor.class, method = "query", args = {MappedStatement.class, Object.class, RowBounds.class, ResultHandler.class, CacheKey.class, BoundSql.class}),
         @Signature(type = Executor.class, method = "query", args = {MappedStatement.class, Object.class, RowBounds.class, ResultHandler.class})
@@ -138,7 +142,7 @@ public class PoJoResultEncrtptorInterceptor implements Interceptor, BeanPostProc
         }
 
         //1.基础数据类型对应的包装类或字符串或时间类型
-        if (DecryptConstant.FUNDAMENTAL.contains(res.getClass())) {
+        if (FieldConstant.FUNDAMENTAL.contains(res.getClass())) {
             //1.1 响应类型是字符串，并且该sql 查询结果只有一个字段
             if (res instanceof String && fieldInfos.size() == 1) {
                 FieldEncryptor fieldEncryptor = fieldInfos.get(0).getFieldEncryptor();
@@ -247,6 +251,9 @@ public class PoJoResultEncrtptorInterceptor implements Interceptor, BeanPostProc
                 sessionFactory.getConfiguration().addInterceptor(new PoJoResultEncrtptorInterceptor());
                 log.info("【field-encryptor】手动注册拦截器 PoJoResultEncrtptorInterceptor");
             }
+
+            //修改拦截器顺序
+            InterceptorUtil.sort(sessionFactory.getConfiguration());
         }
         return bean;
     }

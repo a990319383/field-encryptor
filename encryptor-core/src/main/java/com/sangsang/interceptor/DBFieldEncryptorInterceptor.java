@@ -1,5 +1,8 @@
 package com.sangsang.interceptor;
 
+import com.sangsang.domain.annos.FieldInterceptorOrder;
+import com.sangsang.domain.constants.InterceptorOrderConstant;
+import com.sangsang.util.InterceptorUtil;
 import com.sangsang.util.StringUtils;
 import com.sangsang.visitor.dbencrtptor.DBDencryptStatementVisitor;
 import net.sf.jsqlparser.parser.CCJSqlParserUtil;
@@ -24,6 +27,7 @@ import java.util.Properties;
  * @author liutangqi
  * @date 2023/11/9 19:03
  */
+@FieldInterceptorOrder(InterceptorOrderConstant.ENCRYPTOR)
 @Intercepts({@Signature(type = StatementHandler.class, method = "prepare", args = {Connection.class, Integer.class})})
 public class DBFieldEncryptorInterceptor implements Interceptor, BeanPostProcessor {
 
@@ -118,6 +122,9 @@ public class DBFieldEncryptorInterceptor implements Interceptor, BeanPostProcess
                 sessionFactory.getConfiguration().addInterceptor(new DBFieldEncryptorInterceptor());
                 log.info("【field-encryptor】手动注册拦截器 DBFieldEncryptorInterceptor");
             }
+
+            //修改拦截器顺序
+            InterceptorUtil.sort(sessionFactory.getConfiguration());
         }
         return bean;
     }

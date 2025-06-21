@@ -5,6 +5,7 @@ import com.sangsang.domain.constants.NumberConstant;
 import com.sangsang.domain.dto.BaseFieldParseTable;
 import com.sangsang.domain.dto.FieldInfoDto;
 import com.sangsang.util.CollectionUtils;
+import com.sangsang.visitor.transformation.TransformationOrderByVisitor;
 import net.sf.jsqlparser.statement.select.*;
 
 import java.util.*;
@@ -115,6 +116,15 @@ public class FieldParseParseTableSelectVisitor extends BaseFieldParseTable imple
         for (SelectItem selectItem : selectItems) {
             FieldParseParseSelectItemVisitor fieldParseSelectItemVisitor = FieldParseParseSelectItemVisitor.newInstanceCurLayer(this);
             selectItem.accept(fieldParseSelectItemVisitor);
+        }
+
+        //order by
+        List<OrderByElement> orderByElements = plainSelect.getOrderByElements();
+        if (CollectionUtils.isNotEmpty(orderByElements)) {
+            TransformationOrderByVisitor tfOrderByVisitor = TransformationOrderByVisitor.newInstanceCurLayer(this);
+            for (OrderByElement orderByElement : orderByElements) {
+                orderByElement.accept(tfOrderByVisitor);
+            }
         }
     }
 
