@@ -1,7 +1,10 @@
 package com.sangsang.test;
 
+import com.sangsang.cache.SqlParseCache;
+import com.sangsang.cache.IsolationCache;
 import com.sangsang.cache.TableCache;
-import com.sangsang.domain.dto.TableInfoDto;
+import com.sangsang.config.properties.FieldProperties;
+import com.sangsang.config.properties.IsolationProperties;
 
 import java.util.*;
 
@@ -21,10 +24,31 @@ public class InitTableInfo {
      * @Param []
      **/
     public static void initTable() throws NoSuchFieldException {
-        TableCache tableCache = new TableCache(null);
-        //扫描这个路径下的实体类
-        List<TableInfoDto> tableInfoDtos = tableCache.parseTableInfoByScanEntityPackage("com.sangsang.mockentity");
-        //将这些实体类信息填充到本地缓存中
-        tableCache.fillCacheMap(tableInfoDtos);
+        FieldProperties fieldProperties = new FieldProperties();
+        fieldProperties.setScanEntityPackage(Arrays.asList("com.sangsang.mockentity"));
+        TableCache tableCache = new TableCache(fieldProperties);
+        tableCache.init();
+        //初始化数据解析缓存
+        SqlParseCache.init(new FieldProperties());
+    }
+
+    /**
+     * 初始化数据隔离
+     *
+     * @author liutangqi
+     * @date 2025/6/13 15:14
+     * @Param []
+     **/
+    public static void initIsolation() {
+        FieldProperties fieldProperties = new FieldProperties();
+        fieldProperties.setScanEntityPackage(Arrays.asList("com.sangsang.mockentity"));
+        IsolationProperties isolationProperties = new IsolationProperties();
+        isolationProperties.setField("org_seq");
+        isolationProperties.setIsolationClass("com.sangsang.isolation.TestDataIsolation");
+        isolationProperties.setRelation("likePrefix");
+        fieldProperties.setIsolation(isolationProperties);
+
+        new IsolationCache(fieldProperties).init();
+
     }
 }

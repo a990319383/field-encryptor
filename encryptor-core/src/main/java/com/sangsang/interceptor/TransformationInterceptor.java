@@ -5,9 +5,9 @@ import com.sangsang.domain.annos.FieldInterceptorOrder;
 import com.sangsang.domain.constants.InterceptorOrderConstant;
 import com.sangsang.domain.context.TransformationHolder;
 import com.sangsang.util.InterceptorUtil;
+import com.sangsang.util.JsqlparserUtil;
 import com.sangsang.util.StringUtils;
 import com.sangsang.visitor.transformation.TransformationStatementVisitor;
-import net.sf.jsqlparser.parser.CCJSqlParserUtil;
 import net.sf.jsqlparser.statement.Statement;
 import org.apache.ibatis.executor.statement.StatementHandler;
 import org.apache.ibatis.mapping.BoundSql;
@@ -52,7 +52,7 @@ public class TransformationInterceptor implements Interceptor, BeanPostProcessor
         String newSql = oldSql;
         try {
             log.debug("【db-transformation】旧sql：{}", oldSql);
-            Statement statement = CCJSqlParserUtil.parse(StringUtils.replaceLineBreak(oldSql));
+            Statement statement = JsqlparserUtil.parse(oldSql);
             TransformationStatementVisitor transformationStatementVisitor = new TransformationStatementVisitor();
             statement.accept(transformationStatementVisitor);
             if (StringUtils.isNotBlank(transformationStatementVisitor.getResultSql())) {

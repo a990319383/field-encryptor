@@ -13,11 +13,11 @@ import com.sangsang.domain.dto.ColumnTableDto;
 import com.sangsang.domain.dto.FieldEncryptorInfoDto;
 import com.sangsang.domain.enums.PoJoAlgorithmEnum;
 import com.sangsang.util.InterceptorUtil;
+import com.sangsang.util.JsqlparserUtil;
 import com.sangsang.util.ReflectUtils;
 import com.sangsang.util.StringUtils;
 import com.sangsang.visitor.pojoencrtptor.PoJoEncrtptorStatementVisitor;
 import net.sf.jsqlparser.JSQLParserException;
-import net.sf.jsqlparser.parser.CCJSqlParserUtil;
 import net.sf.jsqlparser.statement.Statement;
 import org.apache.ibatis.cache.CacheKey;
 import org.apache.ibatis.executor.Executor;
@@ -87,7 +87,7 @@ public class PoJoResultEncrtptorInterceptor implements Interceptor, BeanPostProc
         String placeholderSql = StringUtils.question2Placeholder(sql);
 
         //2.解析sql的响应结果，和占位符对应的表字段关系
-        Statement statement = CCJSqlParserUtil.parse(StringUtils.replaceLineBreak(placeholderSql));
+        Statement statement = JsqlparserUtil.parse(placeholderSql);
         PoJoEncrtptorStatementVisitor poJoEncrtptorStatementVisitor = new PoJoEncrtptorStatementVisitor();
         statement.accept(poJoEncrtptorStatementVisitor);
 

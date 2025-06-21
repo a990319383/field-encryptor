@@ -15,7 +15,6 @@ import com.sangsang.util.ReflectUtils;
 import com.sangsang.util.StringUtils;
 import com.sangsang.visitor.pojoencrtptor.PoJoEncrtptorStatementVisitor;
 import net.sf.jsqlparser.JSQLParserException;
-import net.sf.jsqlparser.parser.CCJSqlParserUtil;
 import net.sf.jsqlparser.statement.Statement;
 import org.apache.ibatis.executor.statement.StatementHandler;
 import org.apache.ibatis.mapping.BoundSql;
@@ -126,7 +125,7 @@ public class PoJoParamEncrtptorInterceptor implements Interceptor, BeanPostProce
         String placeholderSql = StringUtils.question2Placeholder(sql);
 
         //2.解析sql的响应结果，和占位符对应的表字段关系
-        Statement statement = CCJSqlParserUtil.parse(StringUtils.replaceLineBreak(placeholderSql));
+        Statement statement = JsqlparserUtil.parse(placeholderSql);
         PoJoEncrtptorStatementVisitor poJoEncrtptorStatementVisitor = new PoJoEncrtptorStatementVisitor();
         statement.accept(poJoEncrtptorStatementVisitor);
 

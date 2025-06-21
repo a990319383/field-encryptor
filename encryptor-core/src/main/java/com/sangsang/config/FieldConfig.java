@@ -1,5 +1,6 @@
 package com.sangsang.config;
 
+import com.sangsang.cache.SqlParseCache;
 import com.sangsang.cache.TableCache;
 import com.sangsang.config.properties.FieldProperties;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
@@ -24,8 +25,12 @@ public class FieldConfig {
      **/
     @Bean
     public TableCache initTableCache(FieldProperties fieldProperties) {
+        //1.初始化表结构字段信息到本地缓存
         TableCache tableCache = new TableCache(fieldProperties);
         tableCache.init();
+
+        //2.初始化字段解析缓存
+        SqlParseCache.init(fieldProperties);
         return tableCache;
     }
 }

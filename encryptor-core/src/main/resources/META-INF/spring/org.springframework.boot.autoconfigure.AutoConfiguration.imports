@@ -2,3 +2,4 @@
   com.sangsang.config.EncryptorConfig
   com.sangsang.config.DesensitizeConfig
   com.sangsang.config.TransformationConfig
+  com.sangsang.config.IsolationConfig

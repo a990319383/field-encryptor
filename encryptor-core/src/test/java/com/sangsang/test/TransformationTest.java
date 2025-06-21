@@ -1,16 +1,17 @@
 package com.sangsang.test;
 
+import cn.hutool.cache.CacheUtil;
+import cn.hutool.cache.impl.LRUCache;
 import com.sangsang.cache.TransformationInstanceCache;
 import com.sangsang.config.properties.FieldProperties;
 import com.sangsang.config.properties.TransformationProperties;
 import com.sangsang.domain.constants.TransformationPatternTypeConstant;
-import com.sangsang.domain.enums.TransformationDateFormatEnum;
 import com.sangsang.util.AnswerUtil;
+import com.sangsang.util.JsqlparserUtil;
 import com.sangsang.util.ReflectUtils;
 import com.sangsang.util.StringUtils;
 import com.sangsang.visitor.transformation.TransformationStatementVisitor;
 import net.sf.jsqlparser.JSQLParserException;
-import net.sf.jsqlparser.parser.CCJSqlParserUtil;
 import net.sf.jsqlparser.statement.Statement;
 import org.junit.jupiter.api.Test;
 
@@ -212,7 +213,18 @@ public class TransformationTest {
     String i4 = "INSERT INTO tb_user (id,USER_NAME,PHONE) value (7,'名字3',18777777777),(9,'名字5',18999999999)";
 
     //测试的sql
-    String testSql = "";
+    String testSql = "SELECT \n" +
+            " count(1) as transportSum, -- 运单总数数量\n" +
+            "sum(IF(status = 0, 1, 0)) as orderSum, -- 已接单数量\n" +
+            "sum(IF(status = 1, 1, 0)) as inGoodsSum, -- 装货中数量\n" +
+            "sum(IF(status = 2, 1, 0)) as transportationSum, -- 运输中数量\n" +
+            "sum(IF(status = 3, 1, 0)) as deliveredSum -- 已交货数量\n" +
+            "FROM tms_transport\n" +
+            "WHERE status in (0,1,2,3)\n" +
+            "and del_flag = 0\n" +
+            "AND create_date >= \"2021-01-01\"\n" +
+            "AND \"2026-01-01\" >= create_date\n" +
+            "AND org_id = 11111";
 
     /**
      * mysql转换为达梦的语法转换器测试
@@ -224,7 +236,7 @@ public class TransformationTest {
     @Test
     public void mysql2dmTransformation() throws JSQLParserException, NoSuchFieldException {
         //需要的sql
-        String sql = s23;
+        String sql = s20;
         System.out.println("----------------------原始sql-----------------------");
         System.out.println(sql);
         //mock数据
@@ -238,7 +250,7 @@ public class TransformationTest {
         new TransformationInstanceCache().init(fieldProperties);
 
         //开始进行语法转换
-        Statement statement = CCJSqlParserUtil.parse(StringUtils.replaceLineBreak(sql));
+        Statement statement = JsqlparserUtil.parse(sql);
         TransformationStatementVisitor transformationStatementVisitor = new TransformationStatementVisitor();
         statement.accept(transformationStatementVisitor);
 
@@ -250,7 +262,12 @@ public class TransformationTest {
 
     @Test
     public void otherTest() {
-        System.out.println(TransformationDateFormatEnum.mysql2dmFormat("%Y-%m-%d %H:%i:%s"));
+        LRUCache<Integer, Integer> lruCache = CacheUtil.newLRUCache(3);
+        for (int i = 0; i < 10; i++) {
+            lruCache.put(i, i);
+            lruCache.get(0);
+            System.out.println(lruCache);
+        }
     }
 
 
@@ -288,7 +305,7 @@ public class TransformationTest {
         for (int i = 0; i < sqls.size(); i++) {
             String sql = sqls.get(i);
             //开始解析sql
-            Statement statement = CCJSqlParserUtil.parse(StringUtils.replaceLineBreak(sql));
+            Statement statement = JsqlparserUtil.parse(sql);
             TransformationStatementVisitor transformationStatementVisitor = new TransformationStatementVisitor();
             statement.accept(transformationStatementVisitor);
             String resultSql = transformationStatementVisitor.getResultSql();
@@ -342,7 +359,7 @@ public class TransformationTest {
         for (String sql : sqls) {
             //开始解析sql
             //开始进行语法转换
-            Statement statement = CCJSqlParserUtil.parse(StringUtils.replaceLineBreak(sql));
+            Statement statement = JsqlparserUtil.parse(sql);
             TransformationStatementVisitor transformationStatementVisitor = new TransformationStatementVisitor();
             statement.accept(transformationStatementVisitor);
             String resultSql = transformationStatementVisitor.getResultSql();

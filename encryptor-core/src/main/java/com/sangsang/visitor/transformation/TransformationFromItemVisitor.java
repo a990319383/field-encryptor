@@ -1,6 +1,7 @@
 package com.sangsang.visitor.transformation;
 
 import com.sangsang.cache.TransformationInstanceCache;
+import com.sangsang.domain.context.TransformationHolder;
 import com.sangsang.domain.dto.BaseFieldParseTable;
 import com.sangsang.domain.dto.FieldInfoDto;
 import net.sf.jsqlparser.schema.Table;

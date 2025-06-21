@@ -4,6 +4,7 @@ import cn.hutool.core.util.HexUtil;
 import cn.hutool.crypto.symmetric.DES;
 import com.sangsang.config.properties.FieldProperties;
 import com.sangsang.domain.enums.PoJoAlgorithmEnum;
+import com.sangsang.config.properties.EncryptorProperties;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

@@ -22,8 +22,6 @@ import java.util.stream.Collectors;
  * @date 2024/2/29 15:43
  */
 public class DBDecryptSelectVisitor extends BaseFieldParseTable implements SelectVisitor {
-    private String resultSql;
-
 
     /**
      * 当涉及到上游不同字段需要进行不同的加解密场景时。这个字段传上游的需要加密的项的索引下标
@@ -87,10 +85,6 @@ public class DBDecryptSelectVisitor extends BaseFieldParseTable implements Selec
                                    Map<String, Map<String, Set<FieldInfoDto>>> layerFieldTableMap) {
         super(layer, layerSelectTableFieldMap, layerFieldTableMap);
         this.upstreamNeedEncryptIndex = Optional.ofNullable(upstreamNeedEncryptIndex).orElse(new ArrayList<>());
-    }
-
-    public String getResultSql() {
-        return resultSql;
     }
 
     /**
@@ -180,9 +174,6 @@ public class DBDecryptSelectVisitor extends BaseFieldParseTable implements Selec
                 join.setOnExpressions(dencryptExpressions);
             }
         }
-
-        //7.维护解析后的sql
-        this.resultSql = plainSelect.toString();
     }
 
     /**
@@ -211,7 +202,6 @@ public class DBDecryptSelectVisitor extends BaseFieldParseTable implements Selec
             resSelectBody.add(select);
         }
         setOpList.setSelects(resSelectBody);
-        this.resultSql = setOpList.toString();
     }
 
     @Override

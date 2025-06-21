@@ -1,5 +1,6 @@
 package com.sangsang.util;
 
+import com.sangsang.cache.SqlParseCache;
 import com.sangsang.cache.TableCache;
 import com.sangsang.domain.annos.FieldEncryptor;
 import com.sangsang.domain.constants.FieldConstant;
@@ -9,10 +10,12 @@ import com.sangsang.visitor.dbencrtptor.DBDecryptExpressionVisitor;
 import com.sangsang.visitor.pojoencrtptor.PlaceholderExpressionVisitor;
 import com.sangsang.visitor.transformation.TransformationExpressionVisitor;
 import com.sangsang.visitor.transformation.wrap.ExpressionWrapper;
+import net.sf.jsqlparser.JSQLParserException;
 import net.sf.jsqlparser.expression.*;
-import net.sf.jsqlparser.expression.operators.relational.ExpressionList;
+import net.sf.jsqlparser.parser.CCJSqlParserUtil;
 import net.sf.jsqlparser.schema.Column;
 import net.sf.jsqlparser.schema.Table;
+import net.sf.jsqlparser.statement.Statement;
 import net.sf.jsqlparser.statement.select.AllColumns;
 import net.sf.jsqlparser.statement.select.AllTableColumns;
 import net.sf.jsqlparser.statement.select.SelectItem;
@@ -30,28 +33,25 @@ import java.util.stream.Collectors;
  */
 public class JsqlparserUtil {
 
-
     /**
-     * 将 column 变成function转换为查询项
-     * 备注：暂未使用此方法，此方法只为记录转换拼接的语法
+     * Jsqlparser解析的统一入口，不直接使用原生的CCJSqlParserUtil.parse()
      *
      * @author liutangqi
-     * @date 2024/3/11 9:07
-     * @Param [column]
+     * @date 2025/6/18 14:19
+     * @Param [sql]
      **/
-    public static SelectItem functColumn(Column column, Alias alias) {
-        String columnName = column.getColumnName();
-
-        Function aesEncryptFunction = new Function();
-        aesEncryptFunction.setName("AES_ENCRYPT");
-        aesEncryptFunction.setParameters(new ExpressionList(new Column(columnName), new StringValue("encryptionKey")));
-
-        Function toBase64Function = new Function();
-        toBase64Function.setName("TO_BASE64");
-        toBase64Function.setParameters(new ExpressionList(aesEncryptFunction));
-
-        alias = alias == null ? new Alias(columnName) : alias;
-        return SelectItem.from(toBase64Function, alias);
+    public static Statement parse(String sql) throws JSQLParserException {
+        //1.去除空白行
+        String clearSql = StringUtils.replaceLineBreak(sql);
+        //2.判断缓存是否命中
+        Statement sqlParseCache = SqlParseCache.getSqlParseCache(clearSql);
+        if (sqlParseCache != null) {
+            return sqlParseCache;
+        }
+        //3.缓存没命中，重新开始解析，并将解析结果扔到缓存中
+        Statement statement = CCJSqlParserUtil.parse(clearSql);
+        SqlParseCache.setSqlParseCache(clearSql, statement);
+        return statement;
     }
 
     /**

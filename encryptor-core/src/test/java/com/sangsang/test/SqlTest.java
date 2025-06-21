@@ -4,6 +4,7 @@ import com.sangsang.cache.FieldEncryptorPatternCache;
 import com.sangsang.domain.dto.ColumnTableDto;
 import com.sangsang.domain.dto.FieldEncryptorInfoDto;
 import com.sangsang.util.AnswerUtil;
+import com.sangsang.util.JsqlparserUtil;
 import com.sangsang.util.ReflectUtils;
 import com.sangsang.util.StringUtils;
 import com.sangsang.visitor.dbencrtptor.DBDencryptStatementVisitor;
@@ -11,7 +12,6 @@ import com.sangsang.visitor.fieldparse.FieldParseParseTableSelectVisitor;
 import com.sangsang.visitor.pojoencrtptor.PoJoEncrtptorStatementVisitor;
 import javafx.util.Pair;
 import net.sf.jsqlparser.JSQLParserException;
-import net.sf.jsqlparser.parser.CCJSqlParserUtil;
 import net.sf.jsqlparser.statement.Statement;
 import net.sf.jsqlparser.statement.select.PlainSelect;
 import org.junit.jupiter.api.Test;
@@ -516,13 +516,13 @@ public class SqlTest {
         InitTableInfo.initTable();
 
         //需要测试的sql
-        String sql = s36;
+        String sql = s17;
         System.out.println("----------------------------------------------------------------------------");
         System.out.println(sql);
         System.out.println("----------------------------------------------------------------------------");
 
         //开始解析sql
-        Statement statement = CCJSqlParserUtil.parse(StringUtils.replaceLineBreak(sql));
+        Statement statement = JsqlparserUtil.parse(sql);
 
         DBDencryptStatementVisitor DBDencryptStatementVisitor = new DBDencryptStatementVisitor();
         statement.accept(DBDencryptStatementVisitor);
@@ -557,7 +557,7 @@ public class SqlTest {
         String placeholderSql = StringUtils.question2Placeholder(sql);
 
         //开始解析sql
-        Statement statement = CCJSqlParserUtil.parse(StringUtils.replaceLineBreak(placeholderSql));
+        Statement statement = JsqlparserUtil.parse(placeholderSql);
         PoJoEncrtptorStatementVisitor poJoEncrtptorStatementVisitor = new PoJoEncrtptorStatementVisitor();
         statement.accept(poJoEncrtptorStatementVisitor);
         System.out.println(poJoEncrtptorStatementVisitor.getFieldEncryptorInfos());
@@ -593,7 +593,7 @@ public class SqlTest {
         for (int i = 0; i < sqls.size(); i++) {
             String sql = sqls.get(i);
             //开始解析sql
-            Statement statement = CCJSqlParserUtil.parse(StringUtils.replaceLineBreak(sql));
+            Statement statement = JsqlparserUtil.parse(sql);
 
             DBDencryptStatementVisitor DBDencryptStatementVisitor = new DBDencryptStatementVisitor();
             statement.accept(DBDencryptStatementVisitor);
@@ -643,7 +643,7 @@ public class SqlTest {
             String placeholderSql = StringUtils.question2Placeholder(sql);
 
             //开始解析sql
-            Statement statement = CCJSqlParserUtil.parse(StringUtils.replaceLineBreak(placeholderSql));
+            Statement statement = JsqlparserUtil.parse(placeholderSql);
             PoJoEncrtptorStatementVisitor poJoEncrtptorStatementVisitor = new PoJoEncrtptorStatementVisitor();
             statement.accept(poJoEncrtptorStatementVisitor);
             List<FieldEncryptorInfoDto> fieldEncryptorInfos = poJoEncrtptorStatementVisitor.getFieldEncryptorInfos();
@@ -699,7 +699,7 @@ public class SqlTest {
 
         for (String sql : sqls) {
             //开始解析sql
-            Statement statement = CCJSqlParserUtil.parse(StringUtils.replaceLineBreak(sql));
+            Statement statement = JsqlparserUtil.parse(sql);
 
             DBDencryptStatementVisitor DBDencryptStatementVisitor = new DBDencryptStatementVisitor();
             statement.accept(DBDencryptStatementVisitor);
@@ -727,7 +727,7 @@ public class SqlTest {
             String placeholderSql = StringUtils.question2Placeholder(sql);
 
             //开始解析sql
-            Statement statement = CCJSqlParserUtil.parse(StringUtils.replaceLineBreak(placeholderSql));
+            Statement statement = JsqlparserUtil.parse(placeholderSql);
             PoJoEncrtptorStatementVisitor poJoEncrtptorStatementVisitor = new PoJoEncrtptorStatementVisitor();
             statement.accept(poJoEncrtptorStatementVisitor);
             List<FieldEncryptorInfoDto> fieldEncryptorInfos = poJoEncrtptorStatementVisitor.getFieldEncryptorInfos();
@@ -744,7 +744,7 @@ public class SqlTest {
         InitTableInfo.initTable();
 
         String sql = "select tu.* from tb_user tu";
-        Statement statement = CCJSqlParserUtil.parse(StringUtils.replaceLineBreak(sql));
+        Statement statement = JsqlparserUtil.parse(sql);
         FieldParseParseTableSelectVisitor fieldParseParseTableSelectVisitor = FieldParseParseTableSelectVisitor.newInstanceFirstLayer();
         ((PlainSelect) statement).accept(fieldParseParseTableSelectVisitor);
         System.out.println(fieldParseParseTableSelectVisitor);

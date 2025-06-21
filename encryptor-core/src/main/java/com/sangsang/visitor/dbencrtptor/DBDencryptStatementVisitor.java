@@ -339,7 +339,7 @@ public class DBDencryptStatementVisitor implements StatementVisitor {
         select.accept(sDecryptSelectVisitor);
 
         //4.处理后的结果赋值
-        this.resultSql = sDecryptSelectVisitor.getResultSql();
+        this.resultSql = select.toString();
     }
 
     @Override

@@ -1,11 +1,13 @@
 package com.sangsang.interceptor;
 
 import com.sangsang.domain.annos.FieldInterceptorOrder;
+import com.sangsang.domain.annos.ForbidIsolation;
 import com.sangsang.domain.constants.InterceptorOrderConstant;
+import com.sangsang.domain.context.IsolationHolder;
 import com.sangsang.util.InterceptorUtil;
 import com.sangsang.util.JsqlparserUtil;
 import com.sangsang.util.StringUtils;
-import com.sangsang.visitor.dbencrtptor.DBDencryptStatementVisitor;
+import com.sangsang.visitor.isolation.IsolationStatementVisitor;
 import net.sf.jsqlparser.statement.Statement;
 import org.apache.ibatis.executor.statement.StatementHandler;
 import org.apache.ibatis.mapping.BoundSql;
@@ -21,17 +23,16 @@ import java.sql.Connection;
 import java.util.Properties;
 
 /**
- * 采用数据库函数加解密模式
- * 将sql需要加解密的字段进行加解密处理
+ * 数据权限拦截器
  *
  * @author liutangqi
- * @date 2023/11/9 19:03
- */
-@FieldInterceptorOrder(InterceptorOrderConstant.ENCRYPTOR)
+ * @date 2025/6/13 13:23
+ * @Param
+ **/
+@FieldInterceptorOrder(InterceptorOrderConstant.ISOLATION)
 @Intercepts({@Signature(type = StatementHandler.class, method = "prepare", args = {Connection.class, Integer.class})})
-public class DBFieldEncryptorInterceptor implements Interceptor, BeanPostProcessor {
-
-    private static final Logger log = LoggerFactory.getLogger(DBFieldEncryptorInterceptor.class);
+public class IsolationInterceptor implements Interceptor, BeanPostProcessor {
+    private static final Logger log = LoggerFactory.getLogger(IsolationInterceptor.class);
 
 
     @Override
@@ -39,28 +40,30 @@ public class DBFieldEncryptorInterceptor implements Interceptor, BeanPostProcess
         //1.获取拦截器中提供的一些对象
         StatementHandler statementHandler = (StatementHandler) invocation.getTarget();
 
-        //2.获取当前执行的sql
-        BoundSql boundSql = statementHandler.getBoundSql();
-        String oldSql = boundSql.getSql();
-        log.debug("【FieldEncryptor】旧sql：{}", oldSql);
-
-        //3.当前sql如果肯定不需要加解密，则不解析sql，直接返回
-        if (StringUtils.notExistEncryptor(oldSql)) {
+        //2.获取当前执行sql头上是否有@ForbidIsolation，或者当前执行的方法上下文中是否有@ForbidIsolation，直接跳过
+        if (InterceptorUtil.getMapperAnnotation(statementHandler, ForbidIsolation.class) != null
+                || IsolationHolder.getForbidIsolation() != null) {
             return invocation.proceed();
         }
 
-        //4.将原sql进行加解密处理
+        //3.获取当前执行的sql
+        BoundSql boundSql = statementHandler.getBoundSql();
+        String oldSql = boundSql.getSql();
+
+        //4.将原sql进行数据隔离
         String newSql = oldSql;
         try {
+            log.debug("【isolation】旧sql：{}", oldSql);
             Statement statement = JsqlparserUtil.parse(oldSql);
-            DBDencryptStatementVisitor DBDencryptStatementVisitor = new DBDencryptStatementVisitor();
-            statement.accept(DBDencryptStatementVisitor);
-            if (StringUtils.isNotBlank(DBDencryptStatementVisitor.getResultSql())) {
-                newSql = DBDencryptStatementVisitor.getResultSql();
+            IsolationStatementVisitor ilStatementVisitor = new IsolationStatementVisitor();
+            statement.accept(ilStatementVisitor);
+            if (StringUtils.isNotBlank(ilStatementVisitor.getResultSql())) {
+                newSql = ilStatementVisitor.getResultSql();
             }
-            log.debug("【FieldEncryptor】新sql：{}", newSql);
+            log.debug("【isolation】新sql：{}", newSql);
+
         } catch (Exception e) {
-            log.error("【FieldEncryptor】加解密sql异常 原sql:{}", oldSql, e);
+            log.error("【isolation】 sql异常 原sql:{}", oldSql, e);
         }
 
         //5.反射修改 SQL 语句。
@@ -76,7 +79,7 @@ public class DBFieldEncryptorInterceptor implements Interceptor, BeanPostProcess
      * 低版本mybatis 这个方法不是default 方法，会报错找不到实现方法，所以这里实现默认的方法
      *
      * @author liutangqi
-     * @date 2024/9/9 17:38
+     * @date 2025/5/21 10:28
      * @Param [target]
      **/
     @Override
@@ -93,7 +96,7 @@ public class DBFieldEncryptorInterceptor implements Interceptor, BeanPostProcess
      * 实现父类default方法，避免低版本不兼容，找不到实现类
      *
      * @author liutangqi
-     * @date 2024/9/10 11:36
+     * @date 2025/5/21 10:28
      * @Param [bean, beanName]
      **/
     @Override
@@ -105,7 +108,7 @@ public class DBFieldEncryptorInterceptor implements Interceptor, BeanPostProcess
      * 实现父类default方法，避免低版本不兼容，找不到实现类
      *
      * @author liutangqi
-     * @date 2024/9/10 11:36
+     * @date 2025/5/21 10:28
      * @Param [bean, beanName]
      **/
     @Override
@@ -114,13 +117,9 @@ public class DBFieldEncryptorInterceptor implements Interceptor, BeanPostProcess
         //使用@Bean的方式注册，可能会导致某些项目的@PostContruct先于拦截器执行，导致拦截器业务代码失效
         if (SqlSessionFactory.class.isAssignableFrom(bean.getClass())) {
             SqlSessionFactory sessionFactory = (SqlSessionFactory) bean;
-            if (sessionFactory.getConfiguration().getInterceptors()
-                    .stream()
-                    .filter(f -> DBFieldEncryptorInterceptor.class.isAssignableFrom(f.getClass()))
-                    .findAny()
-                    .orElse(null) == null) {
-                sessionFactory.getConfiguration().addInterceptor(new DBFieldEncryptorInterceptor());
-                log.info("【field-encryptor】手动注册拦截器 DBFieldEncryptorInterceptor");
+            if (sessionFactory.getConfiguration().getInterceptors().stream().filter(f -> IsolationInterceptor.class.isAssignableFrom(f.getClass())).findAny().orElse(null) == null) {
+                sessionFactory.getConfiguration().addInterceptor(new IsolationInterceptor());
+                log.info("【isolation】手动注册拦截器 IsolationInterceptor");
             }
 
             //修改拦截器顺序
@@ -128,6 +127,4 @@ public class DBFieldEncryptorInterceptor implements Interceptor, BeanPostProcess
         }
         return bean;
     }
-
-
 }

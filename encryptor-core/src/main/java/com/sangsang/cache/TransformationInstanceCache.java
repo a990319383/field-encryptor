@@ -33,7 +33,7 @@ public class TransformationInstanceCache implements BeanPostProcessor {
      */
     private static Map<Class, List<TransformationInterface>> transformationMap = null;
     /**
-     * 实现了TransformationInterface接口的基础转换父类的Class和泛型的对应关系
+     * 实现了TransformationInterface接口的基类转换器的Class和泛型的对应关系
      * key:泛型Class
      * value:类的Class
      */
