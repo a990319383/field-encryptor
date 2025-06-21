@@ -1,0 +1,1 @@
+SELECT * FROM "tb_user" tu WHERE EXISTS (SELECT count(1) FROM "tb_user" tu WHERE tu."phone" = '14874542121') AND tu."user_name" LIKE '%xxx%'

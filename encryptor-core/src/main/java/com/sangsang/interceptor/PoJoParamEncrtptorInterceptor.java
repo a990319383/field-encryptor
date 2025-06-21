@@ -3,11 +3,13 @@ package com.sangsang.interceptor;
 import cn.hutool.core.lang.Pair;
 import com.sangsang.cache.FieldEncryptorPatternCache;
 import com.sangsang.domain.annos.FieldEncryptor;
-import com.sangsang.domain.constants.DecryptConstant;
+import com.sangsang.domain.annos.FieldInterceptorOrder;
+import com.sangsang.domain.constants.FieldConstant;
+import com.sangsang.domain.constants.InterceptorOrderConstant;
 import com.sangsang.domain.constants.SymbolConstant;
 import com.sangsang.domain.dto.ColumnTableDto;
 import com.sangsang.domain.dto.FieldEncryptorInfoDto;
-import com.sangsang.encryptor.EncryptorProperties;
+import com.sangsang.util.InterceptorUtil;
 import com.sangsang.util.JsqlparserUtil;
 import com.sangsang.util.ReflectUtils;
 import com.sangsang.util.StringUtils;
@@ -42,20 +44,17 @@ import java.util.*;
  * @author liutangqi
  * @date 2024/7/9 14:06
  */
+@FieldInterceptorOrder(InterceptorOrderConstant.ENCRYPTOR)
 @Intercepts({
         @Signature(type = StatementHandler.class, method = "prepare", args = {Connection.class, Integer.class})
 })
 public class PoJoParamEncrtptorInterceptor implements Interceptor, BeanPostProcessor {
 
-    private ReflectorFactory reflectorFactory = new DefaultReflectorFactory();
-    private ObjectFactory objectFactory = new DefaultObjectFactory();
-    private ObjectWrapperFactory objectWrapperFactory = new DefaultObjectWrapperFactory();
-    private EncryptorProperties encryptorProperties;
+    private static final ReflectorFactory reflectorFactory = new DefaultReflectorFactory();
+    private static final ObjectFactory objectFactory = new DefaultObjectFactory();
+    private static final ObjectWrapperFactory objectWrapperFactory = new DefaultObjectWrapperFactory();
     private static final Logger log = LoggerFactory.getLogger(PoJoParamEncrtptorInterceptor.class);
 
-    public PoJoParamEncrtptorInterceptor(EncryptorProperties encryptorProperties) {
-        this.encryptorProperties = encryptorProperties;
-    }
 
     /**
      * 将入参的字段和占位符？ 对应起来  （boundSql.getParameterMappings()获取的参数和占位符的顺序是一致的，这个结果集里面也有对应的占位符的key，这样就可以全部关联起来了）
@@ -155,7 +154,7 @@ public class PoJoParamEncrtptorInterceptor implements Interceptor, BeanPostProce
         for (int i = 0; i < parameterMappings.size(); i++) {
             ParameterMapping parameterMapping = parameterMappings.get(i);
             //sql关系中，占位符被统一替换成了这个
-            String placeholderKey = DecryptConstant.PLACEHOLDER + i;
+            String placeholderKey = FieldConstant.PLACEHOLDER + i;
             //获取当前映射字段的入参值
             Object propertyValue = parseObj(boundSql, parameterMapping);
 
@@ -228,7 +227,7 @@ public class PoJoParamEncrtptorInterceptor implements Interceptor, BeanPostProce
         }
 
         //1. 基本数据类型的包装类或者字符串或时间类型，直接返回原值
-        if (DecryptConstant.FUNDAMENTAL.contains(obj.getClass())) {
+        if (FieldConstant.FUNDAMENTAL.contains(obj.getClass())) {
             return obj;
         }
 
@@ -290,9 +289,12 @@ public class PoJoParamEncrtptorInterceptor implements Interceptor, BeanPostProce
                     .filter(f -> PoJoParamEncrtptorInterceptor.class.isAssignableFrom(f.getClass()))
                     .findAny()
                     .orElse(null) == null) {
-                sessionFactory.getConfiguration().addInterceptor(new PoJoParamEncrtptorInterceptor(this.encryptorProperties));
+                sessionFactory.getConfiguration().addInterceptor(new PoJoParamEncrtptorInterceptor());
                 log.info("【field-encryptor】手动注册拦截器 PoJoParamEncrtptorInterceptor");
             }
+
+            //修改拦截器顺序
+            InterceptorUtil.sort(sessionFactory.getConfiguration());
         }
         return bean;
     }

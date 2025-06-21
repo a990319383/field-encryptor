@@ -89,6 +89,15 @@ public class DBDecryptExpressionVisitor extends BaseDEcryptParseTable implements
         return alias;
     }
 
+    /**
+     * 获取处理好后的表达式
+     * 注意：这里不能像Transformation一样获取后立马清除，达到visitor复用的效果，因为visitor里面除了处理后的表达式还有其他属性，如果处理后删除的话，会导致其它属性错乱
+     * 这里也不能立即把其它属性给清除了，因为其它的属性在下游的其它地方可能会有使用
+     *
+     * @author liutangqi
+     * @date 2025/6/6 16:39
+     * @Param []
+     **/
     public Expression getExpression() {
         return expression;
     }
@@ -238,34 +247,20 @@ public class DBDecryptExpressionVisitor extends BaseDEcryptParseTable implements
 
     @Override
     public void visit(AndExpression andExpression) {
-        Expression leftExpression = andExpression.getLeftExpression();
-        DBDecryptExpressionVisitor leftExpressionVisitor = DBDecryptExpressionVisitor.newInstanceCurLayer(this);
-        leftExpression.accept(leftExpressionVisitor);
-        andExpression.setLeftExpression(Optional.ofNullable(leftExpressionVisitor.getExpression()).orElse(leftExpression));
-
-        Expression rightExpression = andExpression.getRightExpression();
-        DBDecryptExpressionVisitor rightExpressionVisitor = DBDecryptExpressionVisitor.newInstanceCurLayer(this);
-        rightExpression.accept(rightExpressionVisitor);
-        andExpression.setRightExpression(Optional.ofNullable(rightExpressionVisitor.getExpression()).orElse(rightExpression));
+        //db模式处理左右表达式
+        JsqlparserUtil.visitDbBinaryExpression(this, andExpression);
     }
 
     @Override
     public void visit(OrExpression orExpression) {
-        //解析左右表达式
-        Expression leftExpression = orExpression.getLeftExpression();
-        DBDecryptExpressionVisitor leftExpressionVisitor = DBDecryptExpressionVisitor.newInstanceCurLayer(this);
-        leftExpression.accept(leftExpressionVisitor);
-        orExpression.setLeftExpression(Optional.ofNullable(leftExpressionVisitor.getExpression()).orElse(leftExpression));
-
-        Expression rightExpression = orExpression.getRightExpression();
-        DBDecryptExpressionVisitor rightExpressionVisitor = DBDecryptExpressionVisitor.newInstanceCurLayer(this);
-        rightExpression.accept(rightExpressionVisitor);
-        orExpression.setRightExpression(Optional.ofNullable(rightExpressionVisitor.getExpression()).orElse(rightExpression));
+        //db模式处理左右表达式
+        JsqlparserUtil.visitDbBinaryExpression(this, orExpression);
     }
 
     @Override
     public void visit(XorExpression xorExpression) {
-
+        //db模式处理左右表达式
+        JsqlparserUtil.visitDbBinaryExpression(this, xorExpression);
     }
 
     @Override
@@ -318,43 +313,20 @@ public class DBDecryptExpressionVisitor extends BaseDEcryptParseTable implements
         }
 
         //4.其它情况（两边都不是Column） 解析左右两边的表达式
-        Expression leftExpression = equalsTo.getLeftExpression();
-        DBDecryptExpressionVisitor leftExpressionVisitor = DBDecryptExpressionVisitor.newInstanceCurLayer(this);
-        leftExpression.accept(leftExpressionVisitor);
-        equalsTo.setLeftExpression(Optional.ofNullable(leftExpressionVisitor.getExpression()).orElse(leftExpression));
-
-        Expression rightExpression = equalsTo.getRightExpression();
-        DBDecryptExpressionVisitor rightExpressionVisitor = DBDecryptExpressionVisitor.newInstanceCurLayer(this);
-        rightExpression.accept(rightExpressionVisitor);
-        equalsTo.setRightExpression(Optional.ofNullable(rightExpressionVisitor.getExpression()).orElse(rightExpression));
+        //db模式处理左右表达式
+        JsqlparserUtil.visitDbBinaryExpression(this, equalsTo);
     }
 
     @Override
     public void visit(GreaterThan greaterThan) {
-        //解析左右表达式
-        Expression leftExpression = greaterThan.getLeftExpression();
-        DBDecryptExpressionVisitor leftExpressionVisitor = DBDecryptExpressionVisitor.newInstanceCurLayer(this);
-        leftExpression.accept(leftExpressionVisitor);
-        greaterThan.setLeftExpression(Optional.ofNullable(leftExpressionVisitor.getExpression()).orElse(leftExpression));
-
-        Expression rightExpression = greaterThan.getRightExpression();
-        DBDecryptExpressionVisitor rightExpressionVisitor = DBDecryptExpressionVisitor.newInstanceCurLayer(this);
-        rightExpression.accept(rightExpressionVisitor);
-        greaterThan.setRightExpression(Optional.ofNullable(rightExpressionVisitor.getExpression()).orElse(rightExpression));
+        //db模式处理左右表达式
+        JsqlparserUtil.visitDbBinaryExpression(this, greaterThan);
     }
 
     @Override
     public void visit(GreaterThanEquals greaterThanEquals) {
-        //解析左右表达式
-        Expression leftExpression = greaterThanEquals.getLeftExpression();
-        DBDecryptExpressionVisitor leftExpressionVisitor = DBDecryptExpressionVisitor.newInstanceCurLayer(this);
-        leftExpression.accept(leftExpressionVisitor);
-        greaterThanEquals.setLeftExpression(Optional.ofNullable(leftExpressionVisitor.getExpression()).orElse(leftExpression));
-
-        Expression rightExpression = greaterThanEquals.getRightExpression();
-        DBDecryptExpressionVisitor rightExpressionVisitor = DBDecryptExpressionVisitor.newInstanceCurLayer(this);
-        rightExpression.accept(rightExpressionVisitor);
-        greaterThanEquals.setRightExpression(Optional.ofNullable(rightExpressionVisitor.getExpression()).orElse(rightExpression));
+        //db模式处理左右表达式
+        JsqlparserUtil.visitDbBinaryExpression(this, greaterThanEquals);
     }
 
     /**
@@ -473,44 +445,20 @@ public class DBDecryptExpressionVisitor extends BaseDEcryptParseTable implements
 
     @Override
     public void visit(LikeExpression likeExpression) {
-        //解析左右表达式
-        Expression leftExpression = likeExpression.getLeftExpression();
-        DBDecryptExpressionVisitor leftExpressionVisitor = DBDecryptExpressionVisitor.newInstanceCurLayer(this);
-        leftExpression.accept(leftExpressionVisitor);
-        likeExpression.setLeftExpression(Optional.ofNullable(leftExpressionVisitor.getExpression()).orElse(leftExpression));
-
-        Expression rightExpression = likeExpression.getRightExpression();
-        DBDecryptExpressionVisitor rightExpressionVisitor = DBDecryptExpressionVisitor.newInstanceCurLayer(this);
-        rightExpression.accept(rightExpressionVisitor);
-        likeExpression.setRightExpression(Optional.ofNullable(rightExpressionVisitor.getExpression()).orElse(rightExpression));
+        //db模式处理左右表达式
+        JsqlparserUtil.visitDbBinaryExpression(this, likeExpression);
     }
 
     @Override
     public void visit(MinorThan minorThan) {
-        //解析左右表达式
-        Expression leftExpression = minorThan.getLeftExpression();
-        DBDecryptExpressionVisitor leftExpressionVisitor = DBDecryptExpressionVisitor.newInstanceCurLayer(this);
-        leftExpression.accept(leftExpressionVisitor);
-        minorThan.setLeftExpression(Optional.ofNullable(leftExpressionVisitor.getExpression()).orElse(leftExpression));
-
-        Expression rightExpression = minorThan.getRightExpression();
-        DBDecryptExpressionVisitor rightExpressionVisitor = DBDecryptExpressionVisitor.newInstanceCurLayer(this);
-        rightExpression.accept(rightExpressionVisitor);
-        minorThan.setRightExpression(Optional.ofNullable(rightExpressionVisitor.getExpression()).orElse(rightExpression));
+        //db模式处理左右表达式
+        JsqlparserUtil.visitDbBinaryExpression(this, minorThan);
     }
 
     @Override
     public void visit(MinorThanEquals minorThanEquals) {
-        //解析左右表达式
-        Expression leftExpression = minorThanEquals.getLeftExpression();
-        DBDecryptExpressionVisitor leftExpressionVisitor = DBDecryptExpressionVisitor.newInstanceCurLayer(this);
-        leftExpression.accept(leftExpressionVisitor);
-        minorThanEquals.setLeftExpression(Optional.ofNullable(leftExpressionVisitor.getExpression()).orElse(leftExpression));
-
-        Expression rightExpression = minorThanEquals.getRightExpression();
-        DBDecryptExpressionVisitor rightExpressionVisitor = DBDecryptExpressionVisitor.newInstanceCurLayer(this);
-        rightExpression.accept(rightExpressionVisitor);
-        minorThanEquals.setRightExpression(Optional.ofNullable(rightExpressionVisitor.getExpression()).orElse(rightExpression));
+        //db模式处理左右表达式
+        JsqlparserUtil.visitDbBinaryExpression(this, minorThanEquals);
     }
 
     @Override
@@ -545,17 +493,8 @@ public class DBDecryptExpressionVisitor extends BaseDEcryptParseTable implements
         }
 
         //4.其它情况（两边都不是Column） 解析左右两边的表达式
-        Expression leftExpression = notEqualsTo.getLeftExpression();
-        DBDecryptExpressionVisitor leftExpressionVisitor = DBDecryptExpressionVisitor.newInstanceCurLayer(this);
-        leftExpression.accept(leftExpressionVisitor);
-        notEqualsTo.setLeftExpression(Optional.ofNullable(leftExpressionVisitor.getExpression()).orElse(leftExpression));
-
-        Expression rightExpression = notEqualsTo.getRightExpression();
-        DBDecryptExpressionVisitor rightExpressionVisitor = DBDecryptExpressionVisitor.newInstanceCurLayer(this);
-        rightExpression.accept(rightExpressionVisitor);
-        notEqualsTo.setRightExpression(Optional.ofNullable(rightExpressionVisitor.getExpression()).orElse(rightExpression));
-
-
+        //db模式处理左右表达式
+        JsqlparserUtil.visitDbBinaryExpression(this, notEqualsTo);
     }
 
     @Override
@@ -607,6 +546,8 @@ public class DBDecryptExpressionVisitor extends BaseDEcryptParseTable implements
      * 这种语法
      * 场景2：
      * xxx in (select xxx from tb)
+     * 场景3：
+     * exists (select xxx from tb)
      *
      * @author liutangqi
      * @date 2024/3/6 17:19
@@ -615,7 +556,7 @@ public class DBDecryptExpressionVisitor extends BaseDEcryptParseTable implements
     @Override
     public void visit(Select subSelect) {
         //这种语法的里面都是单独的语句，所以这里将里层的语句单独解析一次
-        //1.采用独立存储空间单独解析当前子查询的语法
+        //1.采用独立存储空间单独解析合并当前子查询的语法
         FieldParseParseTableSelectVisitor sFieldSelectItemVisitor = FieldParseParseTableSelectVisitor.newInstanceIndividualMap(this);
         subSelect.accept(sFieldSelectItemVisitor);
 
@@ -812,10 +753,10 @@ public class DBDecryptExpressionVisitor extends BaseDEcryptParseTable implements
     @Override
     public void visit(ExpressionList expressionList) {
         for (int i = 0; i < expressionList.size(); i++) {
-            Expression expression = (Expression) expressionList.get(i);
+            Expression exp = (Expression) expressionList.get(i);
             DBDecryptExpressionVisitor dbDecryptExpressionVisitor = DBDecryptExpressionVisitor.newInstanceCurLayer(this);
-            expression.accept(dbDecryptExpressionVisitor);
-            expressionList.set(i, Optional.ofNullable(dbDecryptExpressionVisitor.getExpression()).orElse(expression));
+            exp.accept(dbDecryptExpressionVisitor);
+            expressionList.set(i, Optional.ofNullable(dbDecryptExpressionVisitor.getExpression()).orElse(exp));
         }
     }
 
@@ -829,18 +770,8 @@ public class DBDecryptExpressionVisitor extends BaseDEcryptParseTable implements
      **/
     @Override
     public void visit(RowConstructor rowConstructor) {
-        List<Expression> resExp = new ArrayList<>();
 
-        //依次处理每个表达式
-        List<Expression> expressions = (List<Expression>) rowConstructor;
-        for (Expression exp : expressions) {
-            DBDecryptExpressionVisitor expressionVisitor = DBDecryptExpressionVisitor.newInstanceCurLayer(this);
-            exp.accept(expressionVisitor);
-            resExp.add(Optional.ofNullable(expressionVisitor.getExpression()).orElse(exp));
-        }
 
-        //处理后的表达式赋值
-        rowConstructor.setExpressions(resExp);
     }
 
 
@@ -956,7 +887,6 @@ public class DBDecryptExpressionVisitor extends BaseDEcryptParseTable implements
 
     @Override
     public void visit(ParenthesedSelect parenthesedSelect) {
-        System.out.println("可疑语法出现，请注意" + parenthesedSelect.toString());
     }
 
     /**

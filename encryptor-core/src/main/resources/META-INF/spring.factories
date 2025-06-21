@@ -1,2 +1,5 @@
 org.springframework.boot.autoconfigure.EnableAutoConfiguration=\
-    com.sangsang.interceptor.RegisterConfig
+    com.sangsang.config.FieldConfig,\
+  com.sangsang.config.EncryptorConfig,\
+  com.sangsang.config.DesensitizeConfig,\
+  com.sangsang.config.TransformationConfig

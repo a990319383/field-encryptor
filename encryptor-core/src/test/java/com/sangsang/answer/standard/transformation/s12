@@ -1,0 +1,1 @@
+SELECT LISTAGG(concat(user_name, phone), ',') AS f1, LISTAGG(user_name, ',') WITHIN GROUP (ORDER BY id DESC) AS f2, LISTAGG(user_name, ';') AS f3, LISTAGG(concat(user_name, '-', phone), ';') WITHIN GROUP (ORDER BY id DESC) AS f4 FROM tb_user

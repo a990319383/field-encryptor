@@ -3,12 +3,11 @@ package com.sangsang.cache;
 import cn.hutool.core.util.StrUtil;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableName;
+import com.sangsang.config.properties.FieldProperties;
 import com.sangsang.domain.annos.FieldEncryptor;
 import com.sangsang.domain.annos.ShardingTableEncryptor;
 import com.sangsang.domain.dto.TableFieldDto;
 import com.sangsang.domain.dto.TableInfoDto;
-import com.sangsang.domain.exception.FieldEncryptorException;
-import com.sangsang.encryptor.EncryptorProperties;
 import com.sangsang.util.ClassScanerUtil;
 import com.sangsang.util.ReflectUtils;
 import com.sangsang.util.StringUtils;
@@ -32,16 +31,16 @@ import java.util.stream.Collectors;
 public class TableCache implements BeanPostProcessor {
     private static final Logger log = LoggerFactory.getLogger(TableCache.class);
 
-    private EncryptorProperties encryptorProperties;
+    private FieldProperties fieldProperties;
+
+    public TableCache(FieldProperties fieldProperties) {
+        this.fieldProperties = fieldProperties;
+    }
 
     /**
      * key: 表名小写  value: (key:字段名小写  value: 实体类上标注的@FieldEncryptor注解)
      */
     private static final Map<String, Map<String, FieldEncryptor>> TABLE_ENTITY_CACHE = new HashMap<>();
-
-    public TableCache(EncryptorProperties encryptorProperties) {
-        this.encryptorProperties = encryptorProperties;
-    }
 
     /**
      * 有字段需要加解密的表名的集合（小写）
@@ -66,26 +65,25 @@ public class TableCache implements BeanPostProcessor {
         List<TableInfoDto> tableInfoDtos = null;
 
         //1.如果指定扫描路径，则从指定路径获取当前项目表的实体类结构信息
-        if (!CollectionUtils.isEmpty(encryptorProperties.getScanEntityPackage())) {
-            tableInfoDtos = encryptorProperties.getScanEntityPackage()
+        if (!CollectionUtils.isEmpty(fieldProperties.getScanEntityPackage())) {
+            tableInfoDtos = fieldProperties.getScanEntityPackage()
                     .stream()
                     .map(m -> parseTableInfoByScanEntityPackage(m))
                     .flatMap(Collection::stream)
                     .collect(Collectors.toList());
-            log.info("【field-encryptor】初始化表字段加密信息，扫描指定包路径 :{} 合计表数量：{}", encryptorProperties.getScanEntityPackage(), tableInfoDtos.size());
+            log.info("【field-encryptor】初始化表结构信息，扫描指定包路径 :{} 合计表数量：{}", fieldProperties.getScanEntityPackage(), tableInfoDtos.size());
         }
 
         //2.如果没有指定扫描路径，则从mybatis-plus提供的工具，获取当前项目模块加载的表的实体类信息
-        if (CollectionUtils.isEmpty(encryptorProperties.getScanEntityPackage())) {
-            log.info("【field-encryptor】初始化表字段加密信息，未指定实体类扫描路径");
-            //tableInfoDtos = parseTableInfoByMybatisPlus();  设计中剥离mybatis-plus
-            throw new FieldEncryptorException("未指定实体类扫描路径");
+        if (CollectionUtils.isEmpty(fieldProperties.getScanEntityPackage())) {
+            log.warn("【field-encryptor】初始化表结构信息，未指定实体类扫描路径，如需使用字段自动加解密或者语法转换，请检查配置");
+            return;
         }
 
         //3.将表结构信息处理，加载到缓存的各个Map中
         fillCacheMap(tableInfoDtos);
 
-        log.info("【field-encryptor】初始化表字段加密信息，处理完毕 耗时：{}ms", (System.currentTimeMillis() - startTime));
+        log.info("【field-encryptor】初始化表结构信息，处理完毕 耗时：{}ms", (System.currentTimeMillis() - startTime));
     }
 
 

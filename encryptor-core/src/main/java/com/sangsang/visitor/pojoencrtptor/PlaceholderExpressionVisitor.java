@@ -1,6 +1,6 @@
 package com.sangsang.visitor.pojoencrtptor;
 
-import com.sangsang.domain.constants.DecryptConstant;
+import com.sangsang.domain.constants.FieldConstant;
 import com.sangsang.domain.dto.BaseFieldParseTable;
 import com.sangsang.domain.dto.ColumnTableDto;
 import com.sangsang.domain.dto.PlaceholderFieldParseTable;
@@ -24,7 +24,7 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * 解析where 条件中#{}条件入参条件所属的表以及字段
+ * 解析中#{}条件入参条件所属的表以及字段
  *
  * @author liutangqi
  * @date 2024/7/11 10:47
@@ -73,6 +73,10 @@ public class PlaceholderExpressionVisitor extends PlaceholderFieldParseTable imp
     private PlaceholderExpressionVisitor(BaseFieldParseTable baseFieldParseTable, Map<String, ColumnTableDto> placeholderColumnTableMap, Expression upstreamExpression) {
         super(baseFieldParseTable, placeholderColumnTableMap);
         this.upstreamExpression = upstreamExpression;
+    }
+
+    public Expression getUpstreamExpression() {
+        return upstreamExpression;
     }
 
     @Override
@@ -186,33 +190,21 @@ public class PlaceholderExpressionVisitor extends PlaceholderFieldParseTable imp
 
     @Override
     public void visit(AndExpression andExpression) {
-        //类似递归解析左右两边的表达式
-        Expression leftExpression = andExpression.getLeftExpression();
-        leftExpression.accept(this);
-
-        Expression rightExpression = andExpression.getRightExpression();
-        rightExpression.accept(this);
+        //pojo模式处理左右表达式
+        JsqlparserUtil.visitPojoBinaryExpression(this, andExpression);
     }
 
     @Override
     public void visit(OrExpression orExpression) {
-        //类似递归解析左右两边的表达式
-        Expression leftExpression = orExpression.getLeftExpression();
-        leftExpression.accept(this);
-
-        Expression rightExpression = orExpression.getRightExpression();
-        rightExpression.accept(this);
+        //pojo模式处理左右表达式
+        JsqlparserUtil.visitPojoBinaryExpression(this, orExpression);
 
     }
 
     @Override
     public void visit(XorExpression xorExpression) {
-        //类似递归解析左右两边的表达式
-        Expression leftExpression = xorExpression.getLeftExpression();
-        leftExpression.accept(this);
-
-        Expression rightExpression = xorExpression.getRightExpression();
-        rightExpression.accept(this);
+        //pojo模式处理左右表达式
+        JsqlparserUtil.visitPojoBinaryExpression(this, xorExpression);
     }
 
     @Override
@@ -472,7 +464,7 @@ public class PlaceholderExpressionVisitor extends PlaceholderFieldParseTable imp
     @Override
     public void visit(WhenClause whenClause) {
         //对应case when的情况1： case 表字段  when ?占位符 then xxx
-        if (this.upstreamExpression instanceof Column && whenClause.getWhenExpression().toString().contains(DecryptConstant.PLACEHOLDER)) {
+        if (this.upstreamExpression instanceof Column && whenClause.getWhenExpression().toString().contains(FieldConstant.PLACEHOLDER)) {
             ColumnTableDto columnTableDto = JsqlparserUtil.parseColumn((Column) this.upstreamExpression, this.getLayer(), this.getLayerFieldTableMap());
             this.getPlaceholderColumnTableMap().put(whenClause.getWhenExpression().toString(), columnTableDto);
         }

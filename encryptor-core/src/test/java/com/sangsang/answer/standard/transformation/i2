@@ -1,0 +1,1 @@
+INSERT INTO tb_user ("user_name", "phone") SELECT "user_name", "phone" FROM tb_user WHERE "id" > 5

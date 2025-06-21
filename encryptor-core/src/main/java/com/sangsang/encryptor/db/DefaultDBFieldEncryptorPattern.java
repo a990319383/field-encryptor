@@ -1,7 +1,7 @@
 package com.sangsang.encryptor.db;
 
+import com.sangsang.config.properties.FieldProperties;
 import com.sangsang.domain.constants.SymbolConstant;
-import com.sangsang.encryptor.EncryptorProperties;
 import net.sf.jsqlparser.expression.CastExpression;
 import net.sf.jsqlparser.expression.Expression;
 import net.sf.jsqlparser.expression.Function;
@@ -18,17 +18,17 @@ import net.sf.jsqlparser.expression.operators.relational.ExpressionList;
 public class DefaultDBFieldEncryptorPattern implements DBFieldEncryptorPattern {
 
     //加密秘钥
-    private EncryptorProperties encryptorProperties;
+    private FieldProperties fieldProperties;
 
-    public DefaultDBFieldEncryptorPattern(EncryptorProperties encryptorProperties) {
-        this.encryptorProperties = encryptorProperties;
+    public DefaultDBFieldEncryptorPattern(FieldProperties fieldProperties) {
+        this.fieldProperties = fieldProperties;
     }
 
     @Override
     public Expression encryption(Expression oldExpression) {
         Function aesEncryptFunction = new Function();
         aesEncryptFunction.setName(SymbolConstant.AES_ENCRYPT);
-        aesEncryptFunction.setParameters(new ExpressionList(oldExpression, new StringValue(encryptorProperties.getSecretKey())));
+        aesEncryptFunction.setParameters(new ExpressionList(oldExpression, new StringValue(fieldProperties.getEncryptor().getSecretKey())));
         Function toBase64Function = new Function();
         toBase64Function.setName(SymbolConstant.TO_BASE64);
         toBase64Function.setParameters(new ExpressionList(aesEncryptFunction));
@@ -42,13 +42,12 @@ public class DefaultDBFieldEncryptorPattern implements DBFieldEncryptorPattern {
         base64Function.setParameters(new ExpressionList(oldExpression));
         Function decryptFunction = new Function();
         decryptFunction.setName(SymbolConstant.AES_DECRYPT);
-        decryptFunction.setParameters(new ExpressionList(base64Function, new StringValue(encryptorProperties.getSecretKey())));
+        decryptFunction.setParameters(new ExpressionList(base64Function, new StringValue(fieldProperties.getEncryptor().getSecretKey())));
 
         //类型转换，避免上面解密函数出现中文乱码
         CastExpression castExpression = new CastExpression();
         castExpression.setLeftExpression(decryptFunction);
         castExpression.setColDataType(SymbolConstant.COLDATATYPE_HCAR);
-//        castExpression.setType(SymbolConstant.COLDATATYPE_HCAR);
         return castExpression;
     }
 }

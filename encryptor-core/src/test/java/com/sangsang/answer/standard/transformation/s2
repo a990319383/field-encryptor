@@ -1,0 +1,1 @@
+SELECT DATE_FORMAT(now(), '%Y-%m-%d') AS f1, DATE_FORMAT(CREATE_TIME, '%Y-%m-%d') FROM TB_USER
