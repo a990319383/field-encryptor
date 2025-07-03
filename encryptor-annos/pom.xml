@@ -5,13 +5,13 @@
     <parent>
         <groupId>io.gitee.tired-of-the-water</groupId>
         <artifactId>field-encryptor</artifactId>
-        <version>${revision}</version>
+        <version>3.5.0</version>
     </parent>
     <modelVersion>4.0.0</modelVersion>
 
     <artifactId>encryptor-annos</artifactId>
 
-    <description>注解包，某些场景模块只需要注解，不需要mybatis-plus，所以将注解模块独立开来</description>
+    <description>注解包，某些场景模块只需要注解，不需要mybatis，所以将注解模块独立开来</description>
 
     <dependencies>
         <!-- mybatis-plus 的注解 -->
@@ -19,6 +19,12 @@
             <groupId>com.baomidou</groupId>
             <artifactId>mybatis-plus-annotation</artifactId>
             <version>3.5.3.1</version>
+        </dependency>
+        <!--jsqlparser-->
+        <dependency>
+            <groupId>com.github.jsqlparser</groupId>
+            <artifactId>jsqlparser</artifactId>
+            <version>4.9</version>
         </dependency>
     </dependencies>
 

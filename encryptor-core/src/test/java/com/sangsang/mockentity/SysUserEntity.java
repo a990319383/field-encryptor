@@ -1,10 +1,8 @@
 package com.sangsang.mockentity;
 
-import com.baomidou.mybatisplus.annotation.TableName;
 import com.baomidou.mybatisplus.annotation.FieldFill;
 import com.baomidou.mybatisplus.annotation.TableField;
-
-import java.io.Serializable;
+import com.baomidou.mybatisplus.annotation.TableName;
 
 /**
  * 系统用户表

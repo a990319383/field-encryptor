@@ -4,7 +4,7 @@ import cn.hutool.core.io.file.FileReader;
 import cn.hutool.core.io.file.FileWriter;
 import com.sangsang.domain.dto.ColumnTableDto;
 import com.sangsang.domain.dto.FieldEncryptorInfoDto;
-import javafx.util.Pair;
+import cn.hutool.core.lang.Pair;
 
 import java.util.List;
 import java.util.Map;

@@ -1,7 +1,7 @@
 package com.sangsang.visitor.pojoencrtptor;
 
 import cn.hutool.core.map.MapUtil;
-import com.sangsang.cache.TableCache;
+import com.sangsang.cache.encryptor.TableCache;
 import com.sangsang.domain.constants.NumberConstant;
 import com.sangsang.domain.dto.ColumnTableDto;
 import com.sangsang.domain.dto.FieldEncryptorInfoDto;
@@ -10,6 +10,7 @@ import com.sangsang.util.CollectionUtils;
 import com.sangsang.util.JsqlparserUtil;
 import com.sangsang.visitor.fieldparse.FieldParseParseTableFromItemVisitor;
 import com.sangsang.visitor.fieldparse.FieldParseParseTableSelectVisitor;
+import lombok.extern.slf4j.Slf4j;
 import net.sf.jsqlparser.expression.Expression;
 import net.sf.jsqlparser.expression.operators.relational.ExpressionList;
 import net.sf.jsqlparser.schema.Column;
@@ -45,8 +46,6 @@ import net.sf.jsqlparser.statement.truncate.Truncate;
 import net.sf.jsqlparser.statement.update.Update;
 import net.sf.jsqlparser.statement.update.UpdateSet;
 import net.sf.jsqlparser.statement.upsert.Upsert;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -60,8 +59,8 @@ import java.util.stream.Collectors;
  * @author liutangqi
  * @date 2024/7/6 13:22
  */
+@Slf4j
 public class PoJoEncrtptorStatementVisitor implements StatementVisitor {
-    private static final Logger log = LoggerFactory.getLogger(PoJoEncrtptorStatementVisitor.class);
     /**
      * 当前sql涉及到的字段以及字段的所属表结构信息
      **/
@@ -128,16 +127,11 @@ public class PoJoEncrtptorStatementVisitor implements StatementVisitor {
             rightItem.accept(fieldParseTableFromItemVisitor);
         }
 
-        //3.当前sql涉及到的表不需要加密的不做处理 pojo模式不能跳过
-//        if (!JsqlparserUtil.needEncrypt(fieldParseTableFromItemVisitor.getLayerSelectTableFieldMap(), fieldParseTableFromItemVisitor.getLayerFieldTableMap())) {
-//            return;
-//        }
-
-        //4.将where 条件进行加密
+        //3.将where 条件进行加密
         PlaceholderExpressionVisitor placeholderWhereExpressionVisitor = PlaceholderExpressionVisitor.newInstanceCurLayer(fieldParseTableFromItemVisitor, this.placeholderColumnTableMap);
         where.accept(placeholderWhereExpressionVisitor);
 
-        //5.结果赋值
+        //4.结果赋值
         this.placeholderColumnTableMap = placeholderWhereExpressionVisitor.getPlaceholderColumnTableMap();
     }
 
@@ -156,22 +150,17 @@ public class PoJoEncrtptorStatementVisitor implements StatementVisitor {
             join.getRightItem().accept(fieldParseTableFromItemVisitor);
         }
 
-        //2.当前sql涉及到的表不需要加密的不做处理  pojo模式不能跳过
-//        if (!JsqlparserUtil.needEncrypt(fieldParseTableFromItemVisitor.getLayerSelectTableFieldMap(), fieldParseTableFromItemVisitor.getLayerFieldTableMap())) {
-//            return;
-//        }
-
-        //3.初始化占位符解析的结果集
+        //2.初始化占位符解析的结果集
         this.placeholderColumnTableMap = new HashMap<>();
 
-        //4.加密where 条件的数据
+        //3.加密where 条件的数据
         Expression where = update.getWhere();
         if (where != null) {
             PlaceholderExpressionVisitor dencryptWhereFieldVisitor = PlaceholderExpressionVisitor.newInstanceCurLayer(fieldParseTableFromItemVisitor, this.getPlaceholderColumnTableMap());
             where.accept(dencryptWhereFieldVisitor);
         }
 
-        //5.加密处理set的数据
+        //4.加密处理set的数据
         List<UpdateSet> updateSets = update.getUpdateSets();
         for (UpdateSet updateSet : updateSets) {
             List<Column> columns = updateSet.getColumns();
@@ -192,12 +181,8 @@ public class PoJoEncrtptorStatementVisitor implements StatementVisitor {
 
     @Override
     public void visit(Insert insert) {
-        //insert 的表
+        //1.insert 的表
         Table table = insert.getTable();
-        //1.当前表不需要加密，直接返回，不处理  pojo模式不能跳过
-//        if (!TableCache.getFieldEncryptTable().contains(table.getName().toLowerCase())) {
-//            return;
-//        }
 
         //2.解析当前insert字段所属的表结构信息
         //2.1 获取当前insert语句中的所有字段

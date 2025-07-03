@@ -1,7 +1,6 @@
 package com.sangsang.util;
 
 import cn.hutool.crypto.digest.DigestUtil;
-import com.sangsang.cache.TableCache;
 import com.sangsang.domain.constants.FieldConstant;
 import com.sangsang.domain.constants.SymbolConstant;
 
@@ -161,29 +160,30 @@ public class StringUtils {
     }
 
     /**
-     * 判断sql中是否一定不存在加解密的字段
+     * 判断sql中是否一定不存在 lowerTableNames 中涉及的表
      *
-     * @return true:一定不存在 false: 可能存在
+     * @return true:一定不存在  false: 可能存在
      * @author liutangqi
-     * @date 2024/9/18 22:02
-     * @Param [sql]
+     * @date 2025/7/3 10:40
+     * @Param [sql, lowerTableNames]
      **/
-    public static boolean notExistEncryptor(String sql) {
-        if (StringUtils.isBlank(sql)) {
+    public static boolean notExist(String sql, Set<String> lowerTableNames) {
+        //1.表名为空，或者sql为空 肯定不存在
+        if (StringUtils.isBlank(sql) || CollectionUtils.isEmpty(lowerTableNames)) {
             return true;
         }
-        //sql转小写
+
+        //2.sql转小写
         String lowerCaseSql = sql.toLowerCase();
 
-        //获取当前需要加解密的表
-        Set<String> fieldEncryptTable = TableCache.getFieldEncryptTable();
-        for (String table : fieldEncryptTable) {
+        //3.依次判断sql中是否包含执行表名
+        for (String table : lowerTableNames) {
             if (lowerCaseSql.contains(table)) {
                 return false;
             }
         }
 
-        //都不含需要加解密的表，则当前sql一定不需要加解密
+        //4.都不包含
         return true;
     }
 

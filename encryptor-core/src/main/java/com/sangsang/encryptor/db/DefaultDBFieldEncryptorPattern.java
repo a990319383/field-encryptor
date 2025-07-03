@@ -2,6 +2,8 @@ package com.sangsang.encryptor.db;
 
 import com.sangsang.config.properties.FieldProperties;
 import com.sangsang.domain.constants.SymbolConstant;
+import com.sangsang.domain.strategy.encryptor.DBFieldEncryptorStrategy;
+import com.sangsang.domain.strategy.encryptor.FieldEncryptorStrategy;
 import net.sf.jsqlparser.expression.CastExpression;
 import net.sf.jsqlparser.expression.Expression;
 import net.sf.jsqlparser.expression.Function;
@@ -15,7 +17,7 @@ import net.sf.jsqlparser.expression.operators.relational.ExpressionList;
  * @author liutangqi
  * @date 2024/4/8 14:13
  */
-public class DefaultDBFieldEncryptorPattern implements DBFieldEncryptorPattern {
+public class DefaultDBFieldEncryptorPattern implements FieldEncryptorStrategy<Expression> {
 
     //加密秘钥
     private FieldProperties fieldProperties;

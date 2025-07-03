@@ -1,6 +1,8 @@
 package com.sangsang.mockentity;
 
 
+import com.baomidou.mybatisplus.annotation.TableId;
+
 import java.time.LocalDateTime;
 
 /**
@@ -13,6 +15,7 @@ public class BaseEntity {
     /**
      * 主键
      */
+    @TableId
     private Long id;
     /**
      * 创建时间

@@ -1,17 +1,17 @@
 package com.sangsang.interceptor;
 
 import cn.hutool.core.lang.Pair;
-import com.sangsang.domain.annos.FieldDesensitize;
+import com.sangsang.domain.annos.desensitize.FieldDesensitize;
 import com.sangsang.domain.annos.FieldInterceptorOrder;
-import com.sangsang.domain.annos.MapperDesensitize;
+import com.sangsang.domain.annos.desensitize.MapperDesensitize;
 import com.sangsang.domain.constants.FieldConstant;
 import com.sangsang.domain.constants.InterceptorOrderConstant;
 import com.sangsang.domain.dto.ColumnTableDto;
 import com.sangsang.domain.dto.FieldEncryptorInfoDto;
 import com.sangsang.util.*;
 import com.sangsang.visitor.pojoencrtptor.PoJoEncrtptorStatementVisitor;
+import lombok.extern.slf4j.Slf4j;
 import net.sf.jsqlparser.JSQLParserException;
-import net.sf.jsqlparser.parser.CCJSqlParserUtil;
 import net.sf.jsqlparser.statement.Statement;
 import org.apache.ibatis.cache.CacheKey;
 import org.apache.ibatis.executor.Executor;
@@ -21,8 +21,6 @@ import org.apache.ibatis.plugin.*;
 import org.apache.ibatis.session.ResultHandler;
 import org.apache.ibatis.session.RowBounds;
 import org.apache.ibatis.session.SqlSessionFactory;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.config.BeanPostProcessor;
 
@@ -40,8 +38,8 @@ import java.util.*;
         @Signature(type = Executor.class, method = "query", args = {MappedStatement.class, Object.class, RowBounds.class, ResultHandler.class, CacheKey.class, BoundSql.class}),
         @Signature(type = Executor.class, method = "query", args = {MappedStatement.class, Object.class, RowBounds.class, ResultHandler.class})
 })
+@Slf4j
 public class FieldDesensitizeInterceptor implements Interceptor, BeanPostProcessor {
-    private static final Logger log = LoggerFactory.getLogger(FieldDesensitizeInterceptor.class);
 
     @Override
     public Object intercept(Invocation invocation) throws Throwable {
@@ -54,7 +52,7 @@ public class FieldDesensitizeInterceptor implements Interceptor, BeanPostProcess
         //3.执行sql
         Object result = invocation.proceed();
 
-        //5.处理响应
+        //4.处理响应
         return disposeResult(result, mapperFieldDesensitize);
     }
 
@@ -98,7 +96,7 @@ public class FieldDesensitizeInterceptor implements Interceptor, BeanPostProcess
         String placeholderSql = StringUtils.question2Placeholder(sql);
 
         //2.解析sql的响应结果，和占位符对应的表字段关系
-        Statement statement = CCJSqlParserUtil.parse(StringUtils.replaceLineBreak(placeholderSql));
+        Statement statement = JsqlparserUtil.parse(placeholderSql);
         PoJoEncrtptorStatementVisitor poJoEncrtptorStatementVisitor = new PoJoEncrtptorStatementVisitor();
         statement.accept(poJoEncrtptorStatementVisitor);
 

@@ -2,22 +2,23 @@ package com.sangsang.interceptor;
 
 import cn.hutool.core.lang.Pair;
 import cn.hutool.core.util.StrUtil;
-import com.sangsang.cache.FieldEncryptorPatternCache;
-import com.sangsang.domain.annos.FieldEncryptor;
+import com.sangsang.cache.encryptor.EncryptorInstanceCache;
+import com.sangsang.cache.encryptor.TableCache;
+import com.sangsang.domain.annos.encryptor.FieldEncryptor;
 import com.sangsang.domain.annos.FieldInterceptorOrder;
-import com.sangsang.domain.annos.PoJoResultEncryptor;
+import com.sangsang.domain.annos.encryptor.PoJoResultEncryptor;
 import com.sangsang.domain.constants.FieldConstant;
 import com.sangsang.domain.constants.InterceptorOrderConstant;
 import com.sangsang.domain.constants.SymbolConstant;
 import com.sangsang.domain.dto.ColumnTableDto;
 import com.sangsang.domain.dto.FieldEncryptorInfoDto;
-import com.sangsang.domain.enums.PoJoAlgorithmEnum;
 import com.sangsang.util.InterceptorUtil;
+import com.sangsang.util.JsqlparserUtil;
 import com.sangsang.util.ReflectUtils;
 import com.sangsang.util.StringUtils;
 import com.sangsang.visitor.pojoencrtptor.PoJoEncrtptorStatementVisitor;
+import lombok.extern.slf4j.Slf4j;
 import net.sf.jsqlparser.JSQLParserException;
-import net.sf.jsqlparser.parser.CCJSqlParserUtil;
 import net.sf.jsqlparser.statement.Statement;
 import org.apache.ibatis.cache.CacheKey;
 import org.apache.ibatis.executor.Executor;
@@ -27,8 +28,6 @@ import org.apache.ibatis.plugin.*;
 import org.apache.ibatis.session.ResultHandler;
 import org.apache.ibatis.session.RowBounds;
 import org.apache.ibatis.session.SqlSessionFactory;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.config.BeanPostProcessor;
 import org.springframework.util.CollectionUtils;
@@ -48,9 +47,8 @@ import java.util.*;
         @Signature(type = Executor.class, method = "query", args = {MappedStatement.class, Object.class, RowBounds.class, ResultHandler.class, CacheKey.class, BoundSql.class}),
         @Signature(type = Executor.class, method = "query", args = {MappedStatement.class, Object.class, RowBounds.class, ResultHandler.class})
 })
+@Slf4j
 public class PoJoResultEncrtptorInterceptor implements Interceptor, BeanPostProcessor {
-    private static final Logger log = LoggerFactory.getLogger(PoJoResultEncrtptorInterceptor.class);
-
     @Override
     public Object intercept(Invocation invocation) throws Throwable {
         //1.获取核心类(@Signature 后面的args顺序和下面获取的一致)
@@ -60,7 +58,7 @@ public class PoJoResultEncrtptorInterceptor implements Interceptor, BeanPostProc
         String originalSql = boundSql.getSql();
 
         //2.当前sql如果肯定不需要加解密，则不解析sql，直接返回
-        if (StringUtils.notExistEncryptor(originalSql)) {
+        if (StringUtils.notExist(originalSql, TableCache.getFieldEncryptTable())) {
             return invocation.proceed();
         }
 
@@ -87,7 +85,7 @@ public class PoJoResultEncrtptorInterceptor implements Interceptor, BeanPostProc
         String placeholderSql = StringUtils.question2Placeholder(sql);
 
         //2.解析sql的响应结果，和占位符对应的表字段关系
-        Statement statement = CCJSqlParserUtil.parse(StringUtils.replaceLineBreak(placeholderSql));
+        Statement statement = JsqlparserUtil.parse(placeholderSql);
         PoJoEncrtptorStatementVisitor poJoEncrtptorStatementVisitor = new PoJoEncrtptorStatementVisitor();
         statement.accept(poJoEncrtptorStatementVisitor);
 
@@ -147,34 +145,31 @@ public class PoJoResultEncrtptorInterceptor implements Interceptor, BeanPostProc
             if (res instanceof String && fieldInfos.size() == 1) {
                 FieldEncryptor fieldEncryptor = fieldInfos.get(0).getFieldEncryptor();
                 if (fieldEncryptor != null) {
-                    res = FieldEncryptorPatternCache.getPoJoInstance(fieldEncryptor.pojoAlgorithm()).decryption((String) res);
+                    res = EncryptorInstanceCache.<String>getInstance(fieldEncryptor.value()).decryption((String) res);
                     return res;
                 }
             }
-
-            //2.响应类型是Map
-        } else if (res instanceof Map) {
+        }
+        //2.响应类型是Map
+        else if (res instanceof Map) {
             Map resMap = (Map) res;
             for (Map.Entry<String, Object> entry : (Set<Map.Entry<String, Object>>) resMap.entrySet()) {
                 FieldEncryptor fieldEncryptor = getFieldEncryptorByFieldName(entry.getKey(), fieldInfos);
                 if (fieldEncryptor != null) {
-                    entry.setValue(FieldEncryptorPatternCache.getPoJoInstance(fieldEncryptor.pojoAlgorithm()).decryption((String) entry.getValue()));
+                    entry.setValue(EncryptorInstanceCache.<String>getInstance(fieldEncryptor.value()).decryption((String) entry.getValue()));
                 }
             }
-
-            //3.响应类型是其它实体类
-        } else {
+        }
+        //3.响应类型是其它实体类
+        else {
             List<Field> allFields = ReflectUtils.getNotStaticFinalFields(res.getClass());
             for (Field field : allFields) {
                 //优先取响应实体类字段上面的@PoJoResultEncryptor 的信息 ，取不到再根据实体类上面标注的信息取
                 PoJoResultEncryptor poJoResultEncryptor = field.getAnnotation(PoJoResultEncryptor.class);
                 FieldEncryptor fieldEncryptor = getFieldEncryptorByFieldName(field.getName(), fieldInfos);
-                PoJoAlgorithmEnum poJoAlgorithmEnum = Optional.ofNullable(poJoResultEncryptor)
-                        .map(PoJoResultEncryptor::pojoAlgorithm)
-                        .orElse(Optional.ofNullable(fieldEncryptor).map(FieldEncryptor::pojoAlgorithm).orElse(null));
                 if (poJoResultEncryptor != null || fieldEncryptor != null) {
                     field.setAccessible(true);
-                    field.set(res, FieldEncryptorPatternCache.getPoJoInstance(poJoAlgorithmEnum).decryption((String) field.get(res)));
+                    field.set(res, EncryptorInstanceCache.<String>getInstance(fieldEncryptor.value()).decryption((String) field.get(res)));
                 }
             }
         }

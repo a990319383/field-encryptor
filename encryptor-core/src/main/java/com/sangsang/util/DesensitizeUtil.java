@@ -1,6 +1,6 @@
 package com.sangsang.util;
 
-import com.sangsang.domain.interfaces.DesensitizeInterface;
+import com.sangsang.domain.strategy.desensitize.DesensitizeInterface;
 
 import java.util.HashMap;
 import java.util.Map;

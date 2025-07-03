@@ -1,6 +1,6 @@
 package com.sangsang.visitor.transformation;
 
-import com.sangsang.cache.TransformationInstanceCache;
+import com.sangsang.cache.transformation.TransformationInstanceCache;
 import com.sangsang.domain.dto.BaseFieldParseTable;
 import com.sangsang.domain.dto.ColumnTransformationDto;
 import com.sangsang.domain.dto.FieldInfoDto;

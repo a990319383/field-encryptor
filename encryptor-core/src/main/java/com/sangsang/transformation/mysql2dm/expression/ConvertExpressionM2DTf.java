@@ -1,10 +1,9 @@
 package com.sangsang.transformation.mysql2dm.expression;
 
 import com.sangsang.transformation.ExpressionTransformation;
+import lombok.extern.slf4j.Slf4j;
 import net.sf.jsqlparser.expression.Expression;
 import net.sf.jsqlparser.expression.TranscodingFunction;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * convert函数的转换，由于达梦没有可替代的语法，所以这里只做警告日志输出，由用户自己从业务上替换
@@ -12,9 +11,8 @@ import org.slf4j.LoggerFactory;
  * @author liutangqi
  * @date 2025/6/3 14:41
  */
+@Slf4j
 public class ConvertExpressionM2DTf extends ExpressionTransformation {
-    private static final Logger log = LoggerFactory.getLogger(ConvertExpressionM2DTf.class);
-
     @Override
     public boolean needTransformation(Expression expression) {
         //所有的convert函数都需要转换

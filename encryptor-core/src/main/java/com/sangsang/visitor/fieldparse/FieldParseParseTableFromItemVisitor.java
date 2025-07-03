@@ -1,6 +1,6 @@
 package com.sangsang.visitor.fieldparse;
 
-import com.sangsang.cache.TableCache;
+import com.sangsang.cache.encryptor.TableCache;
 import com.sangsang.domain.constants.FieldConstant;
 import com.sangsang.domain.constants.NumberConstant;
 import com.sangsang.domain.dto.BaseFieldParseTable;
