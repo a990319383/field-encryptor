@@ -1,12 +1,11 @@
 package com.sangsang.config;
 
-import com.sangsang.cache.FieldEncryptorPatternCache;
+import com.sangsang.cache.encryptor.EncryptorInstanceCache;
 import com.sangsang.config.properties.FieldProperties;
 import com.sangsang.domain.constants.EncryptorPatternTypeConstant;
-import com.sangsang.encryptor.db.DBFieldEncryptorPattern;
+import com.sangsang.domain.strategy.encryptor.FieldEncryptorStrategy;
 import com.sangsang.encryptor.db.DefaultDBFieldEncryptorPattern;
 import com.sangsang.encryptor.pojo.DefaultPoJoFieldEncryptorPattern;
-import com.sangsang.encryptor.pojo.PoJoFieldEncryptorPattern;
 import com.sangsang.interceptor.DBFieldEncryptorInterceptor;
 import com.sangsang.interceptor.PoJoParamEncrtptorInterceptor;
 import com.sangsang.interceptor.PoJoResultEncrtptorInterceptor;
@@ -25,6 +24,21 @@ import java.util.List;
  */
 @Configuration
 public class EncryptorConfig {
+
+    /**
+     * 缓存当前项目配置的加密算法
+     * 可能是db模式的也可能是pojo模式的
+     *
+     * @author liutangqi
+     * @date 2024/9/19 14:34
+     **/
+    @Bean
+    @ConditionalOnProperty(name = "field.encryptor.patternType")
+    public EncryptorInstanceCache poJoEncryptorCache(List<FieldEncryptorStrategy> strategies) {
+        EncryptorInstanceCache encryptorCache = new EncryptorInstanceCache();
+        encryptorCache.init(strategies);
+        return encryptorCache;
+    }
 
     /**
      * 注册pojo模式入参加解密的拦截器
@@ -52,6 +66,22 @@ public class EncryptorConfig {
         return new PoJoResultEncrtptorInterceptor();
     }
 
+
+    /**
+     * 默认的pojo加解密算法
+     *
+     * @author liutangqi
+     * @date 2024/9/19 13:40
+     * @Param []
+     **/
+    @Bean
+    @ConditionalOnMissingBean(FieldEncryptorStrategy.class)
+    @ConditionalOnProperty(name = "field.encryptor.patternType", havingValue = EncryptorPatternTypeConstant.POJO)
+    public FieldEncryptorStrategy defaultPoJoFieldEncryptorPattern(FieldProperties fieldProperties) {
+        return new DefaultPoJoFieldEncryptorPattern(fieldProperties);
+    }
+
+
     /**
      * 注册db模式加解密的拦截器
      *
@@ -65,22 +95,6 @@ public class EncryptorConfig {
         return new DBFieldEncryptorInterceptor();
     }
 
-
-    /**
-     * 默认的pojo加解密算法
-     *
-     * @author liutangqi
-     * @date 2024/9/19 13:40
-     * @Param []
-     **/
-    @Bean
-    @ConditionalOnMissingBean(PoJoFieldEncryptorPattern.class)
-    @ConditionalOnProperty(name = "field.encryptor.patternType", havingValue = EncryptorPatternTypeConstant.POJO)
-    public PoJoFieldEncryptorPattern defaultPoJoFieldEncryptorPattern(FieldProperties fieldProperties) {
-        return new DefaultPoJoFieldEncryptorPattern(fieldProperties);
-    }
-
-
     /**
      * 默认的db模式下的加解密算法
      *
@@ -89,40 +103,10 @@ public class EncryptorConfig {
      * @Param [encryptorProperties]
      **/
     @Bean
-    @ConditionalOnMissingBean(DBFieldEncryptorPattern.class)
+    @ConditionalOnMissingBean(FieldEncryptorStrategy.class)
     @ConditionalOnProperty(name = "field.encryptor.patternType", havingValue = EncryptorPatternTypeConstant.DB)
-    public DBFieldEncryptorPattern defaultDBFieldEncryptorPattern(FieldProperties fieldProperties) {
+    public FieldEncryptorStrategy defaultDBFieldEncryptorPattern(FieldProperties fieldProperties) {
         return new DefaultDBFieldEncryptorPattern(fieldProperties);
     }
-
-    /**
-     * pojo模式下缓存当前项目配置的加密算法
-     *
-     * @author liutangqi
-     * @date 2024/9/19 14:34
-     **/
-    @Bean
-    @ConditionalOnProperty(name = "field.encryptor.patternType", havingValue = EncryptorPatternTypeConstant.POJO)
-    public FieldEncryptorPatternCache pojoFieldEncryptorPatternCache(List<PoJoFieldEncryptorPattern> poJoFieldEncryptorPatternLists) {
-        FieldEncryptorPatternCache fieldEncryptorPatternCache = new FieldEncryptorPatternCache(poJoFieldEncryptorPatternLists);
-        fieldEncryptorPatternCache.init();
-        return fieldEncryptorPatternCache;
-    }
-
-
-    /**
-     * db模式下缓存当前项目配置的加密算法
-     *
-     * @author liutangqi
-     * @date 2024/9/19 14:34
-     **/
-    @Bean
-    @ConditionalOnProperty(name = "field.encryptor.patternType", havingValue = EncryptorPatternTypeConstant.DB)
-    public FieldEncryptorPatternCache dbFieldEncryptorPatternCache(DBFieldEncryptorPattern dbFieldEncryptorPattern) {
-        FieldEncryptorPatternCache fieldEncryptorPatternCache = new FieldEncryptorPatternCache(dbFieldEncryptorPattern);
-        fieldEncryptorPatternCache.init();
-        return fieldEncryptorPatternCache;
-    }
-
 
 }

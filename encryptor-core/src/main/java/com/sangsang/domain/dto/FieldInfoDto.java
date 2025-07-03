@@ -1,13 +1,18 @@
 package com.sangsang.domain.dto;
 
 
+import lombok.Data;
+
 import java.io.Serializable;
 import java.util.Objects;
 
 /**
+ * todo-ltq 这个lombok暂时替换不了，会改变字段顺序，后面换
+ *
  * @author liutangqi
  * @date 2024/3/6 10:30
  */
+@Data
 public class FieldInfoDto implements Serializable {
     /**
      * 字段的别名或者是原字段名
@@ -30,6 +35,7 @@ public class FieldInfoDto implements Serializable {
      * 栗子：select user_name   from tb_user    user_name 这个字段真实属于tb_user的，这个值就是ture
      * select a.userName from (select user_name   from tb_user )a    userName这个字段是来自于表a 的，表a不是真实的数据来源表，所以这个值是false
      **/
+
     private boolean fromSourceTable = false;
 
 

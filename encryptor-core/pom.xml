@@ -5,7 +5,7 @@
     <parent>
         <groupId>io.gitee.tired-of-the-water</groupId>
         <artifactId>field-encryptor</artifactId>
-        <version>${revision}</version>
+        <version>3.5.0</version>
     </parent>
     <modelVersion>4.0.0</modelVersion>
 
@@ -15,11 +15,11 @@
     </properties>
 
     <dependencies>
-        <!--加解密注解包-->
+        <!--公共注解包-->
         <dependency>
             <groupId>io.gitee.tired-of-the-water</groupId>
             <artifactId>encryptor-annos</artifactId>
-            <version>${revision}</version>
+            <version>3.5.0</version>
         </dependency>
         <!--spring-boot-->
         <dependency>
@@ -36,15 +36,28 @@
         </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <version>${spring-boot.version}</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>org.slf4j</groupId>
+                    <artifactId>slf4j-api</artifactId>
+                </exclusion>
+            </exclusions>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-configuration-processor</artifactId>
             <version>${spring-boot.version}</version>
             <optional>true</optional>
         </dependency>
+        <!--aop-->
         <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-test</artifactId>
-            <version>${spring-boot.version}</version>
-            <scope>test</scope>
+            <groupId>org.aspectj</groupId>
+            <artifactId>aspectjweaver</artifactId>
+            <version>1.9.7</version>
+            <scope>provided</scope>
         </dependency>
         <!-- log -->
         <dependency>
@@ -60,12 +73,6 @@
             <version>3.5.10</version>
             <scope>provided</scope>
         </dependency>
-        <!--jsqlparser-->
-        <dependency>
-            <groupId>com.github.jsqlparser</groupId>
-            <artifactId>jsqlparser</artifactId>
-            <version>4.9</version>
-        </dependency>
         <!--hutool-->
         <dependency>
             <groupId>cn.hutool</groupId>
@@ -73,50 +80,4 @@
             <version>5.8.11</version>
         </dependency>
     </dependencies>
-
-    <!--将jsqlparser打入到自己的jar包中，避免版本冲突导致的问题 -->
-    <build>
-        <plugins>
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-shade-plugin</artifactId>
-                <version>3.2.4</version>
-                <executions>
-                    <execution>
-                        <!-- 和package 阶段绑定 -->
-                        <phase>package</phase>
-                        <goals>
-                            <goal>shade</goal>
-                        </goals>
-                        <configuration>
-                            <artifactSet>
-                                <!-- 只把指定的包打入我们自己的jar中 -->
-                                <includes>
-                                    <include>com.github.jsqlparser:jsqlparser</include>
-                                    <include>cn.hutool:hutool-all</include>
-                                </includes>
-                                <!--   也可以配置只排除某些包不打入自己的jar中  <excludes>
-                                       <exclude>cn.hutool:hutool-all</exclude>
-                                   </excludes>
-                                   -->
-                            </artifactSet>
-                            <!-- 此处按需编写更具体的配置 -->
-                            <relocations>
-                                <relocation>
-                                    <!-- 将jsqlparse的包打入jar包中，并进行重命名，避免jar包冲突 -->
-                                    <pattern>net.sf.jsqlparser</pattern>
-                                    <shadedPattern>com.shade.net.sf.jsqlparser</shadedPattern>
-                                </relocation>
-                                <relocation>
-                                    <!-- 将hutool的包打入jar包中，并进行重命名，避免jar包冲突 -->
-                                    <pattern>cn.hutool</pattern>
-                                    <shadedPattern>com.shade.cn.hutool</shadedPattern>
-                                </relocation>
-                            </relocations>
-                        </configuration>
-                    </execution>
-                </executions>
-            </plugin>
-        </plugins>
-    </build>
 </project>

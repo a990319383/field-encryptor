@@ -1,9 +1,9 @@
 package com.sangsang.bak;
 
-import com.sangsang.cache.TableCache;
+import com.sangsang.cache.encryptor.EncryptorInstanceCache;
+import com.sangsang.cache.encryptor.TableCache;
 import com.sangsang.domain.constants.SymbolConstant;
 import com.sangsang.domain.dto.TableFieldMsgDto;
-import com.sangsang.encryptor.db.DBFieldEncryptorPattern;
 import com.sangsang.util.StringUtils;
 import net.sf.jsqlparser.schema.Column;
 
@@ -19,11 +19,6 @@ import java.util.stream.Collectors;
  * @date 2024/8/22 13:29
  */
 public class BakSqlCreater {
-    private DBFieldEncryptorPattern dbFieldEncryptorPattern;
-
-    public BakSqlCreater(DBFieldEncryptorPattern dbFieldEncryptorPattern) {
-        this.dbFieldEncryptorPattern = dbFieldEncryptorPattern;
-    }
 
     /**
      * 根据后缀，生成备份表的建表语句
@@ -41,7 +36,8 @@ public class BakSqlCreater {
                         TableCache.getTableFieldEncryptInfo()
                                 .getOrDefault(f.getTableName().toLowerCase(), new HashMap<>())
                                 .getOrDefault(f.getColumnName().toLowerCase(), null) != null //需要加解密的字段
-                ).collect(Collectors.toList());
+                ).peek(p -> p.setFieldEncryptor(TableCache.getTableFieldEncryptInfo().get(p.getTableName().toLowerCase()).get(p.getColumnName().toLowerCase())))
+                .collect(Collectors.toList());
 
         //2.根据表名进行分组
         Map<String, List<TableFieldMsgDto>> tableFieldMsgeMap = tableFieldMsgList.stream().collect(Collectors.groupingBy(TableFieldMsgDto::getTableName));
@@ -124,7 +120,7 @@ public class BakSqlCreater {
         //过滤掉主键
         List<TableFieldMsgDto> tableFieldMsgDtos = tableFieldEntry.getValue().stream().filter(f -> !StringUtils.equalCaseInsensitive(SymbolConstant.PRIMARY_KEY, f.getColumnKey())).collect(Collectors.toList());
         for (TableFieldMsgDto tableFieldMsgDto : tableFieldMsgDtos) {
-            String encryptionField = this.dbFieldEncryptorPattern.encryption(new Column("bak." + tableFieldMsgDto.getColumnName())).toString();
+            String encryptionField = EncryptorInstanceCache.getInstance(tableFieldMsgDto.getFieldEncryptor().value()).encryption(new Column("bak." + tableFieldMsgDto.getColumnName())).toString();
             sql = sql + "t." + tableFieldMsgDto.getColumnName() + " = " + encryptionField + ",";
         }
 

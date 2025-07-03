@@ -1,18 +1,24 @@
 package com.sangsang.util;
 
-import com.sangsang.cache.TableCache;
-import com.sangsang.domain.annos.FieldEncryptor;
+import com.sangsang.cache.SqlParseCache;
+import com.sangsang.cache.encryptor.EncryptorInstanceCache;
+import com.sangsang.cache.encryptor.TableCache;
+import com.sangsang.domain.annos.encryptor.FieldEncryptor;
 import com.sangsang.domain.constants.FieldConstant;
 import com.sangsang.domain.dto.ColumnTableDto;
 import com.sangsang.domain.dto.FieldInfoDto;
+import com.sangsang.domain.enums.EncryptorFunctionEnum;
 import com.sangsang.visitor.dbencrtptor.DBDecryptExpressionVisitor;
 import com.sangsang.visitor.pojoencrtptor.PlaceholderExpressionVisitor;
 import com.sangsang.visitor.transformation.TransformationExpressionVisitor;
 import com.sangsang.visitor.transformation.wrap.ExpressionWrapper;
+import net.sf.jsqlparser.JSQLParserException;
 import net.sf.jsqlparser.expression.*;
-import net.sf.jsqlparser.expression.operators.relational.ExpressionList;
+import net.sf.jsqlparser.expression.operators.relational.ComparisonOperator;
+import net.sf.jsqlparser.parser.CCJSqlParserUtil;
 import net.sf.jsqlparser.schema.Column;
 import net.sf.jsqlparser.schema.Table;
+import net.sf.jsqlparser.statement.Statement;
 import net.sf.jsqlparser.statement.select.AllColumns;
 import net.sf.jsqlparser.statement.select.AllTableColumns;
 import net.sf.jsqlparser.statement.select.SelectItem;
@@ -30,28 +36,25 @@ import java.util.stream.Collectors;
  */
 public class JsqlparserUtil {
 
-
     /**
-     * 将 column 变成function转换为查询项
-     * 备注：暂未使用此方法，此方法只为记录转换拼接的语法
+     * Jsqlparser解析的统一入口，不直接使用原生的CCJSqlParserUtil.parse()
      *
      * @author liutangqi
-     * @date 2024/3/11 9:07
-     * @Param [column]
+     * @date 2025/6/18 14:19
+     * @Param [sql]
      **/
-    public static SelectItem functColumn(Column column, Alias alias) {
-        String columnName = column.getColumnName();
-
-        Function aesEncryptFunction = new Function();
-        aesEncryptFunction.setName("AES_ENCRYPT");
-        aesEncryptFunction.setParameters(new ExpressionList(new Column(columnName), new StringValue("encryptionKey")));
-
-        Function toBase64Function = new Function();
-        toBase64Function.setName("TO_BASE64");
-        toBase64Function.setParameters(new ExpressionList(aesEncryptFunction));
-
-        alias = alias == null ? new Alias(columnName) : alias;
-        return SelectItem.from(toBase64Function, alias);
+    public static Statement parse(String sql) throws JSQLParserException {
+        //1.去除空白行
+        String clearSql = StringUtils.replaceLineBreak(sql);
+        //2.判断缓存是否命中
+        Statement sqlParseCache = SqlParseCache.getSqlParseCache(clearSql);
+        if (sqlParseCache != null) {
+            return sqlParseCache;
+        }
+        //3.缓存没命中，重新开始解析，并将解析结果扔到缓存中
+        Statement statement = CCJSqlParserUtil.parse(clearSql);
+        SqlParseCache.setSqlParseCache(clearSql, statement);
+        return statement;
     }
 
     /**
@@ -212,6 +215,35 @@ public class JsqlparserUtil {
                 .orElse(null) != null;
     }
 
+    /**
+     * 判断这个字段是否需要密文存储，需要的话，返回字段标注的@FieldEncryptor
+     * 参考上面这个方法 com.sangsang.util.JsqlparserUtil#needEncrypt(net.sf.jsqlparser.schema.Column, int, java.util.Map)
+     *
+     * @author liutangqi
+     * @date 2025/6/25 16:30
+     * @Param [column, layer, layerFieldTableMap]
+     **/
+    public static FieldEncryptor needEncryptFieldEncryptor(Expression expression, int layer, Map<String, Map<String, Set<FieldInfoDto>>> layerFieldTableMap) {
+        //0.不是Column直接返回，其它表达式的话上面是不可能标识得有注解的
+        if (!(expression instanceof Column)) {
+            return null;
+        }
+
+        //1.匹配所属表信息
+        Column column = (Column) expression;
+        ColumnTableDto columnTableDto = parseColumn(column, layer, layerFieldTableMap);
+
+        //2.当前字段不是直接来源自真实表，而是包了一层的子查询的字段，直接返回，不做处理
+        if (!columnTableDto.isFromSourceTable()) {
+            return null;
+        }
+
+        //3.从当前表字段中找符合条件的字段上面的注解
+        return Optional.ofNullable(TableCache.getTableFieldEncryptInfo())
+                .map(m -> CollectionUtils.getValueIgnoreFloat(m, columnTableDto.getSourceTableName()))
+                .map(m -> CollectionUtils.getValueIgnoreFloat(m, columnTableDto.getSourceColumn()))
+                .orElse(null);
+    }
 
     /**
      * 将 dto 存放到对应的layerTableMap 中
@@ -397,15 +429,66 @@ public class JsqlparserUtil {
         Expression leftExpression = expression.getLeftExpression();
         DBDecryptExpressionVisitor leftExpressionVisitor = DBDecryptExpressionVisitor.newInstanceCurLayer(dbExpressionVisitor);
         leftExpression.accept(leftExpressionVisitor);
-        expression.setLeftExpression(Optional.ofNullable(leftExpressionVisitor.getExpression()).orElse(leftExpression));
+        expression.setLeftExpression(Optional.ofNullable(leftExpressionVisitor.getProcessedExpression()).orElse(leftExpression));
 
         //解析右表达式
         Expression rightExpression = expression.getRightExpression();
         DBDecryptExpressionVisitor rightExpressionVisitor = DBDecryptExpressionVisitor.newInstanceCurLayer(dbExpressionVisitor);
         rightExpression.accept(rightExpressionVisitor);
-        expression.setRightExpression(Optional.ofNullable(rightExpressionVisitor.getExpression()).orElse(rightExpression));
+        expression.setRightExpression(Optional.ofNullable(rightExpressionVisitor.getProcessedExpression()).orElse(rightExpression));
     }
 
+    /**
+     * 针对ComparisonOperator进行db模式的加解密
+     *
+     * @author liutangqi
+     * @date 2025/7/2 17:55
+     * @Param [dbExpressionVisitor, expression]
+     **/
+    public static void visitComparisonOperator(DBDecryptExpressionVisitor dbExpressionVisitor, ComparisonOperator expression) {
+        //1.如果左右侧都是 Column 类型的话
+        if ((expression.getLeftExpression() instanceof Column) && expression.getRightExpression() instanceof Column) {
+            //1.1 两边都需要加密且算法一致时或者两边都不需要加密时，不需要处理
+            FieldEncryptor leftFieldEncryptor = JsqlparserUtil.needEncryptFieldEncryptor(expression.getLeftExpression(), dbExpressionVisitor.getLayer(), dbExpressionVisitor.getLayerFieldTableMap());
+            FieldEncryptor rightFieldEncryptor = JsqlparserUtil.needEncryptFieldEncryptor(expression.getRightExpression(), dbExpressionVisitor.getLayer(), dbExpressionVisitor.getLayerFieldTableMap());
+            if (Objects.equals(Optional.ofNullable(leftFieldEncryptor).map(FieldEncryptor::value).orElse(null),
+                    Optional.ofNullable(rightFieldEncryptor).map(FieldEncryptor::value).orElse(null))) {
+                return;
+            }
+            //1.2 两边算法不一致时，处理右边表达式
+            DBDecryptExpressionVisitor dbExpVisitor = DBDecryptExpressionVisitor.newInstanceCurLayer(dbExpressionVisitor, EncryptorFunctionEnum.UPSTREAM_COLUMN, leftFieldEncryptor);
+            expression.getRightExpression().accept(dbExpVisitor);
+            //1.3处理结果赋值
+            Optional.ofNullable(dbExpVisitor.getProcessedExpression()).ifPresent(p -> expression.setRightExpression(p));
+            return;
+        }
+
+        //2.左边是 Column 右边不是 Column ，避免索引失效，将非Column进行加密处理即可
+        if ((expression.getLeftExpression() instanceof Column) && !(expression.getRightExpression() instanceof Column)) {
+            //Column 是需要加密的字段则将非Column进行加密
+            FieldEncryptor leftColumnFieldEncryptor = JsqlparserUtil.needEncryptFieldEncryptor(expression.getLeftExpression(), dbExpressionVisitor.getLayer(), dbExpressionVisitor.getLayerFieldTableMap());
+            if (leftColumnFieldEncryptor != null) {
+                Expression newRightExpression = EncryptorInstanceCache.<Expression>getInstance(leftColumnFieldEncryptor.value()).encryption(expression.getRightExpression());
+                expression.setRightExpression(newRightExpression);
+            }
+            return;
+        }
+
+        //3. 左边不是Column 右边是 Column  ，避免索引失效，将非Column进行加密处理即可
+        if ((expression.getRightExpression() instanceof Column) && !(expression.getLeftExpression() instanceof Column)) {
+            //Column 是需要加密的字段则将非Column进行加密
+            FieldEncryptor rightColumnFieldEncryptor = JsqlparserUtil.needEncryptFieldEncryptor(expression.getRightExpression(), dbExpressionVisitor.getLayer(), dbExpressionVisitor.getLayerFieldTableMap());
+            if (rightColumnFieldEncryptor != null) {
+                Expression newLeftExpression = EncryptorInstanceCache.<Expression>getInstance(rightColumnFieldEncryptor.value()).encryption(expression.getLeftExpression());
+                expression.setLeftExpression(newLeftExpression);
+            }
+            return;
+        }
+
+        //4.其它情况（两边都不是Column） 解析左右两边的表达式
+        //db模式处理左右表达式
+        JsqlparserUtil.visitDbBinaryExpression(dbExpressionVisitor, expression);
+    }
 
     /**
      * 针对BinaryExpression进行pojo模式的占位符的解析

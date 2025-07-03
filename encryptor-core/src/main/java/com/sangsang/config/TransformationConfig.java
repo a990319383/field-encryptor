@@ -1,6 +1,6 @@
 package com.sangsang.config;
 
-import com.sangsang.cache.TransformationInstanceCache;
+import com.sangsang.cache.transformation.TransformationInstanceCache;
 import com.sangsang.config.properties.FieldProperties;
 import com.sangsang.interceptor.TransformationInterceptor;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;

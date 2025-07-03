@@ -2,6 +2,7 @@ package com.sangsang.util;
 
 import com.sangsang.domain.annos.FieldInterceptorOrder;
 import com.sangsang.domain.constants.InterceptorOrderConstant;
+import com.sangsang.domain.constants.SymbolConstant;
 import org.apache.ibatis.executor.statement.StatementHandler;
 import org.apache.ibatis.mapping.MappedStatement;
 import org.apache.ibatis.plugin.Interceptor;
@@ -12,12 +13,14 @@ import org.apache.ibatis.reflection.MetaObject;
 import org.apache.ibatis.reflection.SystemMetaObject;
 import org.apache.ibatis.session.Configuration;
 
+import java.lang.annotation.Annotation;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Proxy;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  * 拦截器相关的工具类
@@ -53,6 +56,30 @@ public class InterceptorUtil {
         interceptors.clear();
         interceptors.addAll(selftInterceptor);
         interceptors.addAll(otherInterceptor);
+    }
+
+    /**
+     * 判断当前sql的mapper上面是否标注了注解T
+     *
+     * @author liutangqi
+     * @date 2025/6/13 18:29
+     * @Param [statementHandler, t]
+     **/
+    public static <T extends Annotation> T getMapperAnnotation(StatementHandler statementHandler, Class<? extends T> t) throws Exception {
+        //类全限定名.方法名
+        String nameSpace = getNameSpace(statementHandler);
+
+        //以最后一个.为界，获取到类全限定名和方法名
+        int lastDotIndex = nameSpace.lastIndexOf(SymbolConstant.FULL_STOP);
+        String classFullyName = nameSpace.substring(0, lastDotIndex);
+        String methodName = nameSpace.substring(lastDotIndex + 1);
+
+        //反射判断是否存在此注解
+        return Stream.of(Class.forName(classFullyName).getDeclaredMethods())
+                .filter(f -> f.getName().equals(methodName))
+                .findFirst()
+                .map(m -> m.getAnnotation(t))
+                .orElse(null);
     }
 
 

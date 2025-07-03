@@ -1,6 +1,7 @@
 package com.sangsang.domain.dto;
 
 
+import lombok.Getter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -15,6 +16,7 @@ import java.util.Set;
  * @author liutangqi
  * @date 2024/3/4 14:26
  */
+@Getter
 public class BaseFieldParseTable {
     /**
      * 层数
@@ -48,18 +50,6 @@ public class BaseFieldParseTable {
         this.layer = layer;
         this.layerSelectTableFieldMap = Optional.ofNullable(layerSelectTableFieldMap).orElse(new HashMap<>());
         this.layerFieldTableMap = Optional.ofNullable(layerFieldTableMap).orElse(new HashMap<>());
-    }
-
-    public int getLayer() {
-        return layer;
-    }
-
-    public Map<String, Map<String, Set<FieldInfoDto>>> getLayerSelectTableFieldMap() {
-        return layerSelectTableFieldMap;
-    }
-
-    public Map<String, Map<String, Set<FieldInfoDto>>> getLayerFieldTableMap() {
-        return layerFieldTableMap;
     }
 
 }

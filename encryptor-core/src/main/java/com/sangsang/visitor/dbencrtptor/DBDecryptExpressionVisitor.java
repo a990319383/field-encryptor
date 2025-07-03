@@ -1,15 +1,15 @@
 package com.sangsang.visitor.dbencrtptor;
 
-import com.sangsang.cache.FieldEncryptorPatternCache;
+import com.sangsang.domain.annos.encryptor.FieldEncryptor;
 import com.sangsang.domain.constants.NumberConstant;
 import com.sangsang.domain.dto.BaseDEcryptParseTable;
 import com.sangsang.domain.dto.BaseFieldParseTable;
 import com.sangsang.domain.dto.FieldInfoDto;
-import com.sangsang.domain.enums.EncryptorEnum;
 import com.sangsang.domain.enums.EncryptorFunctionEnum;
 import com.sangsang.util.CollectionUtils;
 import com.sangsang.util.JsqlparserUtil;
 import com.sangsang.visitor.fieldparse.FieldParseParseTableSelectVisitor;
+import lombok.Getter;
 import net.sf.jsqlparser.expression.*;
 import net.sf.jsqlparser.expression.operators.arithmetic.*;
 import net.sf.jsqlparser.expression.operators.conditional.AndExpression;
@@ -36,14 +36,18 @@ public class DBDecryptExpressionVisitor extends BaseDEcryptParseTable implements
     /**
      * 列经过处理后的别名
      * 当字段经过加解密函数处理后，这个值就会被赋值
+     * 注意:这里的getter方法获取到的别名，如果别名不需要额外处理，返回的是原有的别名
      */
+    @Getter
     private Alias alias;
 
     /**
-     * 加解密处理好后的表达式
-     * 当字段经过加解密函数处理后，这个值就会被赋值
-     */
-    private Expression expression;
+     * 经过加解密处理后的表达式，如果没有处理过，则这个字段为null
+     * 注意：这里getter方法不能像Transformation一样获取后立马清除，达到visitor复用的效果，因为visitor里面除了处理后的表达式还有其他属性，如果处理后删除的话，会导致其它属性错乱
+     * 这里也不能立即把其它属性给清除了，因为其它的属性在下游的其它地方可能会有使用
+     **/
+    @Getter
+    private Expression processedExpression;
 
     /**
      * 获取当前层的解析对象
@@ -54,9 +58,11 @@ public class DBDecryptExpressionVisitor extends BaseDEcryptParseTable implements
      * @Param [baseFieldParseTable, alias, expression]
      **/
     public static DBDecryptExpressionVisitor newInstanceCurLayer(BaseFieldParseTable baseFieldParseTable,
-                                                                 EncryptorFunctionEnum encryptorFunctionEnum) {
+                                                                 EncryptorFunctionEnum encryptorFunctionEnum,
+                                                                 FieldEncryptor upstreamFieldEncryptor) {
         return new DBDecryptExpressionVisitor(baseFieldParseTable.getLayer(),
                 encryptorFunctionEnum,
+                upstreamFieldEncryptor,
                 baseFieldParseTable.getLayerSelectTableFieldMap(),
                 baseFieldParseTable.getLayerFieldTableMap());
     }
@@ -64,6 +70,7 @@ public class DBDecryptExpressionVisitor extends BaseDEcryptParseTable implements
     /**
      * 获取当前层的解析对象
      * （一般是当前节点调用，当前节点调用请不用直接accept(this),每个节点处理完毕的alias 和expression 需要单独保存，复用会导致错乱）
+     * 注意：当前节点调用的时候，可能上游对应字段的注解不为空，但是再次创建实例时，这里将上游字段注解进行了清空
      *
      * @author liutangqi
      * @date 2025/2/28 23:09
@@ -73,33 +80,18 @@ public class DBDecryptExpressionVisitor extends BaseDEcryptParseTable implements
         return new DBDecryptExpressionVisitor(
                 baseDEcryptParseTable.getLayer(),
                 baseDEcryptParseTable.getEncryptorFunctionEnum(),
+                //注意：baseDEcryptParseTable的上游对应字段，到这里了就不是当前表达式的上游对应字段了，所以这里进行了清空
+                null,
                 baseDEcryptParseTable.getLayerSelectTableFieldMap(),
                 baseDEcryptParseTable.getLayerFieldTableMap());
     }
 
     private DBDecryptExpressionVisitor(int layer,
                                        EncryptorFunctionEnum encryptorFunctionEnum,
+                                       FieldEncryptor upstreamFieldEncryptor,
                                        Map<String, Map<String, Set<FieldInfoDto>>> layerSelectTableFieldMap,
                                        Map<String, Map<String, Set<FieldInfoDto>>> layerFieldTableMap) {
-        super(layer, encryptorFunctionEnum, layerSelectTableFieldMap, layerFieldTableMap);
-    }
-
-    //处理之后的别名，如果别名不需要额外处理，则这里是原有的别名
-    public Alias getAlias() {
-        return alias;
-    }
-
-    /**
-     * 获取处理好后的表达式
-     * 注意：这里不能像Transformation一样获取后立马清除，达到visitor复用的效果，因为visitor里面除了处理后的表达式还有其他属性，如果处理后删除的话，会导致其它属性错乱
-     * 这里也不能立即把其它属性给清除了，因为其它的属性在下游的其它地方可能会有使用
-     *
-     * @author liutangqi
-     * @date 2025/6/6 16:39
-     * @Param []
-     **/
-    public Expression getExpression() {
-        return expression;
+        super(layer, encryptorFunctionEnum, upstreamFieldEncryptor, layerSelectTableFieldMap, layerFieldTableMap);
     }
 
     @Override
@@ -132,7 +124,7 @@ public class DBDecryptExpressionVisitor extends BaseDEcryptParseTable implements
                 .map(m -> {
                     DBDecryptExpressionVisitor sDecryptExpressionVisitor = DBDecryptExpressionVisitor.newInstanceCurLayer(this);
                     m.accept(sDecryptExpressionVisitor);
-                    return Optional.ofNullable(sDecryptExpressionVisitor.getExpression()).orElse(m);
+                    return Optional.ofNullable(sDecryptExpressionVisitor.getProcessedExpression()).orElse(m);
                 }).collect(Collectors.toList());
         if (function.getParameters() != null) {
             function.setParameters(new ExpressionList(expressions));
@@ -154,14 +146,12 @@ public class DBDecryptExpressionVisitor extends BaseDEcryptParseTable implements
      **/
     @Override
     public void visit(JdbcParameter jdbcParameter) {
-        //注意：这种是常量，肯定不是密文，所以下面写死的false
-        Expression newExpression = this.getEncryptorFunctionEnum()
+        //注意：这种是常量，肯定不是密文存储，头上肯定没注解，所以下面 currentFieldEncryptor 是null
+        Expression disposeExp = this.getEncryptorFunctionEnum()
                 .getFun()
-                .dispose(false)
-                .getdEncryptorFunction()
-                .dEcryp(jdbcParameter);
+                .dispose(this.getUpstreamFieldEncryptor(), null, jdbcParameter);
         //处理结果赋值
-        this.expression = newExpression;
+        this.processedExpression = disposeExp;
     }
 
     @Override
@@ -212,7 +202,7 @@ public class DBDecryptExpressionVisitor extends BaseDEcryptParseTable implements
         Expression exp = parenthesis.getExpression();
         DBDecryptExpressionVisitor sDecryptExpressionVisitor = DBDecryptExpressionVisitor.newInstanceCurLayer(this);
         exp.accept(sDecryptExpressionVisitor);
-        parenthesis.setExpression(Optional.ofNullable(sDecryptExpressionVisitor.getExpression()).orElse(exp));
+        parenthesis.setExpression(Optional.ofNullable(sDecryptExpressionVisitor.getProcessedExpression()).orElse(exp));
     }
 
     @Override
@@ -283,40 +273,18 @@ public class DBDecryptExpressionVisitor extends BaseDEcryptParseTable implements
      **/
     @Override
     public void visit(EqualsTo equalsTo) {
-        //1.如果左右侧都是 Column 类型的话，两边都需要加密或者两边都不需要加密时，不需要处理
-        if ((equalsTo.getLeftExpression() instanceof Column) && (equalsTo.getRightExpression() instanceof Column)) {
-            boolean leftNeedEncrypt = JsqlparserUtil.needEncrypt((Column) equalsTo.getLeftExpression(), this.getLayer(), this.getLayerFieldTableMap());
-            boolean rightNeedEncrypt = JsqlparserUtil.needEncrypt((Column) equalsTo.getRightExpression(), this.getLayer(), this.getLayerFieldTableMap());
-            if ((leftNeedEncrypt && rightNeedEncrypt) || (!leftNeedEncrypt && !rightNeedEncrypt)) {
-                return;
-            }
-        }
-
-        //2.左边是 Column 右边不是 Column ，避免索引失效，将非Column进行加密处理即可
-        if ((equalsTo.getLeftExpression() instanceof Column) && !(equalsTo.getRightExpression() instanceof Column)) {
-            //Column 是需要加密的字段则将非Column进行加密
-            if (JsqlparserUtil.needEncrypt((Column) equalsTo.getLeftExpression(), this.getLayer(), this.getLayerFieldTableMap())) {
-                Expression newRightExpression = FieldEncryptorPatternCache.getInstance().encryption(equalsTo.getRightExpression());
-                equalsTo.setRightExpression(newRightExpression);
-            }
-            return;
-        }
-
-        //3. 左边不是Column 右边是 Column  ，避免索引失效，将非Column进行加密处理即可
-        if ((equalsTo.getRightExpression() instanceof Column) && !(equalsTo.getLeftExpression() instanceof Column)) {
-            //Column 是需要加密的字段则将非Column进行加密
-            if (JsqlparserUtil.needEncrypt((Column) equalsTo.getRightExpression(), this.getLayer(), this.getLayerFieldTableMap())) {
-                Expression newLeftExpression = FieldEncryptorPatternCache.getInstance().encryption(equalsTo.getLeftExpression());
-                equalsTo.setLeftExpression(newLeftExpression);
-            }
-            return;
-        }
-
-        //4.其它情况（两边都不是Column） 解析左右两边的表达式
-        //db模式处理左右表达式
-        JsqlparserUtil.visitDbBinaryExpression(this, equalsTo);
+        //db模式处理比较的表达式
+        JsqlparserUtil.visitComparisonOperator(this, equalsTo);
     }
 
+    /**
+     * 大于的处理
+     * 注意：大于，小于 也不能单独只加密常量的那部分，数值类型的字符串加密后是无法用于大于等于判断的，所以下面不能改成 JsqlparserUtil.visitComparisonOperator(this, greaterThan);
+     *
+     * @author liutangqi
+     * @date 2025/7/3 9:22
+     * @Param [greaterThan]
+     **/
     @Override
     public void visit(GreaterThan greaterThan) {
         //db模式处理左右表达式
@@ -338,6 +306,7 @@ public class DBDecryptExpressionVisitor extends BaseDEcryptParseTable implements
      * 语法5： (xxx,yyy) in (select xxx,yyy from )
      * 语法6： concat("aaa",tu.phone) in (? , ?)
      * 语法7： (?,?) in (select xxx,yyy from )
+     * 语法8： (xxx) in 左边是一个字段，但是使用括号包裹起来了，右边不管
      *
      * @author liutangqi
      * @date 2025/3/1 13:54
@@ -347,35 +316,34 @@ public class DBDecryptExpressionVisitor extends BaseDEcryptParseTable implements
     public void visit(InExpression inExpression) {
         //1.处理左边表达式（一般只需要记录左边需要密文存储的索引(1.1,1.2)，只有特殊情况下才需要对左边进行加解密处理(1.3)）
         Expression leftExpression = inExpression.getLeftExpression();
-        //记录左边字段需要密文存储的列下标
-        List<Integer> needEncryptIndex = new ArrayList<>();
-        //1.1 左边是单列的常量或者是字段列时（对应语法1，语法2，语法3）
-        if ((leftExpression instanceof Column) || (inExpression.getLeftExpression() instanceof JdbcParameter)) {
+        //1.1 如果左边表达式是括号包裹起来的，将括号去了看里面的
+        if (leftExpression instanceof Parenthesis) {
+            leftExpression = ((Parenthesis) leftExpression).getExpression();
+        }
+        //1.2 记录左边字段需要密文存储的注解（注意：字段的顺序和下标一致，从0开始）
+        List<FieldEncryptor> needEncryptFieldEncryptorList = new ArrayList<>();
+        //1.3 左边是单列的常量或者是字段列时（对应语法1，语法2，语法3，语法8）
+        if ((leftExpression instanceof Column) || (leftExpression instanceof JdbcParameter)) {
             //获取左边表达式是否是 Column 并且需要进行密文存储
-            boolean columnNeedEncrypt = (inExpression.getLeftExpression() instanceof Column)
-                    && JsqlparserUtil.needEncrypt((Column) inExpression.getLeftExpression(), this.getLayer(), this.getLayerFieldTableMap());
-            //这种情况左边只有一列，如果需要密文存储的话，下标肯定只有一个，是0
-            if (columnNeedEncrypt) {
-                needEncryptIndex.add(NumberConstant.ZERO);
-            }
+            FieldEncryptor leftColumnFieldEncryptor = JsqlparserUtil.needEncryptFieldEncryptor(leftExpression, this.getLayer(), this.getLayerFieldTableMap());
+            //这种情况左边只有一列，下标肯定只有一个，是0
+            needEncryptFieldEncryptorList.add(NumberConstant.ZERO, leftColumnFieldEncryptor);
         }
-        //1.2 左边是多值字段时（对应语法4，语法5，语法7）
+        //1.4 左边是多值字段时（对应语法4，语法5，语法7）
         else if (leftExpression instanceof ParenthesedExpressionList) {
-            ParenthesedExpressionList leftExpressionList = (ParenthesedExpressionList) inExpression.getLeftExpression();
+            ParenthesedExpressionList<Expression> leftExpressionList = (ParenthesedExpressionList) leftExpression;
             for (int i = 0; i < leftExpressionList.size(); i++) {
-                //当前列是 Column类型，并且需要密文存储，则记录当前索引
-                if ((leftExpressionList.get(i) instanceof Column)
-                        && (JsqlparserUtil.needEncrypt((Column) leftExpressionList.get(i), this.getLayer(), this.getLayerFieldTableMap()))) {
-                    needEncryptIndex.add(i);
-                }
+                //记录左边每个字段头上的@FieldEncryptor注解信息
+                FieldEncryptor leftColumnFieldEncryptor = JsqlparserUtil.needEncryptFieldEncryptor(leftExpressionList.get(i), this.getLayer(), this.getLayerFieldTableMap());
+                needEncryptFieldEncryptorList.add(i, leftColumnFieldEncryptor);
             }
         }
-        //1.3 左边是其它情况时（对应语法6）
+        //1.5 左边是其它情况时（对应语法6）
         else {
             //这种情况下，不维护左边的密文存储的下标，左右单独处理
             DBDecryptExpressionVisitor leftExpressionVisitor = DBDecryptExpressionVisitor.newInstanceCurLayer(this);
             leftExpression.accept(leftExpressionVisitor);
-            inExpression.setLeftExpression(Optional.ofNullable(leftExpressionVisitor.getExpression()).orElse(leftExpression));
+            inExpression.setLeftExpression(Optional.ofNullable(leftExpressionVisitor.getProcessedExpression()).orElse(leftExpression));
         }
 
         //2.处理右边表达式
@@ -386,24 +354,25 @@ public class DBDecryptExpressionVisitor extends BaseDEcryptParseTable implements
             for (ExpressionList expList : rightExpressionList) {
                 for (int i = 0; i < expList.size(); i++) {
                     //根据左边是否明密文的情况处理右边
-                    EncryptorFunctionEnum encryptorFunctionEnum = needEncryptIndex.contains(i) ? EncryptorFunctionEnum.UPSTREAM_SECRET : EncryptorFunctionEnum.UPSTREAM_PLAINTEXT;
-                    DBDecryptExpressionVisitor sDecryptExpressionVisitor = DBDecryptExpressionVisitor.newInstanceCurLayer(this, encryptorFunctionEnum);
+                    FieldEncryptor leftColumnFieldEncryptor = needEncryptFieldEncryptorList.get(i);
+                    DBDecryptExpressionVisitor sDecryptExpressionVisitor = DBDecryptExpressionVisitor.newInstanceCurLayer(this, EncryptorFunctionEnum.UPSTREAM_COLUMN, leftColumnFieldEncryptor);
                     ((Expression) expList.get(i)).accept(sDecryptExpressionVisitor);
                     //处理结果赋值
-                    expList.set(i, Optional.ofNullable(sDecryptExpressionVisitor.getExpression()).orElse((Expression) expList.get(i)));
+                    expList.set(i, Optional.ofNullable(sDecryptExpressionVisitor.getProcessedExpression()).orElse((Expression) expList.get(i)));
                 }
             }
         }
-        //2.2 当右边是多列的其它情况（对应语法1,语法6）注意：此时左边肯定只有1列，所以左边如果存在密文存储的字段，则右边全部都需要处理
+        //2.2 当右边是多列的其它情况（对应语法1,语法6）注意：此时左边肯定只有1列
         else if ((rightExpression instanceof ParenthesedExpressionList)) {
             ParenthesedExpressionList<Expression> rightExpressionList = (ParenthesedExpressionList<Expression>) rightExpression;
+            //左边肯定只有一列，所以这里get(0)
+            FieldEncryptor leftColumnFieldEncryptor = needEncryptFieldEncryptorList.size() > NumberConstant.ZERO ? needEncryptFieldEncryptorList.get(NumberConstant.ZERO) : null;
             for (int i = 0; i < rightExpressionList.size(); i++) {
                 //根据左边是否明密文的情况处理右边
-                EncryptorFunctionEnum encryptorFunctionEnum = CollectionUtils.isNotEmpty(needEncryptIndex) ? EncryptorFunctionEnum.UPSTREAM_SECRET : EncryptorFunctionEnum.UPSTREAM_PLAINTEXT;
-                DBDecryptExpressionVisitor sDecryptExpressionVisitor = DBDecryptExpressionVisitor.newInstanceCurLayer(this, encryptorFunctionEnum);
+                DBDecryptExpressionVisitor sDecryptExpressionVisitor = DBDecryptExpressionVisitor.newInstanceCurLayer(this, EncryptorFunctionEnum.UPSTREAM_COLUMN, leftColumnFieldEncryptor);
                 rightExpressionList.get(i).accept(sDecryptExpressionVisitor);
                 //处理结果赋值
-                rightExpressionList.set(i, Optional.ofNullable(sDecryptExpressionVisitor.getExpression()).orElse(rightExpressionList.get(i)));
+                rightExpressionList.set(i, Optional.ofNullable(sDecryptExpressionVisitor.getProcessedExpression()).orElse(rightExpressionList.get(i)));
             }
         }
         //2.3 当右边是子查询时 （对应语法2，语法3，语法5，语法7）
@@ -413,14 +382,14 @@ public class DBDecryptExpressionVisitor extends BaseDEcryptParseTable implements
             FieldParseParseTableSelectVisitor fPTableSelectVisitor = FieldParseParseTableSelectVisitor.newInstanceFirstLayer();
             rightSelect.accept(fPTableSelectVisitor);
             //对右边的sql进行加解密处理
-            DBDecryptSelectVisitor dbDecryptSelectVisitor = DBDecryptSelectVisitor.newInstanceCurLayer(fPTableSelectVisitor, needEncryptIndex);
+            DBDecryptSelectVisitor dbDecryptSelectVisitor = DBDecryptSelectVisitor.newInstanceCurLayer(fPTableSelectVisitor, needEncryptFieldEncryptorList);
             rightSelect.accept(dbDecryptSelectVisitor);
         }
         //2.4 其它情况没单独解析右边
         else {
             DBDecryptExpressionVisitor rightExpressionVisitor = DBDecryptExpressionVisitor.newInstanceCurLayer(this);
             rightExpression.accept(rightExpressionVisitor);
-            inExpression.setRightExpression(Optional.ofNullable(rightExpressionVisitor.getExpression()).orElse(rightExpression));
+            inExpression.setRightExpression(Optional.ofNullable(rightExpressionVisitor.getProcessedExpression()).orElse(rightExpression));
         }
     }
 
@@ -440,9 +409,17 @@ public class DBDecryptExpressionVisitor extends BaseDEcryptParseTable implements
         Expression leftExpression = isBooleanExpression.getLeftExpression();
         DBDecryptExpressionVisitor leftExpressionVisitor = DBDecryptExpressionVisitor.newInstanceCurLayer(this);
         leftExpression.accept(leftExpressionVisitor);
-        isBooleanExpression.setLeftExpression(Optional.ofNullable(leftExpressionVisitor.getExpression()).orElse(leftExpression));
+        isBooleanExpression.setLeftExpression(Optional.ofNullable(leftExpressionVisitor.getProcessedExpression()).orElse(leftExpression));
     }
 
+    /**
+     * like的处理
+     * 注意：这里只能分开处理左右表达式，不能单独只处理右边的常量，因为常量加密后like是无法进行匹配的
+     *
+     * @author liutangqi
+     * @date 2025/7/3 9:20
+     * @Param [likeExpression]
+     **/
     @Override
     public void visit(LikeExpression likeExpression) {
         //db模式处理左右表达式
@@ -463,38 +440,8 @@ public class DBDecryptExpressionVisitor extends BaseDEcryptParseTable implements
 
     @Override
     public void visit(NotEqualsTo notEqualsTo) {
-        //1.如果左右侧都是 Column 类型的话，两边都需要加密或者两边都不需要加密时，不需要处理
-        if ((notEqualsTo.getLeftExpression() instanceof Column) && notEqualsTo.getRightExpression() instanceof Column) {
-            boolean leftNeedEncrypt = JsqlparserUtil.needEncrypt((Column) notEqualsTo.getLeftExpression(), this.getLayer(), this.getLayerFieldTableMap());
-            boolean rightNeedEncrypt = JsqlparserUtil.needEncrypt((Column) notEqualsTo.getRightExpression(), this.getLayer(), this.getLayerFieldTableMap());
-            if ((leftNeedEncrypt && rightNeedEncrypt) || (!leftNeedEncrypt && !rightNeedEncrypt)) {
-                return;
-            }
-        }
-
-        //2.左边是 Column 右边不是 Column ，避免索引失效，将非Column进行加密处理即可
-        if ((notEqualsTo.getLeftExpression() instanceof Column) && !(notEqualsTo.getRightExpression() instanceof Column)) {
-            //Column 是需要加密的字段则将非Column进行加密
-            if (JsqlparserUtil.needEncrypt((Column) notEqualsTo.getLeftExpression(), this.getLayer(), this.getLayerFieldTableMap())) {
-                Expression newRightExpression = FieldEncryptorPatternCache.getInstance().encryption(notEqualsTo.getRightExpression());
-                notEqualsTo.setRightExpression(newRightExpression);
-            }
-            return;
-        }
-
-        //3. 左边不是Column 右边是 Column  ，避免索引失效，将非Column进行加密处理即可
-        if ((notEqualsTo.getRightExpression() instanceof Column) && !(notEqualsTo.getLeftExpression() instanceof Column)) {
-            //Column 是需要加密的字段则将非Column进行加密
-            if (JsqlparserUtil.needEncrypt((Column) notEqualsTo.getRightExpression(), this.getLayer(), this.getLayerFieldTableMap())) {
-                Expression newLeftExpression = FieldEncryptorPatternCache.getInstance().encryption(notEqualsTo.getLeftExpression());
-                notEqualsTo.setLeftExpression(newLeftExpression);
-            }
-            return;
-        }
-
-        //4.其它情况（两边都不是Column） 解析左右两边的表达式
-        //db模式处理左右表达式
-        JsqlparserUtil.visitDbBinaryExpression(this, notEqualsTo);
+        //db模式处理比较的表达式
+        JsqlparserUtil.visitComparisonOperator(this, notEqualsTo);
     }
 
     @Override
@@ -522,18 +469,18 @@ public class DBDecryptExpressionVisitor extends BaseDEcryptParseTable implements
      **/
     @Override
     public void visit(Column column) {
-        //1.判断当前列是否需要加解密
-        boolean curNeedEncrypt = JsqlparserUtil.needEncrypt(column, this.getLayer(), this.getLayerFieldTableMap());
+        //1.判断当前列是否需要密文存储
+        FieldEncryptor currentFieldEncryptor = JsqlparserUtil.needEncryptFieldEncryptor(column, this.getLayer(), this.getLayerFieldTableMap());
 
-        //2.判断当前需要调用哪个方法
-        EncryptorEnum encryptorEnum = this.getEncryptorFunctionEnum().getFun().dispose(curNeedEncrypt);
+        //2.获取上游列是否需要密文存储
+        FieldEncryptor upstreamFieldEncryptor = this.getUpstreamFieldEncryptor();
 
-        //3.将该字段进行加/解密处理
-        Expression decryptFunction = encryptorEnum.getdEncryptorFunction().dEcryp(column);
-        this.expression = decryptFunction;
+        //3.将此字段进行加解密处理
+        Expression disposeExp = this.getEncryptorFunctionEnum().getFun().dispose(upstreamFieldEncryptor, currentFieldEncryptor, column);
+        this.processedExpression = disposeExp;
 
-        //4.别名处理（字段经过加密函数后，如果之前没有别名的话，需要用之前的字段名作为别名，不然ORM映射的时候会无法匹配）
-        if (!EncryptorEnum.WITHOUT.equals(encryptorEnum)) {
+        //4.别名处理（字段经过加密函数后，如果之前没有别名的话，需要用之前的字段名作为别名，不然ORM映射的时候会无法匹配
+        if (!column.toString().equals(disposeExp.toString())) {
             this.alias = Optional.ofNullable(alias).orElse(new Alias(column.getColumnName()));
         }
     }
@@ -560,14 +507,9 @@ public class DBDecryptExpressionVisitor extends BaseDEcryptParseTable implements
         FieldParseParseTableSelectVisitor sFieldSelectItemVisitor = FieldParseParseTableSelectVisitor.newInstanceIndividualMap(this);
         subSelect.accept(sFieldSelectItemVisitor);
 
-        //2.上游如果是密文存储，则将上游的密文存储的下标传递给下游
-        List<Integer> upstreamNeedEncryptIndex = new ArrayList<>();
-        if (EncryptorFunctionEnum.UPSTREAM_SECRET.equals(this.getEncryptorFunctionEnum())) {
-            upstreamNeedEncryptIndex.add(NumberConstant.ZERO);
-        }
-
-        //3.利用解析后的表结构Map进行子查询解密处理
-        DBDecryptSelectVisitor sDecryptSelectVisitor = DBDecryptSelectVisitor.newInstanceCurLayer(sFieldSelectItemVisitor, upstreamNeedEncryptIndex);
+        //2.利用解析后的表结构Map进行子查询解密处理
+        DBDecryptSelectVisitor sDecryptSelectVisitor = DBDecryptSelectVisitor.newInstanceCurLayer(sFieldSelectItemVisitor,
+                Arrays.asList(this.getUpstreamFieldEncryptor()));
         subSelect.accept(sDecryptSelectVisitor);
     }
 
@@ -586,7 +528,7 @@ public class DBDecryptExpressionVisitor extends BaseDEcryptParseTable implements
         if (switchExpression != null) {
             DBDecryptExpressionVisitor expressionVisitor = DBDecryptExpressionVisitor.newInstanceCurLayer(this);
             switchExpression.accept(expressionVisitor);
-            caseExpression.setSwitchExpression(Optional.ofNullable(expressionVisitor.getExpression()).orElse(switchExpression));
+            caseExpression.setSwitchExpression(Optional.ofNullable(expressionVisitor.getProcessedExpression()).orElse(switchExpression));
         }
 
         //处理when的条件
@@ -596,7 +538,7 @@ public class DBDecryptExpressionVisitor extends BaseDEcryptParseTable implements
                         DBDecryptExpressionVisitor expressionVisitor = DBDecryptExpressionVisitor.newInstanceCurLayer(this);
                         m.accept(expressionVisitor);
                         // 这里返回的类型肯定是通过构造函数传输过去的，所以可以直接强转（这里过去是WhenClause WhenClause下一层才是Column才会转换类型）
-                        return (WhenClause) (Optional.ofNullable(expressionVisitor.getExpression()).orElse(m));
+                        return (WhenClause) (Optional.ofNullable(expressionVisitor.getProcessedExpression()).orElse(m));
                     }).collect(Collectors.toList());
             caseExpression.setWhenClauses(whenClauses);
         }
@@ -606,7 +548,7 @@ public class DBDecryptExpressionVisitor extends BaseDEcryptParseTable implements
         if (elseExpression != null) {
             DBDecryptExpressionVisitor expressionVisitor = DBDecryptExpressionVisitor.newInstanceCurLayer(this);
             elseExpression.accept(expressionVisitor);
-            caseExpression.setElseExpression(Optional.ofNullable(expressionVisitor.getExpression()).orElse(elseExpression));
+            caseExpression.setElseExpression(Optional.ofNullable(expressionVisitor.getProcessedExpression()).orElse(elseExpression));
         }
     }
 
@@ -616,14 +558,14 @@ public class DBDecryptExpressionVisitor extends BaseDEcryptParseTable implements
         if (thenExpression != null) {
             DBDecryptExpressionVisitor expressionVisitor = DBDecryptExpressionVisitor.newInstanceCurLayer(this);
             thenExpression.accept(expressionVisitor);
-            whenClause.setThenExpression(Optional.ofNullable(expressionVisitor.getExpression()).orElse(thenExpression));
+            whenClause.setThenExpression(Optional.ofNullable(expressionVisitor.getProcessedExpression()).orElse(thenExpression));
         }
 
         Expression whenExpression = whenClause.getWhenExpression();
         if (whenExpression != null) {
             DBDecryptExpressionVisitor expressionVisitor = DBDecryptExpressionVisitor.newInstanceCurLayer(this);
             whenExpression.accept(expressionVisitor);
-            whenClause.setWhenExpression(Optional.ofNullable(expressionVisitor.getExpression()).orElse(whenExpression));
+            whenClause.setWhenExpression(Optional.ofNullable(expressionVisitor.getProcessedExpression()).orElse(whenExpression));
         }
     }
 
@@ -633,7 +575,7 @@ public class DBDecryptExpressionVisitor extends BaseDEcryptParseTable implements
         Expression rightExpression = existsExpression.getRightExpression();
         DBDecryptExpressionVisitor rightExpressionVisitor = DBDecryptExpressionVisitor.newInstanceCurLayer(this);
         rightExpression.accept(rightExpressionVisitor);
-        existsExpression.setRightExpression(Optional.ofNullable(rightExpressionVisitor.getExpression()).orElse(rightExpression));
+        existsExpression.setRightExpression(Optional.ofNullable(rightExpressionVisitor.getProcessedExpression()).orElse(rightExpression));
     }
 
     @Override
@@ -676,7 +618,7 @@ public class DBDecryptExpressionVisitor extends BaseDEcryptParseTable implements
         Expression leftExpression = cast.getLeftExpression();
         DBDecryptExpressionVisitor expressionVisitor = DBDecryptExpressionVisitor.newInstanceCurLayer(this);
         leftExpression.accept(expressionVisitor);
-        cast.setLeftExpression(Optional.ofNullable(expressionVisitor.getExpression()).orElse(leftExpression));
+        cast.setLeftExpression(Optional.ofNullable(expressionVisitor.getProcessedExpression()).orElse(leftExpression));
     }
 
 
@@ -743,7 +685,7 @@ public class DBDecryptExpressionVisitor extends BaseDEcryptParseTable implements
         for (Expression exp : expressionList) {
             DBDecryptExpressionVisitor sDecryptExpressionVisitor = DBDecryptExpressionVisitor.newInstanceCurLayer(this);
             exp.accept(sDecryptExpressionVisitor);
-            newExpressions.add(Optional.ofNullable(sDecryptExpressionVisitor.getExpression()).orElse(exp));
+            newExpressions.add(Optional.ofNullable(sDecryptExpressionVisitor.getProcessedExpression()).orElse(exp));
         }
 
         //替换解密后的表达式
@@ -756,7 +698,7 @@ public class DBDecryptExpressionVisitor extends BaseDEcryptParseTable implements
             Expression exp = (Expression) expressionList.get(i);
             DBDecryptExpressionVisitor dbDecryptExpressionVisitor = DBDecryptExpressionVisitor.newInstanceCurLayer(this);
             exp.accept(dbDecryptExpressionVisitor);
-            expressionList.set(i, Optional.ofNullable(dbDecryptExpressionVisitor.getExpression()).orElse(exp));
+            expressionList.set(i, Optional.ofNullable(dbDecryptExpressionVisitor.getProcessedExpression()).orElse(exp));
         }
     }
 
@@ -904,7 +846,7 @@ public class DBDecryptExpressionVisitor extends BaseDEcryptParseTable implements
         expression.accept(dbDecryptExpressionVisitor);
 
         //处理后的表达式赋值
-        transcodingFunction.setExpression(Optional.ofNullable(dbDecryptExpressionVisitor.getExpression()).orElse(expression));
+        transcodingFunction.setExpression(Optional.ofNullable(dbDecryptExpressionVisitor.getProcessedExpression()).orElse(expression));
     }
 
     @Override

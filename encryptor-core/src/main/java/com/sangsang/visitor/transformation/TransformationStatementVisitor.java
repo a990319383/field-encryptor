@@ -1,6 +1,6 @@
 package com.sangsang.visitor.transformation;
 
-import com.sangsang.cache.TransformationInstanceCache;
+import com.sangsang.cache.transformation.TransformationInstanceCache;
 import com.sangsang.domain.dto.ColumnTransformationDto;
 import com.sangsang.util.CollectionUtils;
 import com.sangsang.visitor.fieldparse.FieldParseParseTableFromItemVisitor;
@@ -42,9 +42,7 @@ import net.sf.jsqlparser.statement.update.Update;
 import net.sf.jsqlparser.statement.update.UpdateSet;
 import net.sf.jsqlparser.statement.upsert.Upsert;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 
 /**
  * @author liutangqi
@@ -290,7 +288,7 @@ public class TransformationStatementVisitor implements StatementVisitor {
         select.accept(selectVisitor);
 
         //3.处理好的sql赋值
-        this.resultSql = selectVisitor.getResultSql();
+        this.resultSql = select.toString();
     }
 
     @Override

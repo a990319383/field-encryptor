@@ -1,6 +1,6 @@
 package com.sangsang.config;
 
-import com.sangsang.interceptor.FieldDesensitizeInterceptor;
+import com.sangsang.interceptor.*;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;

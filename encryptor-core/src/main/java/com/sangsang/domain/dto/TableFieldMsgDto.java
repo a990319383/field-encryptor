@@ -1,11 +1,21 @@
 package com.sangsang.domain.dto;
 
+import com.sangsang.domain.annos.encryptor.FieldEncryptor;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
 /**
  * 从数据库查到的表结构字段信息
  *
  * @author liutangqi
  * @date 2024/8/27 10:26
  **/
+@Data
+@Builder
+@AllArgsConstructor
+@NoArgsConstructor
 public class TableFieldMsgDto {
     /**
      * 表名
@@ -33,52 +43,8 @@ public class TableFieldMsgDto {
      */
     private String columnComment;
 
-
-    public String getColumnComment() {
-        return columnComment;
-    }
-
-    public void setColumnComment(String columnComment) {
-        this.columnComment = columnComment;
-    }
-
-    public String getTableName() {
-        return tableName;
-    }
-
-    public void setTableName(String tableName) {
-        this.tableName = tableName;
-    }
-
-    public String getColumnName() {
-        return columnName;
-    }
-
-    public void setColumnName(String columnName) {
-        this.columnName = columnName;
-    }
-
-    public String getDataType() {
-        return dataType;
-    }
-
-    public void setDataType(String dataType) {
-        this.dataType = dataType;
-    }
-
-    public String getColumnKey() {
-        return columnKey;
-    }
-
-    public void setColumnKey(String columnKey) {
-        this.columnKey = columnKey;
-    }
-
-    public Integer getFieldLength() {
-        return fieldLength;
-    }
-
-    public void setFieldLength(Integer fieldLength) {
-        this.fieldLength = fieldLength;
-    }
+    /**
+     * 字段上面标注的注解
+     */
+    private FieldEncryptor fieldEncryptor;
 }

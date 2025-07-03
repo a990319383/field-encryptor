@@ -1,11 +1,13 @@
 package com.sangsang.config.properties;
 
 import com.sangsang.domain.constants.TransformationPatternTypeConstant;
+import lombok.Data;
 
 /**
  * @author liutangqi
  * @date 2025/5/21 16:13
  */
+@Data
 public class TransformationProperties {
     /**
      * 当前转换类型
@@ -15,12 +17,4 @@ public class TransformationProperties {
      * @see TransformationPatternTypeConstant
      */
     private String patternType;
-
-    public String getPatternType() {
-        return patternType;
-    }
-
-    public void setPatternType(String patternType) {
-        this.patternType = patternType;
-    }
 }

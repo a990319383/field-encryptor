@@ -1,6 +1,6 @@
 package com.sangsang.visitor.transformation.wrap;
 
-import com.sangsang.cache.TransformationInstanceCache;
+import com.sangsang.cache.transformation.TransformationInstanceCache;
 import com.sangsang.visitor.transformation.TransformationExpressionVisitor;
 import net.sf.jsqlparser.expression.Expression;
 
