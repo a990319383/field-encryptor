@@ -1,0 +1,1 @@
+UPDATE tb_role tr JOIN tb_user tu ON tr.id = tu.id SET tr.role_name = TO_BASE64(AES_ENCRYPT(CAST(AES_DECRYPT(FROM_BASE64(tu.phone), '7uq?q8g3@q') AS CHAR), '测试秘钥')), tr.role_desc = CAST(AES_DECRYPT(FROM_BASE64(tu.phone), '7uq?q8g3@q') AS CHAR), tr.role_name = TO_BASE64(AES_ENCRYPT(tu.user_name, '测试秘钥')) WHERE tr.id = 1

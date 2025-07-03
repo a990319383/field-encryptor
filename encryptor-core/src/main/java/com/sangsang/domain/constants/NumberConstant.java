@@ -9,6 +9,8 @@ import net.sf.jsqlparser.expression.LongValue;
 public interface NumberConstant {
     int ZERO = 0;
     int ONE = 1;
+    int HUNDRED = 100;
+    int NEGATIVE_ONE = -1;
 
     LongValue NEGATIVE_ONE_LONG_VALUE = new LongValue(-1);
     LongValue ZERO_LONG_VALUE = new LongValue(ZERO);

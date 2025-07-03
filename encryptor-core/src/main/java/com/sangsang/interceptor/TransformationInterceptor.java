@@ -1,20 +1,19 @@
 package com.sangsang.interceptor;
 
-import com.sangsang.cache.TransformationSqlCache;
+import com.sangsang.cache.transformation.TransformationSqlCache;
 import com.sangsang.domain.annos.FieldInterceptorOrder;
 import com.sangsang.domain.constants.InterceptorOrderConstant;
 import com.sangsang.domain.context.TransformationHolder;
 import com.sangsang.util.InterceptorUtil;
+import com.sangsang.util.JsqlparserUtil;
 import com.sangsang.util.StringUtils;
 import com.sangsang.visitor.transformation.TransformationStatementVisitor;
-import net.sf.jsqlparser.parser.CCJSqlParserUtil;
+import lombok.extern.slf4j.Slf4j;
 import net.sf.jsqlparser.statement.Statement;
 import org.apache.ibatis.executor.statement.StatementHandler;
 import org.apache.ibatis.mapping.BoundSql;
 import org.apache.ibatis.plugin.*;
 import org.apache.ibatis.session.SqlSessionFactory;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.config.BeanPostProcessor;
 
@@ -30,10 +29,8 @@ import java.util.Properties;
  */
 @FieldInterceptorOrder(InterceptorOrderConstant.TRANSFORMATION)
 @Intercepts({@Signature(type = StatementHandler.class, method = "prepare", args = {Connection.class, Integer.class})})
+@Slf4j
 public class TransformationInterceptor implements Interceptor, BeanPostProcessor {
-    private static final Logger log = LoggerFactory.getLogger(TransformationInterceptor.class);
-
-
     @Override
     public Object intercept(Invocation invocation) throws Throwable {
         //1.获取拦截器中提供的一些对象
@@ -52,7 +49,7 @@ public class TransformationInterceptor implements Interceptor, BeanPostProcessor
         String newSql = oldSql;
         try {
             log.debug("【db-transformation】旧sql：{}", oldSql);
-            Statement statement = CCJSqlParserUtil.parse(StringUtils.replaceLineBreak(oldSql));
+            Statement statement = JsqlparserUtil.parse(oldSql);
             TransformationStatementVisitor transformationStatementVisitor = new TransformationStatementVisitor();
             statement.accept(transformationStatementVisitor);
             if (StringUtils.isNotBlank(transformationStatementVisitor.getResultSql())) {

@@ -16,14 +16,6 @@ import java.util.*;
  * @date 2025/5/21 15:07
  */
 public class TransformationSelectVisitor extends BaseFieldParseTable implements SelectVisitor {
-    /**
-     * 处理好的sql
-     */
-    private String resultSql;
-
-    public String getResultSql() {
-        return resultSql;
-    }
 
     private TransformationSelectVisitor(int layer, Map<String, Map<String, Set<FieldInfoDto>>> layerSelectTableFieldMap, Map<String, Map<String, Set<FieldInfoDto>>> layerFieldTableMap) {
         super(layer, layerSelectTableFieldMap, layerFieldTableMap);
@@ -124,8 +116,6 @@ public class TransformationSelectVisitor extends BaseFieldParseTable implements 
                 join.setOnExpressions(tfExpressions);
             }
         }
-
-        this.resultSql = plainSelect.toString();
     }
 
     /**
@@ -154,7 +144,6 @@ public class TransformationSelectVisitor extends BaseFieldParseTable implements 
             resSelectBody.add(select);
         }
         setOpList.setSelects(resSelectBody);
-        this.resultSql = setOpList.toString();
     }
 
     @Override

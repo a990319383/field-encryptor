@@ -1,6 +1,8 @@
 package com.sangsang.domain.dto;
 
+import com.sangsang.domain.annos.encryptor.FieldEncryptor;
 import com.sangsang.domain.enums.EncryptorFunctionEnum;
+import lombok.Getter;
 
 import java.util.Map;
 import java.util.Set;
@@ -11,6 +13,7 @@ import java.util.Set;
  * @author liutangqi
  * @date 2025/3/1 12:28
  */
+@Getter
 public class BaseDEcryptParseTable extends BaseFieldParseTable {
     /**
      * 当前字段需要密文存储时，应该调用加密方法还是解密方法
@@ -21,15 +24,25 @@ public class BaseDEcryptParseTable extends BaseFieldParseTable {
      **/
     private EncryptorFunctionEnum encryptorFunctionEnum;
 
+    /**
+     * 和当前表达式对应的上游字段标注的注解
+     * 当此表达式的加解密处理受上游字段影响时才有值
+     *
+     * @author liutangqi
+     * @date 2025/6/25 18:24
+     * @Param
+     **/
+    private FieldEncryptor upstreamFieldEncryptor;
+
     public BaseDEcryptParseTable(int layer,
                                  EncryptorFunctionEnum encryptorFunctionEnum,
+                                 FieldEncryptor upstreamFieldEncryptor,
                                  Map<String, Map<String, Set<FieldInfoDto>>> layerSelectTableFieldMap,
                                  Map<String, Map<String, Set<FieldInfoDto>>> layerFieldTableMap) {
         super(layer, layerSelectTableFieldMap, layerFieldTableMap);
         this.encryptorFunctionEnum = encryptorFunctionEnum;
+        this.upstreamFieldEncryptor = upstreamFieldEncryptor;
     }
 
-    public EncryptorFunctionEnum getEncryptorFunctionEnum() {
-        return encryptorFunctionEnum;
-    }
+
 }

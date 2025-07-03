@@ -7,17 +7,25 @@
     <groupId>io.gitee.tired-of-the-water</groupId>
     <artifactId>field-encryptor</artifactId>
     <packaging>pom</packaging>
-    <version>${revision}</version>
-    <description>无侵入数据库字段加解密</description>
+    <version>3.5.0</version>
+    <description>无侵入数据库字段加解密，无侵入数据库语法转换，个性化数据隔离，个性化脱敏</description>
     <modules>
         <module>encryptor-annos</module>
         <module>encryptor-core</module>
     </modules>
     <properties>
         <java.version>1.8</java.version>
-        <revision>3.2.0</revision>
+        <revision>3.5.0</revision>
     </properties>
-
+    <dependencies>
+        <!--lombok-->
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+            <version>1.18.30</version>
+            <scope>provided</scope>
+        </dependency>
+    </dependencies>
 
     <developers>
         <developer>
@@ -113,6 +121,47 @@
                         <goals>
                             <goal>sign</goal>
                         </goals>
+                    </execution>
+                </executions>
+            </plugin>
+            <!--将jsqlparser，hutool打入到自己的jar包中，避免版本冲突导致的问题 -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-shade-plugin</artifactId>
+                <version>3.2.4</version>
+                <executions>
+                    <execution>
+                        <!-- 和package 阶段绑定 -->
+                        <phase>package</phase>
+                        <goals>
+                            <goal>shade</goal>
+                        </goals>
+                        <configuration>
+                            <artifactSet>
+                                <!-- 只把指定的包打入我们自己的jar中 -->
+                                <includes>
+                                    <include>com.github.jsqlparser:jsqlparser</include>
+                                    <include>cn.hutool:hutool-all</include>
+                                </includes>
+                                <!--   也可以配置只排除某些包不打入自己的jar中  <excludes>
+                                       <exclude>cn.hutool:hutool-all</exclude>
+                                   </excludes>
+                                   -->
+                            </artifactSet>
+                            <!-- 此处按需编写更具体的配置 -->
+                            <relocations>
+                                <relocation>
+                                    <!-- 将jsqlparse的包打入jar包中，并进行重命名，避免jar包冲突 -->
+                                    <pattern>net.sf.jsqlparser</pattern>
+                                    <shadedPattern>com.shade.net.sf.jsqlparser</shadedPattern>
+                                </relocation>
+                                <relocation>
+                                    <!-- 将hutool的包打入jar包中，并进行重命名，避免jar包冲突 -->
+                                    <pattern>cn.hutool</pattern>
+                                    <shadedPattern>com.shade.cn.hutool</shadedPattern>
+                                </relocation>
+                            </relocations>
+                        </configuration>
                     </execution>
                 </executions>
             </plugin>

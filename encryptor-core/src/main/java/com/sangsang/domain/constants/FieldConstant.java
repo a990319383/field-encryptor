@@ -28,11 +28,6 @@ public interface FieldConstant {
     String PLACEHOLDER = "encryptor_placeholder_";
 
     /**
-     * 对于某些情况下，需要重新修改入参parameterMappings的变量名时的统一前缀
-     **/
-    String NEW_PARAM_PLACEHOLDER = "new_param_placeholder_";
-
-    /**
      * 基本数据类型对应的包装类 + 字符串类型 + 时间类型 的集合
      */
     List<Class> FUNDAMENTAL = Arrays.asList(Boolean.class,

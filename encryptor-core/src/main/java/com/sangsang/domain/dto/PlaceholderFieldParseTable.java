@@ -1,5 +1,7 @@
 package com.sangsang.domain.dto;
 
+import lombok.Getter;
+
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
@@ -11,6 +13,7 @@ import java.util.Set;
  * @author liutangqi
  * @date 2024/7/12 10:41
  */
+@Getter
 public class PlaceholderFieldParseTable extends BaseFieldParseTable {
     /**
      * 当前占位符对应的数据库表，字段信息 （存放解析的结果集）
@@ -29,7 +32,4 @@ public class PlaceholderFieldParseTable extends BaseFieldParseTable {
         this.placeholderColumnTableMap = Optional.ofNullable(placeholderColumnTableMap).orElse(new HashMap<>());
     }
 
-    public Map<String, ColumnTableDto> getPlaceholderColumnTableMap() {
-        return placeholderColumnTableMap;
-    }
 }

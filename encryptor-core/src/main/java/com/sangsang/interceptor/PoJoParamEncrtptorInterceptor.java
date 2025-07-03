@@ -1,8 +1,9 @@
 package com.sangsang.interceptor;
 
 import cn.hutool.core.lang.Pair;
-import com.sangsang.cache.FieldEncryptorPatternCache;
-import com.sangsang.domain.annos.FieldEncryptor;
+import com.sangsang.cache.encryptor.EncryptorInstanceCache;
+import com.sangsang.cache.encryptor.TableCache;
+import com.sangsang.domain.annos.encryptor.FieldEncryptor;
 import com.sangsang.domain.annos.FieldInterceptorOrder;
 import com.sangsang.domain.constants.FieldConstant;
 import com.sangsang.domain.constants.InterceptorOrderConstant;
@@ -14,8 +15,8 @@ import com.sangsang.util.JsqlparserUtil;
 import com.sangsang.util.ReflectUtils;
 import com.sangsang.util.StringUtils;
 import com.sangsang.visitor.pojoencrtptor.PoJoEncrtptorStatementVisitor;
+import lombok.extern.slf4j.Slf4j;
 import net.sf.jsqlparser.JSQLParserException;
-import net.sf.jsqlparser.parser.CCJSqlParserUtil;
 import net.sf.jsqlparser.statement.Statement;
 import org.apache.ibatis.executor.statement.StatementHandler;
 import org.apache.ibatis.mapping.BoundSql;
@@ -29,8 +30,6 @@ import org.apache.ibatis.reflection.factory.ObjectFactory;
 import org.apache.ibatis.reflection.wrapper.DefaultObjectWrapperFactory;
 import org.apache.ibatis.reflection.wrapper.ObjectWrapperFactory;
 import org.apache.ibatis.session.SqlSessionFactory;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.config.BeanPostProcessor;
 
@@ -48,12 +47,12 @@ import java.util.*;
 @Intercepts({
         @Signature(type = StatementHandler.class, method = "prepare", args = {Connection.class, Integer.class})
 })
+@Slf4j
 public class PoJoParamEncrtptorInterceptor implements Interceptor, BeanPostProcessor {
 
     private static final ReflectorFactory reflectorFactory = new DefaultReflectorFactory();
     private static final ObjectFactory objectFactory = new DefaultObjectFactory();
     private static final ObjectWrapperFactory objectWrapperFactory = new DefaultObjectWrapperFactory();
-    private static final Logger log = LoggerFactory.getLogger(PoJoParamEncrtptorInterceptor.class);
 
 
     /**
@@ -74,7 +73,7 @@ public class PoJoParamEncrtptorInterceptor implements Interceptor, BeanPostProce
         String originalSql = boundSql.getSql();
 
         //2.当前sql如果肯定不需要加解密，则不解析sql，直接返回
-        if (StringUtils.notExistEncryptor(originalSql)) {
+        if (StringUtils.notExist(originalSql, TableCache.getFieldEncryptTable())) {
             return invocation.proceed();
         }
 
@@ -126,7 +125,7 @@ public class PoJoParamEncrtptorInterceptor implements Interceptor, BeanPostProce
         String placeholderSql = StringUtils.question2Placeholder(sql);
 
         //2.解析sql的响应结果，和占位符对应的表字段关系
-        Statement statement = CCJSqlParserUtil.parse(StringUtils.replaceLineBreak(placeholderSql));
+        Statement statement = JsqlparserUtil.parse(placeholderSql);
         PoJoEncrtptorStatementVisitor poJoEncrtptorStatementVisitor = new PoJoEncrtptorStatementVisitor();
         statement.accept(poJoEncrtptorStatementVisitor);
 
@@ -161,7 +160,7 @@ public class PoJoParamEncrtptorInterceptor implements Interceptor, BeanPostProce
             //如果需要加密的话，将加密后的值，替换原有入参
             FieldEncryptor fieldEncryptor = parseFieldEncryptor(placeholderKey, pair.getKey());
             if (propertyValue instanceof String && fieldEncryptor != null) {
-                String ciphertext = FieldEncryptorPatternCache.getPoJoInstance(fieldEncryptor.pojoAlgorithm()).encryption((String) propertyValue);
+                String ciphertext = EncryptorInstanceCache.<String>getInstance(fieldEncryptor.value()).encryption((String) propertyValue);
                 parameterValue.put(String.valueOf(i), ciphertext);
             } else {
                 //不需要加密的话，则入参还是使用旧值

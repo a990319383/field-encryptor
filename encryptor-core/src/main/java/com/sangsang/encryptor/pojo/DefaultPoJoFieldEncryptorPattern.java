@@ -3,9 +3,8 @@ package com.sangsang.encryptor.pojo;
 import cn.hutool.core.util.HexUtil;
 import cn.hutool.crypto.symmetric.DES;
 import com.sangsang.config.properties.FieldProperties;
-import com.sangsang.domain.enums.PoJoAlgorithmEnum;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import com.sangsang.domain.strategy.encryptor.FieldEncryptorStrategy;
+import lombok.extern.slf4j.Slf4j;
 
 /**
  * java pojo 加密方式下的默认加解密算法
@@ -14,8 +13,8 @@ import org.slf4j.LoggerFactory;
  * @author liutangqi
  * @date 2024/7/24 17:41
  */
-public class DefaultPoJoFieldEncryptorPattern implements PoJoFieldEncryptorPattern {
-    private static final Logger log = LoggerFactory.getLogger(DefaultPoJoFieldEncryptorPattern.class);
+@Slf4j
+public class DefaultPoJoFieldEncryptorPattern implements FieldEncryptorStrategy<String> {
 
     private FieldProperties fieldProperties;
 
@@ -24,11 +23,6 @@ public class DefaultPoJoFieldEncryptorPattern implements PoJoFieldEncryptorPatte
     }
 
     private DES des;
-
-    @Override
-    public PoJoAlgorithmEnum encryptorAlgorithm() {
-        return PoJoAlgorithmEnum.ALGORITHM_DEFAULT;
-    }
 
     @Override
     public String encryption(String cleartext) {

@@ -46,6 +46,11 @@ public interface SymbolConstant {
     String ESC_QUESTION_MARK = "\\?";
 
     /**
+     * 百分号
+     */
+    String PER_CENT = "%";
+
+    /**
      * test as 取别名
      */
     String AS = " as ";
