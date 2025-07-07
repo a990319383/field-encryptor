@@ -1,6 +1,6 @@
 package com.sangsang.domain.context;
 
-import com.sangsang.domain.annos.isolation.IsolationForbid;
+import com.sangsang.domain.annos.isolation.ForbidIsolation;
 
 import java.util.ArrayDeque;
 
@@ -13,7 +13,7 @@ public class IsolationHolder {
      * 存储当前方法是否禁止了数据隔离的标识
      * 这里使用队列，存储标识，就可以支持嵌套
      **/
-    private static final InheritableThreadLocal<ArrayDeque<IsolationForbid>> ISOLATION_HOLDER = new InheritableThreadLocal<>();
+    private static final InheritableThreadLocal<ArrayDeque<ForbidIsolation>> ISOLATION_HOLDER = new InheritableThreadLocal<>();
 
 
     /**
@@ -23,14 +23,14 @@ public class IsolationHolder {
      * @date 2025/6/16 9:06
      * @Param [forbidIsolation]
      **/
-    public static void setForbidIsolation(IsolationForbid isolationForbid) {
-        ArrayDeque<IsolationForbid> isolationForbids = ISOLATION_HOLDER.get();
-        if (isolationForbids == null) {
-            isolationForbids = new ArrayDeque<>();
-            ISOLATION_HOLDER.set(isolationForbids);
+    public static void setForbidIsolation(ForbidIsolation forbidIsolation) {
+        ArrayDeque<ForbidIsolation> forbidIsolations = ISOLATION_HOLDER.get();
+        if (forbidIsolations == null) {
+            forbidIsolations = new ArrayDeque<>();
+            ISOLATION_HOLDER.set(forbidIsolations);
         }
         //从头部添加
-        isolationForbids.addFirst(isolationForbid);
+        forbidIsolations.addFirst(forbidIsolation);
     }
 
     /**
@@ -41,12 +41,12 @@ public class IsolationHolder {
      * @Param []
      **/
     public static void removeForbidIsolation() {
-        ArrayDeque<IsolationForbid> isolationForbids = ISOLATION_HOLDER.get();
-        if (isolationForbids != null) {
+        ArrayDeque<ForbidIsolation> forbidIsolations = ISOLATION_HOLDER.get();
+        if (forbidIsolations != null) {
             //尾部移除
-            isolationForbids.removeLast();
+            forbidIsolations.removeLast();
             //如果移除完毕了，就整个清除了
-            if (isolationForbids.isEmpty()) {
+            if (forbidIsolations.isEmpty()) {
                 ISOLATION_HOLDER.remove();
             }
         }
@@ -59,13 +59,13 @@ public class IsolationHolder {
      * @date 2025/6/16 17:48
      * @Param []
      **/
-    public static IsolationForbid getForbidIsolation() {
-        ArrayDeque<IsolationForbid> isolationForbids = ISOLATION_HOLDER.get();
-        if (isolationForbids == null) {
+    public static ForbidIsolation getForbidIsolation() {
+        ArrayDeque<ForbidIsolation> forbidIsolations = ISOLATION_HOLDER.get();
+        if (forbidIsolations == null) {
             return null;
         }
         //头部获取，头部是最新的
-        return isolationForbids.getFirst();
+        return forbidIsolations.getFirst();
     }
 
 }

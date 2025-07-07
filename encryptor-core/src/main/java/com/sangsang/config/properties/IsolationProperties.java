@@ -1,6 +1,5 @@
 package com.sangsang.config.properties;
 
-import com.sangsang.domain.enums.IsolationRelationEnum;
 import lombok.Data;
 
 /**

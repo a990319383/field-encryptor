@@ -2,7 +2,6 @@ package com.sangsang.encryptor.db;
 
 import com.sangsang.config.properties.FieldProperties;
 import com.sangsang.domain.constants.SymbolConstant;
-import com.sangsang.domain.strategy.encryptor.DBFieldEncryptorStrategy;
 import com.sangsang.domain.strategy.encryptor.FieldEncryptorStrategy;
 import net.sf.jsqlparser.expression.CastExpression;
 import net.sf.jsqlparser.expression.Expression;

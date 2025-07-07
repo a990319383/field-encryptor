@@ -1,6 +1,6 @@
 package com.sangsang.interceptor;
 
-import com.sangsang.cache.encryptor.TableCache;
+import com.sangsang.cache.fieldparse.TableCache;
 import com.sangsang.domain.annos.FieldInterceptorOrder;
 import com.sangsang.domain.constants.InterceptorOrderConstant;
 import com.sangsang.util.InterceptorUtil;

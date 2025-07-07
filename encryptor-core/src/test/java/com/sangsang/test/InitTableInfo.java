@@ -3,12 +3,12 @@ package com.sangsang.test;
 import com.sangsang.cache.SqlParseCache;
 import com.sangsang.cache.encryptor.EncryptorInstanceCache;
 import com.sangsang.cache.isolation.IsolationInstanceCache;
-import com.sangsang.cache.encryptor.TableCache;
+import com.sangsang.cache.fieldparse.TableCache;
 import com.sangsang.config.properties.EncryptorProperties;
 import com.sangsang.config.properties.FieldProperties;
 import com.sangsang.config.properties.IsolationProperties;
 import com.sangsang.encryptor.db.DefaultDBFieldEncryptorPattern;
-import com.sangsang.isolation.TestIsolationData;
+import com.sangsang.isolation.TestDataIsolationStrategy;
 
 import java.util.*;
 
@@ -27,7 +27,7 @@ public class InitTableInfo {
      * @date 2024/4/2 15:58
      * @Param []
      **/
-    public static void initTable() {
+    public static void initTable() throws NoSuchFieldException {
         FieldProperties fieldProperties = new FieldProperties();
         fieldProperties.setScanEntityPackage(Arrays.asList("com.sangsang.mockentity"));
         TableCache tableCache = new TableCache(fieldProperties);
@@ -49,7 +49,7 @@ public class InitTableInfo {
         IsolationProperties isolationProperties = new IsolationProperties();
         isolationProperties.setEnable(true);
         fieldProperties.setIsolation(isolationProperties);
-        new IsolationInstanceCache().init(fieldProperties, Arrays.asList(new TestIsolationData()));
+        new IsolationInstanceCache().init(fieldProperties, Arrays.asList(new TestDataIsolationStrategy()));
     }
 
 

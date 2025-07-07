@@ -2,6 +2,7 @@ package com.sangsang.visitor.isolation;
 
 import com.sangsang.util.StringUtils;
 import com.sangsang.visitor.fieldparse.FieldParseParseTableSelectVisitor;
+import lombok.Getter;
 import net.sf.jsqlparser.statement.*;
 import net.sf.jsqlparser.statement.alter.Alter;
 import net.sf.jsqlparser.statement.alter.AlterSession;
@@ -41,11 +42,9 @@ public class IsolationStatementVisitor implements StatementVisitor {
     /**
      * 处理完的sql
      */
+    @Getter
     private String resultSql;
 
-    public String getResultSql() {
-        return resultSql;
-    }
 
     @Override
     public void visit(Analyze analyze) {

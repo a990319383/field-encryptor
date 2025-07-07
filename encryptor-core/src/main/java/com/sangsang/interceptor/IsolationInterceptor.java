@@ -2,7 +2,7 @@ package com.sangsang.interceptor;
 
 import com.sangsang.cache.isolation.IsolationInstanceCache;
 import com.sangsang.domain.annos.FieldInterceptorOrder;
-import com.sangsang.domain.annos.isolation.IsolationForbid;
+import com.sangsang.domain.annos.isolation.ForbidIsolation;
 import com.sangsang.domain.constants.InterceptorOrderConstant;
 import com.sangsang.domain.context.IsolationHolder;
 import com.sangsang.util.InterceptorUtil;
@@ -40,7 +40,7 @@ public class IsolationInterceptor implements Interceptor, BeanPostProcessor {
         StatementHandler statementHandler = (StatementHandler) invocation.getTarget();
 
         //2.获取当前执行sql头上是否有@ForbidIsolation，或者当前执行的方法上下文中是否有@ForbidIsolation，直接跳过
-        if (InterceptorUtil.getMapperAnnotation(statementHandler, IsolationForbid.class) != null
+        if (InterceptorUtil.getMapperAnnotation(statementHandler, ForbidIsolation.class) != null
                 || IsolationHolder.getForbidIsolation() != null) {
             return invocation.proceed();
         }

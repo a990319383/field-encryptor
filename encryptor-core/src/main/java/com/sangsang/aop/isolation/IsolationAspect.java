@@ -1,6 +1,6 @@
 package com.sangsang.aop.isolation;
 
-import com.sangsang.domain.annos.isolation.IsolationForbid;
+import com.sangsang.domain.annos.isolation.ForbidIsolation;
 import com.sangsang.domain.context.IsolationHolder;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
@@ -18,12 +18,12 @@ import java.lang.reflect.Method;
 @Aspect
 public class IsolationAspect {
 
-    @Around("@annotation(com.sangsang.domain.annos.isolation.IsolationForbid)")
+    @Around("@annotation(com.sangsang.domain.annos.isolation.ForbidIsolation)")
     public Object aroundAdvice(ProceedingJoinPoint pjp) throws Throwable {
         //1.获取头上注解
         MethodSignature signature = (MethodSignature) pjp.getSignature();
         Method method = pjp.getTarget().getClass().getDeclaredMethod(signature.getName(), signature.getParameterTypes());
-        IsolationForbid reSubscribe = method.getAnnotation(IsolationForbid.class);
+        ForbidIsolation reSubscribe = method.getAnnotation(ForbidIsolation.class);
         try {
             //2.标记当前方法禁用数据隔离
             IsolationHolder.setForbidIsolation(reSubscribe);

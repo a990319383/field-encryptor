@@ -1,6 +1,6 @@
 package com.sangsang.visitor.dbencrtptor;
 
-import com.sangsang.cache.encryptor.TableCache;
+import com.sangsang.cache.fieldparse.TableCache;
 import com.sangsang.domain.annos.encryptor.FieldEncryptor;
 import com.sangsang.domain.enums.EncryptorFunctionEnum;
 import com.sangsang.util.CollectionUtils;

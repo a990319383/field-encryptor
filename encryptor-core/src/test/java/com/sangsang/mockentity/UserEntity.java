@@ -3,11 +3,13 @@ package com.sangsang.mockentity;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableName;
 import com.sangsang.domain.annos.encryptor.FieldEncryptor;
+import com.sangsang.domain.annos.isolation.DataIsolation;
 
 /**
  * mock实体类，主要展示表结构，所以没有getter setter
  */
 @TableName(value = "tb_user")
+@DataIsolation
 public class UserEntity extends BaseEntity {
 
     /**

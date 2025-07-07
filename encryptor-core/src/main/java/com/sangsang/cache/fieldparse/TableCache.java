@@ -1,4 +1,4 @@
-package com.sangsang.cache.encryptor;
+package com.sangsang.cache.fieldparse;
 
 import cn.hutool.core.util.StrUtil;
 import com.baomidou.mybatisplus.annotation.TableField;
@@ -24,6 +24,7 @@ import java.util.stream.Collectors;
 /**
  * 优先加载这个bean，避免有些@PostConstruct 加载数据库东西到redis时，此时还没处理完，导致redis中存储了密文
  * 记录表，字段，字段对应的加解密信息
+ * 核心缓存类
  *
  * @author liutangqi
  * @date 2024/2/1 13:27
