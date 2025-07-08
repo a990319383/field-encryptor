@@ -4,11 +4,8 @@ package com.sangsang.domain.strategy;
 import com.sangsang.domain.annos.DefaultStrategy;
 import com.sangsang.domain.enums.IsolationRelationEnum;
 import com.sangsang.domain.exception.IsolationException;
-import com.sangsang.domain.strategy.encryptor.DBFieldEncryptorStrategy;
 import com.sangsang.domain.strategy.encryptor.FieldEncryptorStrategy;
-import com.sangsang.domain.strategy.encryptor.PoJoFieldEncryptorStrategy;
-import com.sangsang.domain.strategy.isolation.IsolationDataStrategy;
-import net.sf.jsqlparser.expression.Expression;
+import com.sangsang.domain.strategy.isolation.DataIsolationStrategy;
 
 import java.util.List;
 import java.util.stream.Collectors;
@@ -27,15 +24,16 @@ public class DefaultStrategyBase<T> {
 
     /**
      * 默认的实现策略，当前spring容器中，有一个就是默认的，有多个的话，标注了@DefaultStrategy的是默认的
+     * 备注：这里是protected修饰的，不能是public，不允许外部直接调用创建对象
      *
      * @author liutangqi
      * @date 2025/6/23 18:19
      * @Param [strategies]
      **/
-    public DefaultStrategyBase(List<T> strategies) {
+    protected DefaultStrategyBase(List<T> strategies) {
         //1.当前项目未找到实现类，抛出异常
         if (strategies == null || strategies.size() == 0) {
-            throw new IsolationException("当前项目未配置策略，请实现对应策略接口并放在spring容器中");
+            throw new IsolationException(String.format("当前项目未配置%s策略，请实现对应策略接口并放在spring容器中", this.getClass().getInterfaces()[0].getSimpleName()));
         }
         //2.当前项目只配置了一种策略，则这个策略就是默认策略
         if (strategies.size() == 1) {
@@ -45,10 +43,10 @@ public class DefaultStrategyBase<T> {
         //3.当前项目配置了多种策略，则标注了@DefaultStrategy是默认策略
         List<T> defaultStrategyList = strategies.stream().filter(item -> item.getClass().isAnnotationPresent(DefaultStrategy.class)).collect(Collectors.toList());
         if (defaultStrategyList.size() == 0) {
-            throw new IsolationException("当前项目存在多种策略，请将默认的策略标注@DefaultStrategy");
+            throw new IsolationException(String.format("当前项目存在多种%s策略，请将默认的策略标注@DefaultStrategy", this.getClass().getInterfaces()[0].getSimpleName()));
         }
         if (defaultStrategyList.size() > 1) {
-            throw new IsolationException("当前项目存在多种策略，且多个不同类型策略标注了@DefaultStrategy，只能选择其中一个作为默认");
+            throw new IsolationException(String.format("当前项目存在多种%s策略，且多个不同类型策略标注了@DefaultStrategy，只能选择其中一个作为默认", this.getClass().getInterfaces()[0].getSimpleName()));
         }
         defaultStrategyInstance = defaultStrategyList.get(0);
     }
@@ -60,7 +58,7 @@ public class DefaultStrategyBase<T> {
      * @date 2025/6/24 10:22
      * @Param
      **/
-    public static class IsolationBeanStrategy extends DefaultStrategyBase<IsolationDataStrategy> implements IsolationDataStrategy {
+    public static class BeanIsolationStrategy extends DefaultStrategyBase<DataIsolationStrategy> implements DataIsolationStrategy {
 
         /**
          * 默认的实现策略，当前spring容器中，有一个就是默认的，有多个的话，标注了@DefaultStrategy的是默认的
@@ -70,7 +68,7 @@ public class DefaultStrategyBase<T> {
          * @date 2025/6/23 18:19
          * @Param [strategies]
          */
-        public IsolationBeanStrategy(List<IsolationDataStrategy> strategies) {
+        public BeanIsolationStrategy(List<DataIsolationStrategy> strategies) {
             super(strategies);
         }
 

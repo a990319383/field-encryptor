@@ -1,5 +1,6 @@
 package com.sangsang.test;
 
+import cn.hutool.core.util.ObjectUtil;
 import com.sangsang.domain.dto.ColumnTableDto;
 import com.sangsang.domain.dto.FieldEncryptorInfoDto;
 import com.sangsang.util.AnswerUtil;
@@ -11,6 +12,7 @@ import com.sangsang.visitor.fieldparse.FieldParseParseTableSelectVisitor;
 import com.sangsang.visitor.pojoencrtptor.PoJoEncrtptorStatementVisitor;
 import cn.hutool.core.lang.Pair;
 import net.sf.jsqlparser.JSQLParserException;
+import net.sf.jsqlparser.parser.CCJSqlParserUtil;
 import net.sf.jsqlparser.statement.Statement;
 import net.sf.jsqlparser.statement.select.PlainSelect;
 import org.junit.jupiter.api.Test;
@@ -424,8 +426,27 @@ public class SqlTest {
     // xxx in (select xxx from)  且上下游加解密算法不一致 （注意：区别于s38，in的左边没括号）
     String s39 = "select * from tb_user tu where tu.phone in (select tr.role_name from tb_role tr)";
 
-    // case when 后面的字段都属于数据库的表，切存在上下游算法不一致的情况
-    String s40 = "";
+    // case when 后面的字段都属于数据库的表，且存在上下游算法不一致的情况
+    String s40 = "  select \n" +
+            "  case tu.phone \n" +
+            "  when tr.role_name then 1\n" +
+            "  when tr.role_desc then 2\n" +
+            "  when 'xxx' then 3\n" +
+            "  else 4 \n" +
+            "  end ,\n" +
+            "  case\n" +
+            "  when tu.phone = tr.role_name then 1\n" +
+            "  when tu.phone = tr.role_desc then 2\n" +
+            "  when 'xxx' = tr.role_name then 3\n" +
+            "  when 'yyy' = tr.role_desc then 4\n" +
+            "  else 5\n" +
+            "  end,\n" +
+            "  tu.phone ,\n" +
+            "  tr.role_name ,\n" +
+            "  tr.role_desc \n" +
+            "  from tb_user tu \n" +
+            "  left join tb_role tr \n" +
+            "  on tu.id = tr.id ";
 
     // -----------------insert 测试语句---------------------
     String i1 = "insert into tb_user(id, user_name ,phone) \n" +
@@ -536,7 +557,7 @@ public class SqlTest {
         InitTableInfo.initTable();
 
         //需要测试的sql
-        String sql = s10;
+        String sql = s40;
         System.out.println("----------------------------------------------------------------------------");
         System.out.println(sql);
         System.out.println("----------------------------------------------------------------------------");
@@ -568,7 +589,7 @@ public class SqlTest {
         InitTableInfo.initTable();
 
         //需要测试的sql
-        String sql = s37;
+        String sql = s40;
         System.out.println("----------------------------------------------------------------------------");
         System.out.println(sql);
         System.out.println("----------------------------------------------------------------------------");
@@ -589,7 +610,7 @@ public class SqlTest {
 
     //需要测试的sql
     List<String> sqls = Arrays.asList(s1, s2, s3, s4, s5, s6, s7, s8, s9, s10, s11, s12, s13, s14, s15, s16, s17, s18, s19,
-            s20, s21, s22, s23, s24, s25, s26, s27, s28, s29, s30, s31, s33, s34, s35, s36, s37, s38, s39,
+            s20, s21, s22, s23, s24, s25, s26, s27, s28, s29, s30, s31, s33, s34, s35, s36, s37, s38, s39, s40,
             i1, i2, i3, i5, i6,//i4,
             d1, d2,
             u1, u2, u3, u4, u5

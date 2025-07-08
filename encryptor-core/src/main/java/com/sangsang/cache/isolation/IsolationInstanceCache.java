@@ -2,12 +2,12 @@ package com.sangsang.cache.isolation;
 
 import com.baomidou.mybatisplus.annotation.TableName;
 import com.sangsang.config.properties.FieldProperties;
-import com.sangsang.domain.annos.isolation.IsolationData;
+import com.sangsang.domain.annos.isolation.DataIsolation;
 import com.sangsang.domain.constants.SymbolConstant;
 import com.sangsang.domain.enums.IsolationRelationEnum;
 import com.sangsang.domain.exception.IsolationException;
 import com.sangsang.domain.strategy.DefaultStrategyBase;
-import com.sangsang.domain.strategy.isolation.IsolationDataStrategy;
+import com.sangsang.domain.strategy.isolation.DataIsolationStrategy;
 import com.sangsang.util.ClassScanerUtil;
 import com.sangsang.util.CollectionUtils;
 import com.sangsang.util.ExpressionsUtil;
@@ -46,7 +46,7 @@ public class IsolationInstanceCache implements BeanPostProcessor {
      * @date 2025/6/13 10:31
      * @Param
      **/
-    private static final Map<Class<? extends IsolationDataStrategy>, IsolationDataStrategy> INSTANCE_MAP = new HashMap<>();
+    private static final Map<Class<? extends DataIsolationStrategy>, DataIsolationStrategy> INSTANCE_MAP = new HashMap<>();
 
     /**
      * 缓存当前表的数据隔离信息
@@ -57,7 +57,7 @@ public class IsolationInstanceCache implements BeanPostProcessor {
      * @date 2025/6/13 10:32
      * @Param
      **/
-    private static final Map<String, IsolationDataStrategy> TABLE_ISOLATION_MAP = new HashMap<>();
+    private static final Map<String, DataIsolationStrategy> TABLE_ISOLATION_MAP = new HashMap<>();
 
     /**
      * 存储当前需要进行数据隔离的小写的表名
@@ -77,7 +77,7 @@ public class IsolationInstanceCache implements BeanPostProcessor {
      * @Param []
      **/
     public void init(FieldProperties fieldProperties,
-                     List<IsolationDataStrategy> isolationDataStrategyList) throws Exception {
+                     List<DataIsolationStrategy> dataIsolationStrategyList) throws Exception {
         long startTime = System.currentTimeMillis();
         //1.配置校验
         if (CollectionUtils.isEmpty(fieldProperties.getScanEntityPackage())) {
@@ -85,12 +85,12 @@ public class IsolationInstanceCache implements BeanPostProcessor {
         }
 
         //2.实例化默认的策略
-        DefaultStrategyBase.IsolationBeanStrategy isolationBeanStrategy = new DefaultStrategyBase.IsolationBeanStrategy(isolationDataStrategyList);
-        INSTANCE_MAP.put(DefaultStrategyBase.IsolationBeanStrategy.class, isolationBeanStrategy);
+        DefaultStrategyBase.BeanIsolationStrategy isolationBeanStrategy = new DefaultStrategyBase.BeanIsolationStrategy(dataIsolationStrategyList);
+        INSTANCE_MAP.put(DefaultStrategyBase.BeanIsolationStrategy.class, isolationBeanStrategy);
 
         //3.初始化当前spring容器内的实现策略
-        for (IsolationDataStrategy isolationDataStrategy : isolationDataStrategyList) {
-            INSTANCE_MAP.put(isolationDataStrategy.getClass(), isolationDataStrategy);
+        for (DataIsolationStrategy dataIsolationStrategy : dataIsolationStrategyList) {
+            INSTANCE_MAP.put(dataIsolationStrategy.getClass(), dataIsolationStrategy);
         }
 
         //4.缓存表和@DataIsolation 的对应关系 ，顺便记录哪些表涉及到数据隔离
@@ -111,7 +111,7 @@ public class IsolationInstanceCache implements BeanPostProcessor {
      **/
     private void doScanEntityPackage(String scanEntityPackage) {
         //1.扫描指定路径下的的标注类
-        Set<Class> entityClasses = ClassScanerUtil.scan(scanEntityPackage, TableName.class, IsolationData.class).stream().filter(f -> f.getAnnotation(TableName.class) != null && f.getAnnotation(IsolationData.class) != null).collect(Collectors.toSet());
+        Set<Class> entityClasses = ClassScanerUtil.scan(scanEntityPackage, TableName.class, DataIsolation.class).stream().filter(f -> f.getAnnotation(TableName.class) != null && f.getAnnotation(DataIsolation.class) != null).collect(Collectors.toSet());
         if (CollectionUtils.isEmpty(entityClasses)) {
             log.warn("【isolation】未找到标注了@TableName 的@DataIsolation 的类信息，请检查配置");
             return;
@@ -121,15 +121,15 @@ public class IsolationInstanceCache implements BeanPostProcessor {
         for (Class entityClass : entityClasses) {
             //2.1获取类上面的两个注解
             TableName tableName = (TableName) entityClass.getAnnotation(TableName.class);
-            IsolationData dataIsolation = (IsolationData) entityClass.getAnnotation(IsolationData.class);
+            DataIsolation dataIsolation = (DataIsolation) entityClass.getAnnotation(DataIsolation.class);
             String lowerTableName = tableName.value().toLowerCase();
             //2.2校验配置是否正确
-            IsolationDataStrategy isolationDataStrategy = INSTANCE_MAP.get(dataIsolation.value());
-            if (isolationDataStrategy == null) {
+            DataIsolationStrategy dataIsolationStrategy = INSTANCE_MAP.get(dataIsolation.value());
+            if (dataIsolationStrategy == null) {
                 throw new IsolationException(String.format("当前表%s 配置的隔离策略 %s spring容器中找不到", tableName.value(), dataIsolation.value()));
             }
             //2.3缓存表和数据隔离实例关系
-            TABLE_ISOLATION_MAP.put(lowerTableName, isolationDataStrategy);
+            TABLE_ISOLATION_MAP.put(lowerTableName, dataIsolationStrategy);
             //2.4记录当前需要涉及到数据隔离的所有表
             ISOLATION_TABLE.add(lowerTableName);
         }
@@ -172,7 +172,7 @@ public class IsolationInstanceCache implements BeanPostProcessor {
      * @date 2025/6/13 10:58
      * @Param [tableName]
      **/
-    public static IsolationDataStrategy getInstance(String tableName) {
+    public static DataIsolationStrategy getInstance(String tableName) {
         //看这个表是否需要数据隔离
         return CollectionUtils.getValueIgnoreFloat(TABLE_ISOLATION_MAP, tableName.toLowerCase());
     }
@@ -187,7 +187,7 @@ public class IsolationInstanceCache implements BeanPostProcessor {
      **/
     public static Expression buildIsolationExpression(String isolationField, String tableAlias, IsolationRelationEnum isolationRelationEnum, Object isolationValue) {
         //1.类型校验
-        if (!IsolationDataStrategy.ALLOW_TYPES.stream().filter(f -> f.isAssignableFrom(isolationValue.getClass())).findAny().isPresent()) {
+        if (!DataIsolationStrategy.ALLOW_TYPES.stream().filter(f -> f.isAssignableFrom(isolationValue.getClass())).findAny().isPresent()) {
             throw new IsolationException(String.format("数据隔离值类型不支持 %s", isolationValue.getClass().getName()));
         }
 

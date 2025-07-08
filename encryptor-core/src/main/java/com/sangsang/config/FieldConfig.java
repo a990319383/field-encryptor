@@ -1,7 +1,7 @@
 package com.sangsang.config;
 
 import com.sangsang.cache.SqlParseCache;
-import com.sangsang.cache.encryptor.TableCache;
+import com.sangsang.cache.fieldparse.TableCache;
 import com.sangsang.config.properties.FieldProperties;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
@@ -29,7 +29,7 @@ public class FieldConfig {
         TableCache tableCache = new TableCache(fieldProperties);
         tableCache.init();
 
-        //2.初始化字段解析缓存
+        //2.初始化jsqlparser解析缓存
         SqlParseCache.init(fieldProperties);
         return tableCache;
     }

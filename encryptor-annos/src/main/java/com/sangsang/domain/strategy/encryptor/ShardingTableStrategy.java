@@ -9,7 +9,7 @@ import java.util.List;
  * @date 2024/10/11 10:55
  */
 @FunctionalInterface
-public interface ShardingTableInterface {
+public interface ShardingTableStrategy {
     /**
      * 根据原始表名，返回分表的所有表名的规则
      * 注意：返回值不能为null

@@ -8,6 +8,7 @@ import com.sangsang.domain.strategy.DefaultStrategyBase;
 import com.sangsang.domain.strategy.encryptor.FieldEncryptorStrategy;
 import com.sangsang.util.ClassScanerUtil;
 import com.sangsang.util.ReflectUtils;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.config.BeanPostProcessor;
 
@@ -23,6 +24,7 @@ import java.util.stream.Collectors;
  * @author liutangqi
  * @date 2025/6/24 17:58
  */
+@Slf4j
 public class EncryptorInstanceCache implements BeanPostProcessor {
 
     /**

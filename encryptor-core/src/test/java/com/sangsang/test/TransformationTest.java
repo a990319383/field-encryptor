@@ -294,7 +294,7 @@ public class TransformationTest {
      * @Param []
      **/
     @Test
-    public void tfCheck() throws JSQLParserException, IllegalAccessException {
+    public void tfCheck() throws NoSuchFieldException, JSQLParserException, IllegalAccessException {
         //mock数据
         InitTableInfo.initTable();
 

@@ -1,4 +1,4 @@
-package com.sangsang.cache.encryptor;
+package com.sangsang.cache.fieldparse;
 
 import cn.hutool.core.util.StrUtil;
 import com.baomidou.mybatisplus.annotation.TableField;
@@ -24,6 +24,7 @@ import java.util.stream.Collectors;
 /**
  * 优先加载这个bean，避免有些@PostConstruct 加载数据库东西到redis时，此时还没处理完，导致redis中存储了密文
  * 记录表，字段，字段对应的加解密信息
+ * 核心缓存类
  *
  * @author liutangqi
  * @date 2024/2/1 13:27
@@ -74,7 +75,7 @@ public class TableCache implements BeanPostProcessor {
             log.info("【field-encryptor】初始化表结构信息，扫描指定包路径 :{} 合计表数量：{}", fieldProperties.getScanEntityPackage(), tableInfoDtos.size());
         }
 
-        //2.如果没有指定扫描路径，则从mybatis-plus提供的工具，获取当前项目模块加载的表的实体类信息
+        //2.如果没有指定扫描路径，输出警告日志
         if (CollectionUtils.isEmpty(fieldProperties.getScanEntityPackage())) {
             log.warn("【field-encryptor】初始化表结构信息，未指定实体类扫描路径，如需使用数据脱敏以外的功能，请检查配置");
             return;

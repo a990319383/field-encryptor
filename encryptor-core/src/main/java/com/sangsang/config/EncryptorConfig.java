@@ -34,7 +34,7 @@ public class EncryptorConfig {
      **/
     @Bean
     @ConditionalOnProperty(name = "field.encryptor.patternType")
-    public EncryptorInstanceCache poJoEncryptorCache(List<FieldEncryptorStrategy> strategies) {
+    public EncryptorInstanceCache encryptorCache(List<FieldEncryptorStrategy> strategies) {
         EncryptorInstanceCache encryptorCache = new EncryptorInstanceCache();
         encryptorCache.init(strategies);
         return encryptorCache;

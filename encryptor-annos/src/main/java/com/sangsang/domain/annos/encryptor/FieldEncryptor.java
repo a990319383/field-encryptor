@@ -1,9 +1,7 @@
 package com.sangsang.domain.annos.encryptor;
 
 import com.sangsang.domain.strategy.DefaultStrategyBase;
-import com.sangsang.domain.strategy.encryptor.DBFieldEncryptorStrategy;
 import com.sangsang.domain.strategy.encryptor.FieldEncryptorStrategy;
-import com.sangsang.domain.strategy.encryptor.PoJoFieldEncryptorStrategy;
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;

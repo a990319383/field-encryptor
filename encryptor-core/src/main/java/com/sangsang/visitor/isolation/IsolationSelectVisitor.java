@@ -4,7 +4,7 @@ import com.sangsang.cache.isolation.IsolationInstanceCache;
 import com.sangsang.domain.dto.BaseFieldParseTable;
 import com.sangsang.domain.dto.FieldInfoDto;
 import com.sangsang.domain.enums.IsolationRelationEnum;
-import com.sangsang.domain.strategy.isolation.IsolationDataStrategy;
+import com.sangsang.domain.strategy.isolation.DataIsolationStrategy;
 import com.sangsang.util.CollectionUtils;
 import com.sangsang.util.ExpressionsUtil;
 import com.sangsang.util.StringUtils;
@@ -104,7 +104,7 @@ public class IsolationSelectVisitor extends BaseFieldParseTable implements Selec
             //4.3.1 随便获取一个字段，得到这个字段所属的真实表名（因为这些字段都是属于同一张真实表，所以随便获取一个即可）
             FieldInfoDto anyFieldInfo = fieldTableEntry.getValue().stream().findAny().get();
             //4.3.2 通过表名获取到当前的数据隔离的相关信息（外层获取，避免方法重复调用）
-            IsolationDataStrategy dataIsolationStrategy = IsolationInstanceCache.getInstance(anyFieldInfo.getSourceTableName());
+            DataIsolationStrategy dataIsolationStrategy = IsolationInstanceCache.getInstance(anyFieldInfo.getSourceTableName());
             String isolationField = dataIsolationStrategy.getIsolationField();
             IsolationRelationEnum isolationRelation = dataIsolationStrategy.getIsolationRelation();
             Object isolationData = dataIsolationStrategy.getIsolationData();
