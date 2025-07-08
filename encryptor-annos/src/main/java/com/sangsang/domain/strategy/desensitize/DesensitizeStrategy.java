@@ -5,7 +5,7 @@ package com.sangsang.domain.strategy.desensitize;
  * @date 2025/4/7 17:19
  */
 @FunctionalInterface
-public interface DesensitizeInterface<T> {
+public interface DesensitizeStrategy<T> {
 
     /**
      * 执行脱敏的具体逻辑

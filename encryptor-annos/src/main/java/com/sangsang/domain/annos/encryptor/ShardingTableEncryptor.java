@@ -1,6 +1,6 @@
 package com.sangsang.domain.annos.encryptor;
 
-import com.sangsang.domain.strategy.encryptor.ShardingTableInterface;
+import com.sangsang.domain.strategy.encryptor.ShardingTableStrategy;
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
@@ -20,5 +20,5 @@ public @interface ShardingTableEncryptor {
     /**
      * 通过分表前的原始表名能获取到所有分表后的表名
      **/
-    Class<? extends ShardingTableInterface> value();
+    Class<? extends ShardingTableStrategy> value();
 }

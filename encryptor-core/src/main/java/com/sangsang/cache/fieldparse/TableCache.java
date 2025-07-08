@@ -75,7 +75,7 @@ public class TableCache implements BeanPostProcessor {
             log.info("【field-encryptor】初始化表结构信息，扫描指定包路径 :{} 合计表数量：{}", fieldProperties.getScanEntityPackage(), tableInfoDtos.size());
         }
 
-        //2.如果没有指定扫描路径，则从mybatis-plus提供的工具，获取当前项目模块加载的表的实体类信息
+        //2.如果没有指定扫描路径，输出警告日志
         if (CollectionUtils.isEmpty(fieldProperties.getScanEntityPackage())) {
             log.warn("【field-encryptor】初始化表结构信息，未指定实体类扫描路径，如需使用数据脱敏以外的功能，请检查配置");
             return;

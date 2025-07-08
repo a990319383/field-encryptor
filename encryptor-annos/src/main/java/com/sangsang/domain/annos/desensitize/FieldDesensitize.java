@@ -1,6 +1,6 @@
 package com.sangsang.domain.annos.desensitize;
 
-import com.sangsang.domain.strategy.desensitize.DesensitizeInterface;
+import com.sangsang.domain.strategy.desensitize.DesensitizeStrategy;
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
@@ -24,7 +24,7 @@ public @interface FieldDesensitize {
     /**
      * 具体的脱敏算法
      **/
-    Class<? extends DesensitizeInterface> value();
+    Class<? extends DesensitizeStrategy> value();
 
     /**
      * 需要进行脱敏的字段名（只有标注在Mapper上面，并且返回值是Map的时候才需要）
