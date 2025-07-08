@@ -1,7 +1,7 @@
 package com.sangsang.bak;
 
 import com.sangsang.cache.encryptor.EncryptorInstanceCache;
-import com.sangsang.cache.encryptor.TableCache;
+import com.sangsang.cache.fieldparse.TableCache;
 import com.sangsang.domain.constants.SymbolConstant;
 import com.sangsang.domain.dto.TableFieldMsgDto;
 import com.sangsang.util.StringUtils;

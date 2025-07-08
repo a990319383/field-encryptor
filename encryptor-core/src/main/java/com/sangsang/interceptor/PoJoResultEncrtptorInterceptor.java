@@ -3,7 +3,7 @@ package com.sangsang.interceptor;
 import cn.hutool.core.lang.Pair;
 import cn.hutool.core.util.StrUtil;
 import com.sangsang.cache.encryptor.EncryptorInstanceCache;
-import com.sangsang.cache.encryptor.TableCache;
+import com.sangsang.cache.fieldparse.TableCache;
 import com.sangsang.domain.annos.encryptor.FieldEncryptor;
 import com.sangsang.domain.annos.FieldInterceptorOrder;
 import com.sangsang.domain.annos.encryptor.PoJoResultEncryptor;

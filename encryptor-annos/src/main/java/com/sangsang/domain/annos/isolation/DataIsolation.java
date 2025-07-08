@@ -1,7 +1,7 @@
 package com.sangsang.domain.annos.isolation;
 
 import com.sangsang.domain.strategy.DefaultStrategyBase;
-import com.sangsang.domain.strategy.isolation.IsolationDataStrategy;
+import com.sangsang.domain.strategy.isolation.DataIsolationStrategy;
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
@@ -17,11 +17,11 @@ import java.lang.annotation.Target;
  */
 @Target({ElementType.TYPE})
 @Retention(RetentionPolicy.RUNTIME)
-public @interface IsolationData {
+public @interface DataIsolation {
 
     /**
      * 获取当前用户隔离的值的具体方法
      * 如果没有指定的话，取全局配置的值
      **/
-    Class<? extends IsolationDataStrategy> value() default DefaultStrategyBase.IsolationBeanStrategy.class;
+    Class<? extends DataIsolationStrategy> value() default DefaultStrategyBase.BeanIsolationStrategy.class;
 }

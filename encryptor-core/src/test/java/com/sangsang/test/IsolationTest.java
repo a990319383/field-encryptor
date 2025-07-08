@@ -1,10 +1,15 @@
 package com.sangsang.test;
 
+import com.sangsang.util.AnswerUtil;
 import com.sangsang.util.JsqlparserUtil;
+import com.sangsang.util.ReflectUtils;
+import com.sangsang.util.StringUtils;
 import com.sangsang.visitor.isolation.IsolationStatementVisitor;
-import net.sf.jsqlparser.JSQLParserException;
 import net.sf.jsqlparser.statement.Statement;
 import org.junit.jupiter.api.Test;
+
+import java.util.Arrays;
+import java.util.List;
 
 
 /**
@@ -13,34 +18,34 @@ import org.junit.jupiter.api.Test;
  */
 public class IsolationTest {
     //普通查询，没有条件
-    String s1 = "select * from il_user tu";
+    String s1 = "select * from tb_user tu";
 
     //带条件的查询，且条件里面有or
     String s2 = "select \n" +
             "*\n" +
-            "from il_user \n" +
+            "from tb_user \n" +
             "WHERE phone like 'xxx'\n" +
             "and user_name = 'xxx'\n" +
             "or phone = 'xxx'";
     //多层嵌套查询
     String s3 = "select a.*,\n" +
-            "(select tu.phone from il_user tu) as ppp\n" +
+            "(select tu.phone from tb_user tu) as ppp\n" +
             "from \n" +
             "(\n" +
             "select *\n" +
-            "from il_user \n" +
+            "from tb_user \n" +
             "WHERE phone = 'xxx')a";
-    //联表查询 + EXISTS
+    //联表查询 + EXISTS（注意：EXISTS中拥有了外部上游的字段访问权限，当前处理是，内层也增加了外层的数据隔离）
     String s4 = "SELECT *\n" +
-            "\t\tfrom il_user t1 \n" +
-            "\t\tleft join il_user t2\n" +
+            "\t\tfrom tb_user t1 \n" +
+            "\t\tleft join tb_user t2\n" +
             "\t\ton t1.id = t2.id \n" +
-            "\t\tWHERE EXISTS (SELECT count(1) from il_user )";
+            "\t\tWHERE EXISTS (SELECT count(1) from tb_user )";
 
     // in select
     String s5 = "\tSELECT *\n" +
-            "\tfrom il_user tu \n" +
-            "\tWHERE tu.id in (select id from il_user)";
+            "\tfrom tb_user tu \n" +
+            "\tWHERE tu.id in (select id from tb_user)";
 
     /**
      * mysql转换为达梦的语法转换器测试
@@ -52,19 +57,18 @@ public class IsolationTest {
     @Test
     public void isolationTest() throws Exception {
         //需要的sql
-        String sql = s5;
-        System.out.println("----------------------原始sql-----------------------");
-        System.out.println(sql);
+        String sql = s4;
         //mock数据
         InitTableInfo.initTable();
         InitTableInfo.initIsolation();
 
-        //开始进行语法转换
+        //开始进行数据隔离
         Statement statement = JsqlparserUtil.parse(sql);
         IsolationStatementVisitor ilStatementVisitor = new IsolationStatementVisitor();
         statement.accept(ilStatementVisitor);
 
-
+        System.out.println("----------------------原始sql-----------------------");
+        System.out.println(sql);
         System.out.println("----------------------数据隔离后sql-----------------------");
         System.out.println(ilStatementVisitor.getResultSql());
         System.out.println("---------------------------------------------");
@@ -75,43 +79,37 @@ public class IsolationTest {
     }
 
 
-//----------------------------------------校验当前程序是否正确分割线---------------------------------------------------------
-/*
+    //----------------------------------------校验当前程序是否正确分割线---------------------------------------------------------
     //需要测试的sql
     List<String> sqls = Arrays.asList(
+            s1, s2, s3, s4, s5
     );
 
 
-    *//**
+    /**
      * 校验语法转换处理是否正确
      * 哥们儿，来对答案了
      *
      * @author liutangqi
      * @date 2025/6/6 15:40
      * @Param []
-     **//*
+     **/
     @Test
-    public void tfCheck() throws NoSuchFieldException, JSQLParserException, IllegalAccessException {
+    public void isolationCheck() throws Exception {
         //mock数据
         InitTableInfo.initTable();
-
-        //初始化转换器实例缓存
-        FieldProperties fieldProperties = new FieldProperties();
-        TransformationProperties transformationProperties = new TransformationProperties();
-        transformationProperties.setPatternType(TransformationPatternTypeConstant.MYSQL_2_DM);
-        fieldProperties.setTransformation(transformationProperties);
-        new TransformationInstanceCache().init(fieldProperties);
+        InitTableInfo.initIsolation();
 
         for (int i = 0; i < sqls.size(); i++) {
             String sql = sqls.get(i);
-            //开始解析sql
+            //开始进行数据隔离
             Statement statement = JsqlparserUtil.parse(sql);
-            TransformationStatementVisitor transformationStatementVisitor = new TransformationStatementVisitor();
-            statement.accept(transformationStatementVisitor);
-            String resultSql = transformationStatementVisitor.getResultSql();
+            IsolationStatementVisitor ilStatementVisitor = new IsolationStatementVisitor();
+            statement.accept(ilStatementVisitor);
+            String resultSql = ilStatementVisitor.getResultSql();
 
             //找答案
-            String answer = AnswerUtil.readTfAnswerToFile(this, sql);
+            String answer = AnswerUtil.readIsolationAnswerToFile(this, sql);
             String sqlFieldName = ReflectUtils.getFieldNameByValue(this, sql);
             if (StringUtils.isBlank(answer)) {
                 System.out.println("这个sql没答案，自己检查，然后把正确答案给录到com.sangsang.answer.standard下面 :" + sqlFieldName);
@@ -137,33 +135,24 @@ public class IsolationTest {
 //-----------------标准答案存储路径：com.sangsang.answer.standard
 //-----------------此处答案输出路径：com.sangsang.answer.current
 
-    *//**
+    /**
      * 将转换好的结果答案写入到文件中
      *
      * @author liutangqi
      * @date 2025/6/6 15:31
      * @Param []
-     **//*
+     **/
     @Test
-    public void transformationAnswerWrite() throws Exception {
+    public void isolationAnswerWrite() throws Exception {
         //mock数据
         InitTableInfo.initTable();
-
-        //初始化转换器实例缓存
-        FieldProperties fieldProperties = new FieldProperties();
-        TransformationProperties transformationProperties = new TransformationProperties();
-        transformationProperties.setPatternType(TransformationPatternTypeConstant.MYSQL_2_DM);
-        fieldProperties.setTransformation(transformationProperties);
-        new TransformationInstanceCache().init(fieldProperties);
-
+        InitTableInfo.initIsolation();
         for (String sql : sqls) {
-            //开始解析sql
-            //开始进行语法转换
+            //开始进行数据隔离
             Statement statement = JsqlparserUtil.parse(sql);
-            TransformationStatementVisitor transformationStatementVisitor = new TransformationStatementVisitor();
-            statement.accept(transformationStatementVisitor);
-            String resultSql = transformationStatementVisitor.getResultSql();
-            AnswerUtil.writeTfAnswerToFile(this, sql, resultSql);
+            IsolationStatementVisitor ilStatementVisitor = new IsolationStatementVisitor();
+            statement.accept(ilStatementVisitor);
+            AnswerUtil.writeIsolationAnswerToFile(this, sql, ilStatementVisitor.getResultSql());
         }
-    }*/
+    }
 }

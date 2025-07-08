@@ -83,6 +83,25 @@ public class AnswerUtil {
         writer.write(resSql, false);
     }
 
+    /**
+     * 将数据隔离的答案写入到文件中
+     *
+     * @author liutangqi
+     * @date 2025/7/7 16:44
+     * @Param [obj, oldSql, resSql]
+     **/
+    public static void writeIsolationAnswerToFile(Object obj,
+                                                  String oldSql,
+                                                  String resSql) throws IllegalAccessException {
+        //项目路径
+        String projectRoot = System.getProperty("user.dir");
+        //获取变量名作为文件名
+        String fileName = ReflectUtils.getFieldNameByValue(obj, oldSql);
+        String path = projectRoot + answerBasePath + "/isolation/" + fileName;
+        FileWriter writer = new FileWriter(path);
+        writer.write(resSql, false);
+    }
+
 
     /**
      * 读取db模式的这个sql的答案
@@ -149,6 +168,29 @@ public class AnswerUtil {
         //获取变量名作为文件名
         String fileName = ReflectUtils.getFieldNameByValue(obj, oldSql);
         String path = projectRoot + standardBasePath + "/transformation/" + fileName;
+        FileReader fileReader = null;
+        try {
+            fileReader = new FileReader(path);
+        } catch (Exception e) {
+            return null;
+        }
+        return fileReader.readString();
+    }
+
+    /**
+     * 读取数据隔离的答案
+     *
+     * @author liutangqi
+     * @date 2025/7/7 16:46
+     * @Param [obj, oldSql]
+     **/
+    public static String readIsolationAnswerToFile(Object obj,
+                                                   String oldSql) throws IllegalAccessException {
+        //项目路径
+        String projectRoot = System.getProperty("user.dir");
+        //获取变量名作为文件名
+        String fileName = ReflectUtils.getFieldNameByValue(obj, oldSql);
+        String path = projectRoot + standardBasePath + "/isolation/" + fileName;
         FileReader fileReader = null;
         try {
             fileReader = new FileReader(path);

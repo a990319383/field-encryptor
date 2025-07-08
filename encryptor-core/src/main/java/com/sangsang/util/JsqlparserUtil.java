@@ -1,8 +1,9 @@
 package com.sangsang.util;
 
+import cn.hutool.core.util.ObjectUtil;
 import com.sangsang.cache.SqlParseCache;
 import com.sangsang.cache.encryptor.EncryptorInstanceCache;
-import com.sangsang.cache.encryptor.TableCache;
+import com.sangsang.cache.fieldparse.TableCache;
 import com.sangsang.domain.annos.encryptor.FieldEncryptor;
 import com.sangsang.domain.constants.FieldConstant;
 import com.sangsang.domain.dto.ColumnTableDto;
@@ -44,17 +45,19 @@ public class JsqlparserUtil {
      * @Param [sql]
      **/
     public static Statement parse(String sql) throws JSQLParserException {
-        //1.去除空白行
+        //1.去除空白行（Jsqlparser4.9中sql中有空白行会解析报错）
         String clearSql = StringUtils.replaceLineBreak(sql);
-        //2.判断缓存是否命中
-        Statement sqlParseCache = SqlParseCache.getSqlParseCache(clearSql);
-        if (sqlParseCache != null) {
-            return sqlParseCache;
+
+        //2.判断缓存是否命中，没命中解析一个扔缓存中
+        Statement statement = SqlParseCache.getSqlParseCache(clearSql);
+        if (statement == null) {
+            statement = CCJSqlParserUtil.parse(clearSql);
+            SqlParseCache.setSqlParseCache(clearSql, statement);
         }
-        //3.缓存没命中，重新开始解析，并将解析结果扔到缓存中
-        Statement statement = CCJSqlParserUtil.parse(clearSql);
-        SqlParseCache.setSqlParseCache(clearSql, statement);
-        return statement;
+
+        //3.将statement深克隆一份给到调用方，这里不能返回缓存对象，缓存对象里面会改，相互影响
+        //备注：这里深克隆一份的耗时大约是重新解析一遍的十分之一，所以这里是个有效缓存，这个也是个高频操作，整个系统多种功能都强依赖这个
+        return ObjectUtil.cloneByStream(statement);
     }
 
     /**

@@ -1,0 +1,1 @@
+SELECT * FROM tb_user tu WHERE tu.role_id = 1111111 AND (tu.id IN (SELECT id FROM tb_user WHERE tu.role_id = 1111111 AND tb_user.role_id = 1111111))

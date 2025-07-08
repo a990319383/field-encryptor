@@ -7,12 +7,12 @@ import java.util.List;
 
 /**
  * 数据隔离策略
- * 注意：泛型T允许的值在 com.sangsang.domain.strategy.isolation.IsolationDataStrategy#ALLOW_TYPES
+ * 注意：泛型T允许的值在 com.sangsang.domain.strategy.isolation.DataIsolationStrategy#ALLOW_TYPES
  *
  * @author liutangqi
  * @date 2025/6/12 16:09
  */
-public interface IsolationDataStrategy<T> {
+public interface DataIsolationStrategy<T> {
 
     /**
      * 获取数据隔离的数据库字段名
@@ -36,7 +36,7 @@ public interface IsolationDataStrategy<T> {
 
     /**
      * 获取数据隔离的具体数据
-     * 注意：泛型T允许的值在 com.sangsang.domain.strategy.isolation.IsolationDataStrategy#ALLOW_TYPES
+     * 注意：泛型T允许的值在 com.sangsang.domain.strategy.isolation.DataIsolationStrategy#ALLOW_TYPES
      *
      * @author liutangqi
      * @date 2025/6/21 19:49
