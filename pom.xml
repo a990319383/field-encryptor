@@ -9,6 +9,7 @@
     <packaging>pom</packaging>
     <version>3.5.0</version>
     <description>无侵入数据库字段加解密，无侵入数据库语法转换，个性化数据隔离，个性化脱敏</description>
+    <name>field-encryptor</name>
     <modules>
         <module>encryptor-annos</module>
         <module>encryptor-core</module>
