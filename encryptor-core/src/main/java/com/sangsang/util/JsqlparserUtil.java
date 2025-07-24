@@ -3,12 +3,16 @@ package com.sangsang.util;
 import cn.hutool.core.util.ObjectUtil;
 import com.sangsang.cache.SqlParseCache;
 import com.sangsang.cache.encryptor.EncryptorInstanceCache;
+import com.sangsang.cache.fielddefault.FieldDefaultInstanceCache;
 import com.sangsang.cache.fieldparse.TableCache;
 import com.sangsang.domain.annos.encryptor.FieldEncryptor;
+import com.sangsang.domain.annos.fielddefault.FieldDefault;
 import com.sangsang.domain.constants.FieldConstant;
 import com.sangsang.domain.dto.ColumnTableDto;
+import com.sangsang.domain.dto.ColumnUniqueDto;
 import com.sangsang.domain.dto.FieldInfoDto;
 import com.sangsang.domain.enums.EncryptorFunctionEnum;
+import com.sangsang.domain.enums.SqlCommandEnum;
 import com.sangsang.visitor.dbencrtptor.DBDecryptExpressionVisitor;
 import com.sangsang.visitor.pojoencrtptor.PlaceholderExpressionVisitor;
 import com.sangsang.visitor.transformation.TransformationExpressionVisitor;
@@ -16,6 +20,7 @@ import com.sangsang.visitor.transformation.wrap.ExpressionWrapper;
 import net.sf.jsqlparser.JSQLParserException;
 import net.sf.jsqlparser.expression.*;
 import net.sf.jsqlparser.expression.operators.relational.ComparisonOperator;
+import net.sf.jsqlparser.expression.operators.relational.ExpressionList;
 import net.sf.jsqlparser.parser.CCJSqlParserUtil;
 import net.sf.jsqlparser.schema.Column;
 import net.sf.jsqlparser.schema.Table;
@@ -70,8 +75,7 @@ public class JsqlparserUtil {
      **/
     public static List<SelectItem> perfectAllColumns(SelectItem selectItem, Map<String, Set<FieldInfoDto>> layerFieldTableMap) {
         //只有查询的这张表有需要加密的字段才将* 转换为每个字段，避免不必要的性能损耗
-        if (layerFieldTableMap.values().stream().flatMap(Collection::stream)
-                .filter(f -> TableCache.getFieldEncryptTable().contains(f.getSourceTableName())).count() == 0) {
+        if (layerFieldTableMap.values().stream().flatMap(Collection::stream).filter(f -> TableCache.getFieldEncryptTable().contains(f.getSourceTableName())).count() == 0) {
             return Arrays.asList(selectItem);
         }
         Expression expression = selectItem.getExpression();
@@ -79,24 +83,16 @@ public class JsqlparserUtil {
         //select 别名.*  （注意：AllColumns AllTableColumns 有继承关系，这里判断顺序不能改）
         if (expression instanceof AllTableColumns) {
             String tableName = ((AllTableColumns) expression).getTable().getName().toLowerCase();
-            return Optional.ofNullable(CollectionUtils.getValueIgnoreFloat(layerFieldTableMap, tableName))
-                    .orElse(new HashSet<>())
-                    .stream()
-                    .map(m -> {
-                        Column column = new Column(m.getColumnName());
-                        column.setTable(new Table(tableName));
-                        return SelectItem.from(column);
-                    }).collect(Collectors.toList());
+            return Optional.ofNullable(CollectionUtils.getValueIgnoreFloat(layerFieldTableMap, tableName)).orElse(new HashSet<>()).stream().map(m -> {
+                Column column = new Column(m.getColumnName());
+                column.setTable(new Table(tableName));
+                return SelectItem.from(column);
+            }).collect(Collectors.toList());
         }
 
         // select *  未指定别名，表示当前层只有一张表，直接将当前层的全部字段作为结果集返回
         if (expression instanceof AllColumns) {
-            return layerFieldTableMap
-                    .values()
-                    .stream()
-                    .flatMap(Collection::stream)
-                    .map(m -> SelectItem.from(new Column(m.getColumnName())))
-                    .collect(Collectors.toList());
+            return layerFieldTableMap.values().stream().flatMap(Collection::stream).map(m -> SelectItem.from(new Column(m.getColumnName()))).collect(Collectors.toList());
         }
 
         //不包含*
@@ -129,27 +125,23 @@ public class JsqlparserUtil {
 
         //1.没有指定表名时，从当前层的表的所有字段里面找到这个名字的表( select 字段)
         if (table == null) {
-            layerFieldTableMap.get(String.valueOf(layer)).entrySet()
-                    .forEach(f -> {
-                        List<FieldInfoDto> matchFields = f.getValue().stream().filter(fi -> StringUtils.equalIgnoreFieldSymbol(fi.getColumnName(), columName)).collect(Collectors.toList());
-                        if (CollectionUtils.isNotEmpty(matchFields)) {
-                            //当前层的所有字段里面叫这个的，正确sql语法中只会有一个，所以get(0)
-                            FieldInfoDto matchField = matchFields.get(0);
-                            sourceTableName.set(matchField.getSourceTableName());
-                            sourceColumn.set(matchField.getSourceColumn());
-                            fromSourceTable.set(matchField.isFromSourceTable());
-                            tableAliasName.set(f.getKey());
-                        }
-                    });
+            layerFieldTableMap.get(String.valueOf(layer)).entrySet().forEach(f -> {
+                List<FieldInfoDto> matchFields = f.getValue().stream().filter(fi -> StringUtils.equalIgnoreFieldSymbol(fi.getColumnName(), columName)).collect(Collectors.toList());
+                if (CollectionUtils.isNotEmpty(matchFields)) {
+                    //当前层的所有字段里面叫这个的，正确sql语法中只会有一个，所以get(0)
+                    FieldInfoDto matchField = matchFields.get(0);
+                    sourceTableName.set(matchField.getSourceTableName());
+                    sourceColumn.set(matchField.getSourceColumn());
+                    fromSourceTable.set(matchField.isFromSourceTable());
+                    tableAliasName.set(f.getKey());
+                }
+            });
         }
 
         //2.有指定表名时，从当前层的这张表的所有字段里面这个字段的信息 （select 别名.字段）
         if (table != null) {
             String columnTableName = table.getName().toLowerCase();
-            List<FieldInfoDto> matchFields = Optional.ofNullable(CollectionUtils.getValueIgnoreFloat(layerFieldTableMap.get(String.valueOf(layer)), columnTableName))
-                    .orElse(new HashSet<>())
-                    .stream().filter(f -> StringUtils.equalIgnoreFieldSymbol(f.getColumnName(), columName))
-                    .collect(Collectors.toList());
+            List<FieldInfoDto> matchFields = Optional.ofNullable(CollectionUtils.getValueIgnoreFloat(layerFieldTableMap.get(String.valueOf(layer)), columnTableName)).orElse(new HashSet<>()).stream().filter(f -> StringUtils.equalIgnoreFieldSymbol(f.getColumnName(), columName)).collect(Collectors.toList());
             if (CollectionUtils.isNotEmpty(matchFields)) {
                 //当前层的所有字段里面叫这个的，正确sql语法中只会有一个，所以get(0)
                 FieldInfoDto matchField = matchFields.get(0);
@@ -160,12 +152,7 @@ public class JsqlparserUtil {
             }
         }
 
-        return ColumnTableDto.builder()
-                .tableAliasName(tableAliasName.get())
-                .sourceTableName(sourceTableName.get())
-                .sourceColumn(sourceColumn.get())
-                .fromSourceTable(fromSourceTable.get())
-                .build();
+        return ColumnTableDto.builder().tableAliasName(tableAliasName.get()).sourceTableName(sourceTableName.get()).sourceColumn(sourceColumn.get()).fromSourceTable(fromSourceTable.get()).build();
     }
 
 
@@ -188,8 +175,7 @@ public class JsqlparserUtil {
         if (table == null) {
             for (Map.Entry<String, Set<FieldInfoDto>> entry : layerFieldTableMap.getOrDefault(String.valueOf(layer), new HashMap<>()).entrySet()) {
                 //任意的表有一个字段符合，则返回true，表示是个表字段
-                if (entry.getValue().stream()
-                        .anyMatch(m -> StringUtils.equalIgnoreFieldSymbol(m.getColumnName(), columName))) {
+                if (entry.getValue().stream().anyMatch(m -> StringUtils.equalIgnoreFieldSymbol(m.getColumnName(), columName))) {
                     return true;
                 }
             }
@@ -211,11 +197,7 @@ public class JsqlparserUtil {
         ColumnTableDto columnTableDto = parseColumn(column, layer, layerFieldTableMap);
 
         //2.当前字段不需要解密直接返回 (实体类上面没有标注@FieldEncryptor注解 或者字段不是来源自真实表)
-        return columnTableDto.isFromSourceTable()
-                && Optional.ofNullable(TableCache.getTableFieldEncryptInfo())
-                .map(m -> CollectionUtils.getValueIgnoreFloat(m, columnTableDto.getSourceTableName()))
-                .map(m -> CollectionUtils.getValueIgnoreFloat(m, columnTableDto.getSourceColumn()))
-                .orElse(null) != null;
+        return columnTableDto.isFromSourceTable() && Optional.ofNullable(TableCache.getTableFieldEncryptInfo()).map(m -> CollectionUtils.getValueIgnoreFloat(m, columnTableDto.getSourceTableName())).map(m -> CollectionUtils.getValueIgnoreFloat(m, columnTableDto.getSourceColumn())).orElse(null) != null;
     }
 
     /**
@@ -242,10 +224,7 @@ public class JsqlparserUtil {
         }
 
         //3.从当前表字段中找符合条件的字段上面的注解
-        return Optional.ofNullable(TableCache.getTableFieldEncryptInfo())
-                .map(m -> CollectionUtils.getValueIgnoreFloat(m, columnTableDto.getSourceTableName()))
-                .map(m -> CollectionUtils.getValueIgnoreFloat(m, columnTableDto.getSourceColumn()))
-                .orElse(null);
+        return Optional.ofNullable(TableCache.getTableFieldEncryptInfo()).map(m -> CollectionUtils.getValueIgnoreFloat(m, columnTableDto.getSourceTableName())).map(m -> CollectionUtils.getValueIgnoreFloat(m, columnTableDto.getSourceColumn())).orElse(null);
     }
 
     /**
@@ -319,20 +298,8 @@ public class JsqlparserUtil {
      * @Param [layerSelectTableFieldMap, layerFieldTableMap]
      **/
     public static boolean needEncrypt(Map<String, Map<String, Set<FieldInfoDto>>> layerSelectTableFieldMap, Map<String, Map<String, Set<FieldInfoDto>>> layerFieldTableMap) {
-        Set<FieldInfoDto> selectFieldInfoDtos = layerSelectTableFieldMap
-                .values()
-                .stream()
-                .flatMap(f -> f.values().stream())
-                .flatMap(Collection::stream)
-                .filter(f -> TableCache.getFieldEncryptTable().contains(f.getSourceTableName()))
-                .collect(Collectors.toSet());
-        Set<FieldInfoDto> fieldInfoDtos = layerFieldTableMap
-                .values()
-                .stream()
-                .flatMap(f -> f.values().stream())
-                .flatMap(Collection::stream)
-                .filter(f -> TableCache.getFieldEncryptTable().contains(f.getSourceTableName()))
-                .collect(Collectors.toSet());
+        Set<FieldInfoDto> selectFieldInfoDtos = layerSelectTableFieldMap.values().stream().flatMap(f -> f.values().stream()).flatMap(Collection::stream).filter(f -> TableCache.getFieldEncryptTable().contains(f.getSourceTableName())).collect(Collectors.toSet());
+        Set<FieldInfoDto> fieldInfoDtos = layerFieldTableMap.values().stream().flatMap(f -> f.values().stream()).flatMap(Collection::stream).filter(f -> TableCache.getFieldEncryptTable().contains(f.getSourceTableName())).collect(Collectors.toSet());
         return CollectionUtils.isNotEmpty(selectFieldInfoDtos) || CollectionUtils.isNotEmpty(fieldInfoDtos);
     }
 
@@ -344,8 +311,7 @@ public class JsqlparserUtil {
      * @Param [dto]
      **/
     public static FieldEncryptor parseFieldEncryptor(ColumnTableDto dto) {
-        Map<String, FieldEncryptor> stringFieldEncryptorMap = Optional.ofNullable(CollectionUtils.getValueIgnoreFloat(TableCache.getTableFieldEncryptInfo(), dto.getSourceTableName()))
-                .orElse(new HashMap<>());
+        Map<String, FieldEncryptor> stringFieldEncryptorMap = Optional.ofNullable(CollectionUtils.getValueIgnoreFloat(TableCache.getTableFieldEncryptInfo(), dto.getSourceTableName())).orElse(new HashMap<>());
         return CollectionUtils.getValueIgnoreFloat(stringFieldEncryptorMap, dto.getSourceColumn());
     }
 
@@ -356,10 +322,7 @@ public class JsqlparserUtil {
      * @date 2024/7/11 11:24
      * @Param [layer 当前层数, layerFieldTableMap 当前层所有的字段信息,expression 表达式, placeholderColumnTableMap 存放结果集的map]
      **/
-    public static void parseWhereColumTable(int layer,
-                                            Map<String, Map<String, Set<FieldInfoDto>>> layerFieldTableMap,
-                                            BinaryExpression expression,
-                                            Map<String, ColumnTableDto> placeholderColumnTableMap) {
+    public static void parseWhereColumTable(int layer, Map<String, Map<String, Set<FieldInfoDto>>> layerFieldTableMap, BinaryExpression expression, Map<String, ColumnTableDto> placeholderColumnTableMap) {
         Expression leftExpression = expression.getLeftExpression();
         Expression rightExpression = expression.getRightExpression();
 
@@ -374,26 +337,44 @@ public class JsqlparserUtil {
      * @date 2024/7/11 11:24
      * @Param [layer 当前层数, layerFieldTableMap 当前层所有的字段信息,leftExpression 左表达式,rightExpression右表达式, placeholderColumnTableMap 存放结果集的map]
      **/
-    public static void parseWhereColumTable(int layer,
-                                            Map<String, Map<String, Set<FieldInfoDto>>> layerFieldTableMap,
-                                            Expression leftExpression,
-                                            Expression rightExpression,
-                                            Map<String, ColumnTableDto> placeholderColumnTableMap) {
+    public static void parseWhereColumTable(int layer, Map<String, Map<String, Set<FieldInfoDto>>> layerFieldTableMap, Expression leftExpression, Expression rightExpression, Map<String, ColumnTableDto> placeholderColumnTableMap) {
         //左边是列，右边是我们的占位符
-        if (leftExpression instanceof Column
-                && rightExpression != null
-                && rightExpression.toString().contains(FieldConstant.PLACEHOLDER)) {
+        if (leftExpression instanceof Column && rightExpression != null && rightExpression.toString().contains(FieldConstant.PLACEHOLDER)) {
             ColumnTableDto columnTableDto = JsqlparserUtil.parseColumn((Column) leftExpression, layer, layerFieldTableMap);
             placeholderColumnTableMap.put(rightExpression.toString(), columnTableDto);
         }
 
         //左边是我们的占位符 右边是列
-        if (rightExpression instanceof Column
-                && leftExpression != null
-                && leftExpression.toString().contains(FieldConstant.PLACEHOLDER)) {
+        if (rightExpression instanceof Column && leftExpression != null && leftExpression.toString().contains(FieldConstant.PLACEHOLDER)) {
             ColumnTableDto columnTableDto = JsqlparserUtil.parseColumn((Column) rightExpression, layer, layerFieldTableMap);
             placeholderColumnTableMap.put(leftExpression.toString(), columnTableDto);
         }
+    }
+
+    /**
+     * 根据sql当前层的字段，过滤出其中需要设置变动默认值的字段信息
+     *
+     * @author liutangqi
+     * @date 2025/7/17 11:26
+     * @Param [someLayerFieldTableMap: 某一层的字段信息]
+     **/
+    public static Map<ColumnUniqueDto, FieldDefault> filterFieldDefault(Map<String, Set<FieldInfoDto>> someLayerFieldTableMap, SqlCommandEnum sqlCommandEnum) {
+        //1.创建处理结果的容器
+        Map<ColumnUniqueDto, FieldDefault> res = new HashMap<>();
+
+        //2.当前项目需要设置默认值的小写表名
+        Map<String, Map<String, FieldDefault>> tableFieldDefaultInfo = TableCache.getTableFieldDefaultInfo();
+
+        //3.依次处理每张表信息
+        for (Map.Entry<String, Set<FieldInfoDto>> fieldMapEntry : someLayerFieldTableMap.entrySet()) {
+            String tableAliasName = fieldMapEntry.getKey();
+            for (FieldInfoDto fieldInfoDto : fieldMapEntry.getValue()) {
+                //获取此字段上面标注的@FieldDefault，存在注解并且当前需要处理 就放结果集里面
+                Optional.ofNullable(CollectionUtils.getValueIgnoreFloat(tableFieldDefaultInfo, fieldInfoDto.getSourceTableName())).map(m -> CollectionUtils.getValueIgnoreFloat(m, fieldInfoDto.getSourceColumn())).filter(f -> FieldDefaultInstanceCache.getInstance(f.value()).whetherToHandle(sqlCommandEnum)).ifPresent(p -> res.put(ColumnUniqueDto.builder().tableAliasName(tableAliasName).sourceColumn(fieldInfoDto.getSourceColumn()).build(), p));
+            }
+        }
+
+        return res;
     }
 
 
@@ -454,8 +435,7 @@ public class JsqlparserUtil {
             //1.1 两边都需要加密且算法一致时或者两边都不需要加密时，不需要处理
             FieldEncryptor leftFieldEncryptor = JsqlparserUtil.needEncryptFieldEncryptor(expression.getLeftExpression(), dbExpressionVisitor.getLayer(), dbExpressionVisitor.getLayerFieldTableMap());
             FieldEncryptor rightFieldEncryptor = JsqlparserUtil.needEncryptFieldEncryptor(expression.getRightExpression(), dbExpressionVisitor.getLayer(), dbExpressionVisitor.getLayerFieldTableMap());
-            if (Objects.equals(Optional.ofNullable(leftFieldEncryptor).map(FieldEncryptor::value).orElse(null),
-                    Optional.ofNullable(rightFieldEncryptor).map(FieldEncryptor::value).orElse(null))) {
+            if (Objects.equals(Optional.ofNullable(leftFieldEncryptor).map(FieldEncryptor::value).orElse(null), Optional.ofNullable(rightFieldEncryptor).map(FieldEncryptor::value).orElse(null))) {
                 return;
             }
             //1.2 两边算法不一致时，处理右边表达式
@@ -515,4 +495,29 @@ public class JsqlparserUtil {
         rightExpression.accept(phVisitor);
     }
 
+
+    /**
+     * 补齐设置的字段的默认值
+     *
+     * @author liutangqi
+     * @date 2025/7/22 17:50
+     * @Param [upstreamFieldDefaultColumns, expressions]
+     **/
+    public static ExpressionList completeFiledDefaultValues(List<FieldDefault> upstreamFieldDefaultColumns, ExpressionList<Expression> expressions) {
+        for (int i = 0; i < upstreamFieldDefaultColumns.size(); i++) {
+            //1.需要设置默认值的字段原sql就存在，并且开启了强制覆盖 则将默认值给原sql用if的方式给替换了
+            if (i < expressions.size() && upstreamFieldDefaultColumns.get(i) != null && upstreamFieldDefaultColumns.get(i).mandatoryOverride()) {
+                Expression fieldDefaultExp = ExpressionsUtil.buildFieldDefaultExp(upstreamFieldDefaultColumns.get(i).value());
+                Function ifFunction = ExpressionsUtil.buildAffirmativeIf(expressions.get(i), fieldDefaultExp);
+                expressions.set(i, ifFunction);
+            }
+
+            //2.需要设置默认值的字段原sql不存在，则新增
+            if (i >= expressions.size() && upstreamFieldDefaultColumns.get(i) != null) {
+                Expression fieldDefaultExp = ExpressionsUtil.buildFieldDefaultExp(upstreamFieldDefaultColumns.get(i).value());
+                expressions.add(i, fieldDefaultExp);
+            }
+        }
+        return expressions;
+    }
 }

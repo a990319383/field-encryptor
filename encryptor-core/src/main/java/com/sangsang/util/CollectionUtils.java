@@ -115,4 +115,23 @@ public class CollectionUtils {
         return value;
     }
 
+
+    /**
+     * 从Map中获取值，获取成功后，再将该值给移除掉
+     *
+     * @author liutangqi
+     * @date 2025/7/18 10:58
+     * @Param [map, key]
+     **/
+    public static <K, V> V getAndRemove(Map<K, V> map, K key) {
+        //1.先获取值
+        V res = map.get(key);
+
+        //2.判断Map中是否包含此key，包含就移除（注意：这里不能判断上面get的值是否为null来作为移除依据，因为Map中可以存null值作为value）
+        if (map.containsKey(key)) {
+            map.remove(key);
+        }
+        return res;
+    }
+
 }

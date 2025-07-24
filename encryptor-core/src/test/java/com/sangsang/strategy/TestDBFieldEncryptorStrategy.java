@@ -1,4 +1,4 @@
-package com.sangsang.encryptor;
+package com.sangsang.strategy;
 
 import com.sangsang.domain.constants.SymbolConstant;
 import com.sangsang.domain.strategy.encryptor.FieldEncryptorStrategy;
@@ -14,7 +14,7 @@ import net.sf.jsqlparser.expression.operators.relational.ExpressionList;
  * @author liutangqi
  * @date 2025/7/2 14:40
  */
-public class TestDBFieldEncryptorPattern implements FieldEncryptorStrategy<Expression> {
+public class TestDBFieldEncryptorStrategy implements FieldEncryptorStrategy<Expression> {
     private final String secreKey = "测试秘钥";
 
     @Override

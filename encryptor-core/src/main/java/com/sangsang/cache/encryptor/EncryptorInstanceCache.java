@@ -2,6 +2,7 @@ package com.sangsang.cache.encryptor;
 
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableName;
+import com.sangsang.config.other.DefaultBeanPostProcessor;
 import com.sangsang.domain.annos.encryptor.FieldEncryptor;
 import com.sangsang.domain.exception.FieldEncryptorException;
 import com.sangsang.domain.strategy.DefaultStrategyBase;
@@ -9,8 +10,6 @@ import com.sangsang.domain.strategy.encryptor.FieldEncryptorStrategy;
 import com.sangsang.util.ClassScanerUtil;
 import com.sangsang.util.ReflectUtils;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.BeansException;
-import org.springframework.beans.factory.config.BeanPostProcessor;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
@@ -25,7 +24,7 @@ import java.util.stream.Collectors;
  * @date 2025/6/24 17:58
  */
 @Slf4j
-public class EncryptorInstanceCache implements BeanPostProcessor {
+public class EncryptorInstanceCache extends DefaultBeanPostProcessor {
 
     /**
      * 缓存当前项目中的pojo加解密策略
@@ -35,7 +34,7 @@ public class EncryptorInstanceCache implements BeanPostProcessor {
     private static final Map<Class<? extends FieldEncryptorStrategy>, FieldEncryptorStrategy> INSTANCE_MAP = new HashMap<>();
 
     /**
-     * 初spring容器中的pojo加解密策略
+     * 初始化spring容器中的加解密策略
      *
      * @author liutangqi
      * @date 2025/6/24 11:12
@@ -54,16 +53,24 @@ public class EncryptorInstanceCache implements BeanPostProcessor {
 
 
     /**
-     * 获取当前pojo加解密策略实例
+     * 获取当前加解密策略实例
      *
      * @author liutangqi
      * @date 2025/6/24 11:13
      * @Param [clazz]
      **/
     public static <T> FieldEncryptorStrategy<T> getInstance(Class<? extends FieldEncryptorStrategy> clazz) {
+        //1.先从本地缓存中找
         FieldEncryptorStrategy<T> strategy = INSTANCE_MAP.get(clazz);
+
+        //2.本地缓存找不到，尝试通过无参构造方法进行实例化
         if (strategy == null) {
-            throw new FieldEncryptorException(String.format("未找到指定类型的加密策略 %s", clazz));
+            try {
+                strategy = clazz.newInstance();
+                INSTANCE_MAP.put(clazz, strategy);
+            } catch (Exception e) {
+                throw new FieldEncryptorException(String.format("未找到指定类型的加密策略 %s", clazz));
+            }
         }
         return strategy;
     }
@@ -110,32 +117,6 @@ public class EncryptorInstanceCache implements BeanPostProcessor {
                 INSTANCE_MAP.put(strategyClass, dbFieldEncryptorStrategy);
             }
         }
-    }
-
-    //------------------------------------------------------分割线----------------------------------------------------------------
-
-    /**
-     * 实现父类default方法，避免低版本不兼容，找不到实现类
-     *
-     * @author liutangqi
-     * @date 2024/9/10 11:36
-     * @Param [bean, beanName]
-     **/
-    @Override
-    public Object postProcessBeforeInitialization(Object bean, String beanName) throws BeansException {
-        return bean;
-    }
-
-    /**
-     * 实现父类default方法，避免低版本不兼容，找不到实现类
-     *
-     * @author liutangqi
-     * @date 2024/9/10 11:36
-     * @Param [bean, beanName]
-     **/
-    @Override
-    public Object postProcessAfterInitialization(Object bean, String beanName) throws BeansException {
-        return bean;
     }
 
 }

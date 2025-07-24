@@ -2,6 +2,9 @@ package com.sangsang.mockentity;
 
 
 import com.baomidou.mybatisplus.annotation.TableId;
+import com.sangsang.domain.annos.fielddefault.FieldDefault;
+import com.sangsang.strategy.TestCreateFieldDefaultStrategy;
+import com.sangsang.strategy.TestUpdateFieldDefaultStrategy;
 
 import java.time.LocalDateTime;
 
@@ -20,10 +23,12 @@ public class BaseEntity {
     /**
      * 创建时间
      */
+    @FieldDefault(TestCreateFieldDefaultStrategy.class)
     private LocalDateTime createTime;
     /**
      * 修改时间
      */
+    @FieldDefault(value = TestUpdateFieldDefaultStrategy.class, mandatoryOverride = true)
     private LocalDateTime updateTime;
 
     public static final String CREATE_TIME = "createTime";

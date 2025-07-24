@@ -1,4 +1,4 @@
-package com.sangsang.isolation;
+package com.sangsang.strategy;
 
 import com.sangsang.domain.enums.IsolationRelationEnum;
 import com.sangsang.domain.strategy.isolation.DataIsolationStrategy;

@@ -2,12 +2,11 @@ package com.sangsang.cache;
 
 import cn.hutool.cache.CacheUtil;
 import cn.hutool.cache.impl.LRUCache;
+import com.sangsang.config.other.DefaultBeanPostProcessor;
 import com.sangsang.config.properties.FieldProperties;
 import com.sangsang.domain.constants.NumberConstant;
 import com.sangsang.util.StringUtils;
 import net.sf.jsqlparser.statement.Statement;
-import org.springframework.beans.BeansException;
-import org.springframework.beans.factory.config.BeanPostProcessor;
 
 import java.util.Optional;
 
@@ -18,7 +17,7 @@ import java.util.Optional;
  * @author liutangqi
  * @date 2025/6/12 15:28
  */
-public class SqlParseCache implements BeanPostProcessor {
+public class SqlParseCache extends DefaultBeanPostProcessor {
 
     /**
      * 存储当前sql的解析结果的缓存
@@ -61,30 +60,4 @@ public class SqlParseCache implements BeanPostProcessor {
     public static void setSqlParseCache(String sql, Statement statement) {
         SQL_PARSE_CACHE.put(StringUtils.getSqlUniqueKey(sql), statement);
     }
-
-
-    /**
-     * 实现父类default方法，避免低版本不兼容，找不到实现类
-     *
-     * @author liutangqi
-     * @date 2025/5/21 10:28
-     * @Param [bean, beanName]
-     **/
-    @Override
-    public Object postProcessBeforeInitialization(Object bean, String beanName) throws BeansException {
-        return bean;
-    }
-
-    /**
-     * 实现父类default方法，避免低版本不兼容，找不到实现类
-     *
-     * @author liutangqi
-     * @date 2025/5/21 10:28
-     * @Param [bean, beanName]
-     **/
-    @Override
-    public Object postProcessAfterInitialization(Object bean, String beanName) throws BeansException {
-        return bean;
-    }
-
 }

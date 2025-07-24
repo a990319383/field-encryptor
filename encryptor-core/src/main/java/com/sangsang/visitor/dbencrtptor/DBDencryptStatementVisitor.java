@@ -150,7 +150,7 @@ public class DBDencryptStatementVisitor implements StatementVisitor {
         for (UpdateSet updateSet : updateSets) {
             List<Column> columns = updateSet.getColumns();
             ExpressionList<Expression> expressions = (ExpressionList<Expression>) updateSet.getValues();
-            //处理每对需要加密的字段，只处理一边是数据库字段，一边是常量的，两边都是数据库字段的，根据情况处理
+            //处理每对需要加密的字段
             for (int i = 0; i < columns.size(); i++) {
                 Column column = columns.get(i);
                 Expression expression = expressions.get(i);
