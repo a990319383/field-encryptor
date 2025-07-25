@@ -54,8 +54,8 @@ public class TransformationInterceptor implements Interceptor, BeanPostProcessor
             statement.accept(transformationStatementVisitor);
             if (StringUtils.isNotBlank(transformationStatementVisitor.getResultSql())) {
                 newSql = transformationStatementVisitor.getResultSql();
+                log.debug("【db-transformation】新sql：{}", newSql);
             }
-            log.debug("【db-transformation】新sql：{}", newSql);
 
             //5.如果当前sql语句未发生了语法转换，则将当前sql放入缓存中，避免下次重复处理
             if (!TransformationHolder.isTransformation()) {

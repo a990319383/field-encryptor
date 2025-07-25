@@ -55,8 +55,8 @@ public class DBFieldEncryptorInterceptor implements Interceptor, BeanPostProcess
             statement.accept(dbStatementVisitor);
             if (StringUtils.isNotBlank(dbStatementVisitor.getResultSql())) {
                 newSql = dbStatementVisitor.getResultSql();
+                log.debug("【FieldEncryptor】新sql：{}", newSql);
             }
-            log.debug("【FieldEncryptor】新sql：{}", newSql);
         } catch (Exception e) {
             log.error("【FieldEncryptor】加解密sql异常 原sql:{}", oldSql, e);
         }

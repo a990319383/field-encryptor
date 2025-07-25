@@ -49,8 +49,8 @@ public class FieldDefaultInterceptor implements Interceptor, BeanPostProcessor {
             statement.accept(fdStatementVisitor);
             if (StringUtils.isNotBlank(fdStatementVisitor.getResultSql())) {
                 newSql = fdStatementVisitor.getResultSql();
+                log.debug("【FieldDefault】新sql：{}", newSql);
             }
-            log.debug("【FieldDefault】新sql：{}", newSql);
         } catch (Exception e) {
             log.error("【FieldDefault】设置默认值异常 原sql:{}", oldSql, e);
         }
