@@ -116,6 +116,15 @@ public class TransformationSelectVisitor extends BaseFieldParseTable implements 
                 join.setOnExpressions(tfExpressions);
             }
         }
+
+        //5. order by
+        List<OrderByElement> orderByElements = plainSelect.getOrderByElements();
+        if (CollectionUtils.isNotEmpty(orderByElements)) {
+            TransformationOrderByVisitor tfOrderByVisitor = TransformationOrderByVisitor.newInstanceCurLayer(this);
+            for (OrderByElement orderByElement : orderByElements) {
+                orderByElement.accept(tfOrderByVisitor);
+            }
+        }
     }
 
     /**
