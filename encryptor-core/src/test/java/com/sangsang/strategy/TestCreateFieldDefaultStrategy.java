@@ -1,0 +1,25 @@
+package com.sangsang.strategy;
+
+import cn.hutool.core.date.DateUtil;
+import com.sangsang.domain.enums.SqlCommandEnum;
+import com.sangsang.domain.strategy.fielddefault.FieldDefaultStrategy;
+
+import java.time.LocalDateTime;
+
+/**
+ * @author liutangqi
+ * @date 2025/7/17 17:17
+ */
+
+public class TestCreateFieldDefaultStrategy implements FieldDefaultStrategy<String> {
+
+    @Override
+    public boolean whetherToHandle(SqlCommandEnum sqlCommandEnum) {
+        return SqlCommandEnum.INSERT.equals(sqlCommandEnum);
+    }
+
+    @Override
+    public String getDefaultValue() {
+        return DateUtil.format(LocalDateTime.now(), "yyyy-MM-dd HH:mm:ss");
+    }
+}

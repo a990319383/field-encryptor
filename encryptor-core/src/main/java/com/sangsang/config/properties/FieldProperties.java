@@ -42,4 +42,9 @@ public class FieldProperties {
      * 数据隔离的相关配置
      **/
     private IsolationProperties isolation;
+
+    /**
+     * 字段设置默认值相关配置
+     */
+    private FieldDefaultProperties fieldDefault;
 }

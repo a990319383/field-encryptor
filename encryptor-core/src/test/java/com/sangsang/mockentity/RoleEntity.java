@@ -3,7 +3,7 @@ package com.sangsang.mockentity;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableName;
 import com.sangsang.domain.annos.encryptor.FieldEncryptor;
-import com.sangsang.encryptor.TestDBFieldEncryptorPattern;
+import com.sangsang.strategy.TestDBFieldEncryptorStrategy;
 
 /**
  * @author liutangqi
@@ -13,7 +13,7 @@ import com.sangsang.encryptor.TestDBFieldEncryptorPattern;
 public class RoleEntity extends BaseEntity {
 
     @TableField("role_name")
-    @FieldEncryptor(TestDBFieldEncryptorPattern.class)
+    @FieldEncryptor(TestDBFieldEncryptorStrategy.class)
     private String roleName;
 
     @TableField("role_desc")

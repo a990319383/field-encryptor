@@ -8,7 +8,7 @@ import com.sangsang.config.properties.EncryptorProperties;
 import com.sangsang.config.properties.FieldProperties;
 import com.sangsang.config.properties.IsolationProperties;
 import com.sangsang.encryptor.db.DefaultDBFieldEncryptorPattern;
-import com.sangsang.isolation.TestDataIsolationStrategy;
+import com.sangsang.strategy.TestDataIsolationStrategy;
 
 import java.util.*;
 
@@ -27,7 +27,7 @@ public class InitTableInfo {
      * @date 2024/4/2 15:58
      * @Param []
      **/
-    public static void initTable() throws NoSuchFieldException {
+    public static void initTable() {
         FieldProperties fieldProperties = new FieldProperties();
         fieldProperties.setScanEntityPackage(Arrays.asList("com.sangsang.mockentity"));
         TableCache tableCache = new TableCache(fieldProperties);

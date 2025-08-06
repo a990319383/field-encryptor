@@ -11,9 +11,9 @@ package com.sangsang.domain.constants;
 public interface InterceptorOrderConstant {
     /**
      * sql语法转换的顺序
-     * 最先执行
+     * 最晚执行
      */
-    int TRANSFORMATION = 0;
+    int TRANSFORMATION = 100;
 
     /**
      * 数据隔离的顺序
@@ -30,6 +30,11 @@ public interface InterceptorOrderConstant {
      * 必须最后执行
      */
     int DESENSITIZE = 100;
+
+    /**
+     * 给字段设置默认值
+     */
+    int FIELD_DEFAULT = 50;
     /**
      * 未指定order的顺序
      */

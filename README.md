@@ -43,7 +43,7 @@
     - **依赖数据库的加解密算法**，通过自动改造原sql，实现字段的自动加解密
   - 优点
     - 加解密场景适应性强，支持列运算的字符加解密
-    - 支持模糊查询
+    - **支持密文模糊查询**
   - 缺点
     - 原生数据库的加解密函数较少，但是可以通过自己扩展udf解决这个问题
     - 额外增加数据库的计算开销（数据库会多几个函数运算，这个看项目场景，一般场景可忽略）
@@ -177,7 +177,7 @@ select  phone,user_name FROM tb_user WHERE phone = ?
 
 ```
 #配置@TableName标注的实体类路径
-field.scanEntityPackage[0]=com.sangsang.es.entity
+field.scanEntityPackage[0]=com.sangsang.*.entity
 #确定想要使用的模式是哪种，目前支持 db  pojo 两种模式配置
 field.encryptor.patternType=db
 #自定义秘钥(这里配置秘钥后，默认的加密算法会使用这个秘钥)
@@ -431,7 +431,7 @@ public class TestDesensitizeStrategy implements DesensitizeStrategy {
 
 ```
 #配置@TableName标注的实体类路径
-field.scanEntityPackage[0]=com.sangsang.es.entity
+field.scanEntityPackage[0]=com.sangsang.*.entity
 #语法转换模式指定，目前仅支持mysql转达梦
 field.transformation.patternType=mysql2dm
 ```
@@ -459,7 +459,7 @@ field.lruCapacity=100
 
 ```
 #配置@TableName标注的实体类路径
-field.scanEntityPackage[0]=com.sangsang.es.entity
+field.scanEntityPackage[0]=com.sangsang.*.entity
 #开启数据隔离
 field.isolation.enable=true
 ```

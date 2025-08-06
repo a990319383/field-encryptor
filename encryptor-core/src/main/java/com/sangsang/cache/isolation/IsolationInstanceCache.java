@@ -1,6 +1,7 @@
 package com.sangsang.cache.isolation;
 
 import com.baomidou.mybatisplus.annotation.TableName;
+import com.sangsang.config.other.DefaultBeanPostProcessor;
 import com.sangsang.config.properties.FieldProperties;
 import com.sangsang.domain.annos.isolation.DataIsolation;
 import com.sangsang.domain.constants.SymbolConstant;
@@ -36,7 +37,7 @@ import java.util.stream.Collectors;
  * @date 2025/6/13 10:29
  */
 @Slf4j
-public class IsolationInstanceCache implements BeanPostProcessor {
+public class IsolationInstanceCache extends DefaultBeanPostProcessor {
     /**
      * 缓存当前数据隔离实现类实例
      * key: 实现类的className
@@ -125,41 +126,20 @@ public class IsolationInstanceCache implements BeanPostProcessor {
             String lowerTableName = tableName.value().toLowerCase();
             //2.2校验配置是否正确
             DataIsolationStrategy dataIsolationStrategy = INSTANCE_MAP.get(dataIsolation.value());
+            //2.3容器中找不到，尝试使用无参构造进行实例化
             if (dataIsolationStrategy == null) {
-                throw new IsolationException(String.format("当前表%s 配置的隔离策略 %s spring容器中找不到", tableName.value(), dataIsolation.value()));
+                try {
+                    dataIsolationStrategy = dataIsolation.value().newInstance();
+                    INSTANCE_MAP.put(dataIsolation.value(), dataIsolationStrategy);
+                } catch (Exception e) {
+                    throw new IsolationException(String.format("当前表%s 配置的隔离策略 %s spring容器中找不到，无参构造实例化失败", tableName.value(), dataIsolation.value()));
+                }
             }
-            //2.3缓存表和数据隔离实例关系
+            //2.4缓存表和数据隔离实例关系
             TABLE_ISOLATION_MAP.put(lowerTableName, dataIsolationStrategy);
-            //2.4记录当前需要涉及到数据隔离的所有表
+            //2.5记录当前需要涉及到数据隔离的所有表
             ISOLATION_TABLE.add(lowerTableName);
         }
-    }
-
-
-    //------------------------------------------------------分割线----------------------------------------------------------------
-
-    /**
-     * 实现父类default方法，避免低版本不兼容，找不到实现类
-     *
-     * @author liutangqi
-     * @date 2025/6/13 10:36
-     * @Param [bean, beanName]
-     **/
-    @Override
-    public Object postProcessBeforeInitialization(Object bean, String beanName) throws BeansException {
-        return bean;
-    }
-
-    /**
-     * 实现父类default方法，避免低版本不兼容，找不到实现类
-     *
-     * @author liutangqi
-     * @date 2025/6/13 10:36
-     * @Param [bean, beanName]
-     **/
-    @Override
-    public Object postProcessAfterInitialization(Object bean, String beanName) throws BeansException {
-        return bean;
     }
 
     //--------------------------------------------下面是对外提供的方法---------------------------------------------------------------
