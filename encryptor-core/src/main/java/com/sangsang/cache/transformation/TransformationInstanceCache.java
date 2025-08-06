@@ -1,5 +1,6 @@
 package com.sangsang.cache.transformation;
 
+import com.sangsang.config.other.DefaultBeanPostProcessor;
 import com.sangsang.config.properties.FieldProperties;
 import com.sangsang.domain.constants.SymbolConstant;
 import com.sangsang.domain.context.TransformationHolder;
@@ -24,7 +25,7 @@ import java.util.stream.Collectors;
  * @date 2025/5/21 16:24
  */
 @Slf4j
-public class TransformationInstanceCache implements BeanPostProcessor {
+public class TransformationInstanceCache extends DefaultBeanPostProcessor {
     /**
      * 存储当前转换器的实例
      * key:转换器的父类class (限定是属于Column 还是Function)
@@ -38,30 +39,6 @@ public class TransformationInstanceCache implements BeanPostProcessor {
      */
     private static final Map<Class, Class> superTransformationMap = new HashMap<>();
 
-
-    /**
-     * 实现父类default方法，避免低版本不兼容，找不到实现类
-     *
-     * @author liutangqi
-     * @date 2025/5/21 10:28
-     * @Param [bean, beanName]
-     **/
-    @Override
-    public Object postProcessBeforeInitialization(Object bean, String beanName) throws BeansException {
-        return bean;
-    }
-
-    /**
-     * 实现父类default方法，避免低版本不兼容，找不到实现类
-     *
-     * @author liutangqi
-     * @date 2025/5/21 10:28
-     * @Param [bean, beanName]
-     **/
-    @Override
-    public Object postProcessAfterInitialization(Object bean, String beanName) throws BeansException {
-        return bean;
-    }
 
     //---------------------------对外提供的方法分割线---------------------------
 

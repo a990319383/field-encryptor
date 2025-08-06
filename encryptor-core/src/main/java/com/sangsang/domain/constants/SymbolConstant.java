@@ -66,6 +66,10 @@ public interface SymbolConstant {
     String BLANK = "";
 
     /**
+     * 星号
+     */
+    String START = "*";
+    /**
      * union
      */
     String UNION = "union";
@@ -119,4 +123,14 @@ public interface SymbolConstant {
      * 数据库里面的文本类型
      */
     String TEXT = "text";
+
+    /**
+     * 默认的时间格式化格式
+     **/
+    String DEFAULT_TIME_FORMAT = "yyyy-MM-dd HH:mm:ss";
+
+    /**
+     * 默认的天的日期格式化格式
+     */
+    String DEFAULT_DAY_FORMAT = "yyyy-MM-dd";
 }

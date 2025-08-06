@@ -1,6 +1,7 @@
 package com.sangsang.interceptor;
 
 import cn.hutool.core.lang.Pair;
+import com.sangsang.cache.desensitize.DesensitizeInstanceCache;
 import com.sangsang.domain.annos.desensitize.FieldDesensitize;
 import com.sangsang.domain.annos.FieldInterceptorOrder;
 import com.sangsang.domain.annos.desensitize.MapperDesensitize;
@@ -141,7 +142,7 @@ public class FieldDesensitizeInterceptor implements Interceptor, BeanPostProcess
      * @date 2025/4/8 9:53
      * @Param [res :sql执行的结果,  mapperFieldDesensitize:这个sql的mapper上面标注的@FieldDesensitize 注解]
      **/
-    private Object desensitize(Object res, MapperDesensitize mapperFieldDesensitize) throws IllegalAccessException, InstantiationException {
+    private Object desensitize(Object res, MapperDesensitize mapperFieldDesensitize) throws IllegalAccessException {
         //0.整个对象都为null，直接返回
         if (res == null) {
             return res;
@@ -155,7 +156,7 @@ public class FieldDesensitizeInterceptor implements Interceptor, BeanPostProcess
                 return res;
             }
             //1.2 根据注解上面标注的脱敏方法进行脱敏，然后返回
-            return DesensitizeUtil.desensitize(mapperFieldDesensitize.value()[0].value(), (String) res, res);
+            return DesensitizeInstanceCache.getInstance(mapperFieldDesensitize.value()[0].value()).desensitize((String) res, res);
         }
 
         //2.响应类型是Map
@@ -176,9 +177,9 @@ public class FieldDesensitizeInterceptor implements Interceptor, BeanPostProcess
                 }
                 //2.2.2 将指定的key从结果集中取值，并进行脱敏处理后放到结果集中
                 resMap.put(fieldDesensitize.fieldName(),
-                        DesensitizeUtil.desensitize(fieldDesensitize.value(),
-                                Optional.ofNullable(resMap.get(fieldDesensitize.fieldName())).map(Object::toString).orElse(null),
-                                res));
+                        DesensitizeInstanceCache.getInstance(fieldDesensitize.value())
+                                .desensitize(Optional.ofNullable(resMap.get(fieldDesensitize.fieldName())).map(Object::toString).orElse(null),
+                                        res));
             }
         }
 
@@ -191,9 +192,9 @@ public class FieldDesensitizeInterceptor implements Interceptor, BeanPostProcess
                 if (fieldDesensitize != null) {
                     field.setAccessible(true);
                     field.set(res,
-                            DesensitizeUtil.desensitize(fieldDesensitize.value(),
-                                    Optional.ofNullable(field.get(res)).map(Object::toString).orElse(null),
-                                    res));
+                            DesensitizeInstanceCache.getInstance(fieldDesensitize.value())
+                                    .desensitize(Optional.ofNullable(field.get(res)).map(Object::toString).orElse(null),
+                                            res));
                 }
             }
         }

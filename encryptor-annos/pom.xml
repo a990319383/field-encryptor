@@ -5,12 +5,12 @@
     <parent>
         <groupId>io.gitee.tired-of-the-water</groupId>
         <artifactId>field-encryptor</artifactId>
-        <version>3.5.0</version>
+        <version>3.5.2-alpha</version>
     </parent>
     <modelVersion>4.0.0</modelVersion>
 
     <artifactId>encryptor-annos</artifactId>
-
+    <name>encryptor-annos</name>
     <description>注解包，某些场景模块只需要注解，不需要mybatis，所以将注解模块独立开来</description>
 
     <dependencies>

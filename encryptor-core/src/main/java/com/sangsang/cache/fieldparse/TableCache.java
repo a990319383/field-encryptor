@@ -3,9 +3,11 @@ package com.sangsang.cache.fieldparse;
 import cn.hutool.core.util.StrUtil;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableName;
+import com.sangsang.config.other.DefaultBeanPostProcessor;
 import com.sangsang.config.properties.FieldProperties;
 import com.sangsang.domain.annos.encryptor.FieldEncryptor;
 import com.sangsang.domain.annos.encryptor.ShardingTableEncryptor;
+import com.sangsang.domain.annos.fielddefault.FieldDefault;
 import com.sangsang.domain.dto.TableFieldDto;
 import com.sangsang.domain.dto.TableInfoDto;
 import com.sangsang.util.ClassScanerUtil;
@@ -30,7 +32,7 @@ import java.util.stream.Collectors;
  * @date 2024/2/1 13:27
  */
 @Slf4j
-public class TableCache implements BeanPostProcessor {
+public class TableCache extends DefaultBeanPostProcessor {
 
     public FieldProperties fieldProperties;
 
@@ -44,9 +46,19 @@ public class TableCache implements BeanPostProcessor {
     private static final Map<String, Map<String, FieldEncryptor>> TABLE_ENTITY_CACHE = new HashMap<>();
 
     /**
+     * key: 表名小写 value: (key:字段名小写  value: 实体类上标注的@FieldDefault注解)
+     */
+    private static final Map<String, Map<String, FieldDefault>> TABLE_DEFAULT_CACHE = new HashMap<>();
+
+    /**
      * 有字段需要加解密的表名的集合（小写）
      */
     private static final Set<String> FIELD_ENCRYPT_TABLE = new HashSet<>();
+
+    /**
+     * 有字段需要进行默认值处理的表名集合(小写)
+     */
+    private static final Set<String> FIELD_DEFAULT_TABLE = new HashSet<>();
 
     /**
      * key: 表名 小写
@@ -119,10 +131,13 @@ public class TableCache implements BeanPostProcessor {
                         .orElse(StrUtil.toUnderlineCase(field.getName()));
                 //4.2获取此字段上拥有的@FieldEncryptor 注解
                 FieldEncryptor fieldEncryptor = field.getAnnotation(FieldEncryptor.class);
-                //4.3构建字段对象
+                //4.3获取此字段上拥有的@FieldDefault 注解
+                FieldDefault fieldDefault = field.getAnnotation(FieldDefault.class);
+                //4.4构建字段对象
                 return TableFieldDto.builder()
                         .fieldName(filedName.toLowerCase())
                         .fieldEncryptor(fieldEncryptor)
+                        .fieldDefault(fieldDefault)
                         .build();
             }).collect(Collectors.toSet());
 
@@ -173,11 +188,27 @@ public class TableCache implements BeanPostProcessor {
                     TABLE_ENTITY_CACHE.put(f.getTableName(), fieldMap);
                 });
 
+        //TABLE_DEFAULT_CACHE
+        tableInfoDtos.stream()
+                .forEach(f -> {
+                    Map<String, FieldDefault> fieldMap = new HashMap<>();
+                    f.getTableFields().stream()
+                            .forEach(field -> fieldMap.put(field.getFieldName(), field.getFieldDefault()));
+                    TABLE_DEFAULT_CACHE.put(f.getTableName(), fieldMap);
+                });
+
         //FIELD_ENCRYPT_TABLE
         tableInfoDtos.stream()
                 .filter(f -> f.getTableFields().stream().filter(field -> field.getFieldEncryptor() != null).count() > 0)
                 .map(TableInfoDto::getTableName)
                 .forEach(f -> FIELD_ENCRYPT_TABLE.add(f));
+
+        //FIELD_DEFAULT_TABLE
+        tableInfoDtos.stream()
+                .filter(f -> f.getTableFields().stream().filter(field -> field.getFieldDefault() != null).count() > 0)
+                .map(TableInfoDto::getTableName)
+                .forEach(f -> FIELD_DEFAULT_TABLE.add(f));
+
 
         //TABLE_FIELD_MAP
         tableInfoDtos.stream()
@@ -190,30 +221,6 @@ public class TableCache implements BeanPostProcessor {
 
     }
 
-
-    /**
-     * 实现父类default方法，避免低版本不兼容，找不到实现类
-     *
-     * @author liutangqi
-     * @date 2024/9/10 11:36
-     * @Param [bean, beanName]
-     **/
-    @Override
-    public Object postProcessBeforeInitialization(Object bean, String beanName) throws BeansException {
-        return bean;
-    }
-
-    /**
-     * 实现父类default方法，避免低版本不兼容，找不到实现类
-     *
-     * @author liutangqi
-     * @date 2024/9/10 11:36
-     * @Param [bean, beanName]
-     **/
-    @Override
-    public Object postProcessAfterInitialization(Object bean, String beanName) throws BeansException {
-        return bean;
-    }
 
     //--------------------------------------------下面是对外提供的方法---------------------------------------------------------------
 
@@ -229,6 +236,17 @@ public class TableCache implements BeanPostProcessor {
     }
 
     /**
+     * 获取当前项目所有表字段想要变更时维护的默认值信息
+     *
+     * @author liutangqi
+     * @date 2025/7/17 9:25
+     * @Param []
+     **/
+    public static Map<String, Map<String, FieldDefault>> getTableFieldDefaultInfo() {
+        return TABLE_DEFAULT_CACHE;
+    }
+
+    /**
      * 获取当前有字段需要加密的所有表
      *
      * @author liutangqi
@@ -237,6 +255,17 @@ public class TableCache implements BeanPostProcessor {
      **/
     public static Set<String> getFieldEncryptTable() {
         return FIELD_ENCRYPT_TABLE;
+    }
+
+    /**
+     * 获取当前存在字段需要进行默认值设置的表名小写
+     *
+     * @author liutangqi
+     * @date 2025/7/17 10:01
+     * @Param []
+     **/
+    public static Set<String> getFieldDefaultTable() {
+        return FIELD_DEFAULT_TABLE;
     }
 
     /**

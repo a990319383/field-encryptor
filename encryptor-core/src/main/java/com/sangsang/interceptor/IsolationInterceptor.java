@@ -63,8 +63,8 @@ public class IsolationInterceptor implements Interceptor, BeanPostProcessor {
             statement.accept(ilStatementVisitor);
             if (StringUtils.isNotBlank(ilStatementVisitor.getResultSql())) {
                 newSql = ilStatementVisitor.getResultSql();
+                log.debug("【isolation】新sql：{}", newSql);
             }
-            log.debug("【isolation】新sql：{}", newSql);
         } catch (Exception e) {
             log.error("【isolation】 sql异常 原sql:{}", oldSql, e);
         }
