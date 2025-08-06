@@ -57,7 +57,7 @@ public class IsolationTest {
     @Test
     public void isolationTest() throws Exception {
         //需要的sql
-        String sql = s4;
+        String sql = s3;
         //mock数据
         InitTableInfo.initTable();
         InitTableInfo.initIsolation();
