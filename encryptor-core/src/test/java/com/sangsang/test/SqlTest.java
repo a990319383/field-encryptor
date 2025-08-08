@@ -448,6 +448,38 @@ public class SqlTest {
             "  left join tb_role tr \n" +
             "  on tu.id = tr.id ";
 
+    //存在没有配置表字段信息的表，多个表一起select 别名.*
+    String s41 = "\t\tselect \n" +
+            "\t\t tu.*,\n" +
+            "\t\t tm.*,\n" +
+            "\t\t TS.*\n" +
+            "\t\tfrom tb_user tu \n" +
+            "\t\tjoin tb_menu tm \n" +
+            "\t\ton tu.id = tm.id \n" +
+            "\t\tjoin tb_schedule TS \n" +
+            "\t\ton tu.id = ts.id \n" +
+            "\t\twhere tu.phone = 'xxx'";
+
+    // 存在没有配置表字段信息的表，多个表整体一个 select *
+    String s42 = "\t\tselect \n" +
+            "\t\t * \n" +
+            "\t\tfrom tb_user tu \n" +
+            "\t\tjoin tb_menu tm \n" +
+            "\t\ton tu.id = tm.id \n" +
+            "\t\tjoin tb_schedule TS \n" +
+            "\t\ton tu.id = ts.id \n" +
+            "\t\twhere tu.phone = 'xxx'";
+
+    // * 中存在子查询的结果集
+    String s43 = "select * \n" +
+            "from \n" +
+            "(select \n" +
+            "tu.phone as ph,\n" +
+            "(select menu_name from tb_menu tm where tm.id = tu.id) as xxx \n" +
+            "from tb_user tu )a\n" +
+            "join tb_user tu \n" +
+            "on a.ph = tu.phone";
+
     // -----------------insert 测试语句---------------------
     String i1 = "insert into tb_user(id, user_name ,phone) \n" +
             "values(1,?,'18243512315'),(2,'南瓜',?)";
@@ -557,7 +589,7 @@ public class SqlTest {
         InitTableInfo.initTable();
 
         //需要测试的sql
-        String sql = s40;
+        String sql = s43;
         System.out.println("----------------------------------------------------------------------------");
         System.out.println(sql);
         System.out.println("----------------------------------------------------------------------------");
