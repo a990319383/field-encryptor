@@ -12,17 +12,17 @@ import com.sangsang.domain.strategy.isolation.DataIsolationStrategy;
 public class TestDataIsolationStrategy implements DataIsolationStrategy<Long> {
 
     @Override
-    public String getIsolationField() {
+    public String getIsolationField(String tableName) {
         return "role_id";
     }
 
     @Override
-    public IsolationRelationEnum getIsolationRelation() {
+    public IsolationRelationEnum getIsolationRelation(String tableName) {
         return IsolationRelationEnum.EQUALS;
     }
 
     @Override
-    public Long getIsolationData() {
+    public Long getIsolationData(String tableName) {
         return 1111111L;
     }
 

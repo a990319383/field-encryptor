@@ -105,27 +105,30 @@ public class IsolationSelectVisitor extends BaseFieldParseTable implements Selec
             FieldInfoDto anyFieldInfo = fieldTableEntry.getValue().stream().findAny().get();
             //4.3.2 通过表名获取到当前的数据隔离的相关信息（外层获取，避免方法重复调用）
             DataIsolationStrategy dataIsolationStrategy = IsolationInstanceCache.getInstance(anyFieldInfo.getSourceTableName());
-            String isolationField = dataIsolationStrategy.getIsolationField();
-            IsolationRelationEnum isolationRelation = dataIsolationStrategy.getIsolationRelation();
-            Object isolationData = dataIsolationStrategy.getIsolationData();
+            if (dataIsolationStrategy == null) {
+                continue;
+            }
+            String isolationField = dataIsolationStrategy.getIsolationField(anyFieldInfo.getSourceTableName());
+            IsolationRelationEnum isolationRelation = dataIsolationStrategy.getIsolationRelation(anyFieldInfo.getSourceTableName());
+            Object isolationData = dataIsolationStrategy.getIsolationData(anyFieldInfo.getSourceTableName());
             //4.3.3 依次处理每个字段，判断这些字段是否需要数据隔离
             for (FieldInfoDto fieldInfo : fieldTableEntry.getValue()) {
                 //4.3.3.1 此表不存在隔离字段，跳过这张表
-                if (dataIsolationStrategy == null) {
+                if (StringUtils.isBlank(isolationField)) {
                     break;
                 }
-                //4.3.3.2当前字段不是直接来自真实表的，跳过
-                if (!fieldInfo.isFromSourceTable()) {
-                    continue;
-                }
-                //4.3.3.3 当前字段和数据隔离字段不同，跳过
-                if (!StringUtils.equalIgnoreFieldSymbol(fieldInfo.getColumnName(), isolationField)) {
-                    continue;
-                }
-                //4.3.3.4 当前数据隔离值为空，跳过 （拼凑个为空的条件，sql肯定执行出问题，所以打个警告日志后跳过）
+                //4.3.3.2 当前数据隔离值为空，跳过 （拼凑个为空的条件，sql肯定执行出问题，所以打个警告日志后跳过）
                 if (isolationData == null) {
                     log.warn("【isolation】当前表的权限隔离字段获取为空，请留意是否正常 tableName:{} DataIsolationStrategy:{}", fieldInfo.getSourceTableName(), dataIsolationStrategy.getClass().getName());
                     break;
+                }
+                //4.3.3.3当前字段不是直接来自真实表的，跳过
+                if (!fieldInfo.isFromSourceTable()) {
+                    continue;
+                }
+                //4.3.3.4 当前字段和数据隔离字段不同，跳过
+                if (!StringUtils.equalIgnoreFieldSymbol(fieldInfo.getColumnName(), isolationField)) {
+                    continue;
                 }
                 //4.3.3.5开拼
                 Expression isolationExpression = IsolationInstanceCache.buildIsolationExpression(isolationField, fieldTableEntry.getKey(), isolationRelation, isolationData);

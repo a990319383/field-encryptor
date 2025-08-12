@@ -5,6 +5,7 @@ import com.sangsang.config.other.DefaultBeanPostProcessor;
 import com.sangsang.config.properties.FieldProperties;
 import com.sangsang.domain.annos.isolation.DataIsolation;
 import com.sangsang.domain.constants.SymbolConstant;
+import com.sangsang.domain.dto.ClasssCacheKey;
 import com.sangsang.domain.enums.IsolationRelationEnum;
 import com.sangsang.domain.exception.IsolationException;
 import com.sangsang.domain.strategy.DefaultStrategyBase;
@@ -23,8 +24,6 @@ import net.sf.jsqlparser.expression.operators.relational.LikeExpression;
 import net.sf.jsqlparser.expression.operators.relational.ParenthesedExpressionList;
 import net.sf.jsqlparser.schema.Column;
 import net.sf.jsqlparser.schema.Table;
-import org.springframework.beans.BeansException;
-import org.springframework.beans.factory.config.BeanPostProcessor;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -47,7 +46,7 @@ public class IsolationInstanceCache extends DefaultBeanPostProcessor {
      * @date 2025/6/13 10:31
      * @Param
      **/
-    private static final Map<Class<? extends DataIsolationStrategy>, DataIsolationStrategy> INSTANCE_MAP = new HashMap<>();
+    private static final Map<ClasssCacheKey, DataIsolationStrategy> INSTANCE_MAP = new HashMap<>();
 
     /**
      * 缓存当前表的数据隔离信息
@@ -87,11 +86,11 @@ public class IsolationInstanceCache extends DefaultBeanPostProcessor {
 
         //2.实例化默认的策略
         DefaultStrategyBase.BeanIsolationStrategy isolationBeanStrategy = new DefaultStrategyBase.BeanIsolationStrategy(dataIsolationStrategyList);
-        INSTANCE_MAP.put(DefaultStrategyBase.BeanIsolationStrategy.class, isolationBeanStrategy);
+        INSTANCE_MAP.put(ClasssCacheKey.buildKey(DefaultStrategyBase.BeanIsolationStrategy.class), isolationBeanStrategy);
 
         //3.初始化当前spring容器内的实现策略
         for (DataIsolationStrategy dataIsolationStrategy : dataIsolationStrategyList) {
-            INSTANCE_MAP.put(dataIsolationStrategy.getClass(), dataIsolationStrategy);
+            INSTANCE_MAP.put(ClasssCacheKey.buildKey(dataIsolationStrategy.getClass()), dataIsolationStrategy);
         }
 
         //4.缓存表和@DataIsolation 的对应关系 ，顺便记录哪些表涉及到数据隔离
@@ -125,12 +124,12 @@ public class IsolationInstanceCache extends DefaultBeanPostProcessor {
             DataIsolation dataIsolation = (DataIsolation) entityClass.getAnnotation(DataIsolation.class);
             String lowerTableName = tableName.value().toLowerCase();
             //2.2校验配置是否正确
-            DataIsolationStrategy dataIsolationStrategy = INSTANCE_MAP.get(dataIsolation.value());
+            DataIsolationStrategy dataIsolationStrategy = INSTANCE_MAP.get(ClasssCacheKey.buildKey(dataIsolation.value()));
             //2.3容器中找不到，尝试使用无参构造进行实例化
             if (dataIsolationStrategy == null) {
                 try {
                     dataIsolationStrategy = dataIsolation.value().newInstance();
-                    INSTANCE_MAP.put(dataIsolation.value(), dataIsolationStrategy);
+                    INSTANCE_MAP.put(ClasssCacheKey.buildKey(dataIsolation.value()), dataIsolationStrategy);
                 } catch (Exception e) {
                     throw new IsolationException(String.format("当前表%s 配置的隔离策略 %s spring容器中找不到，无参构造实例化失败", tableName.value(), dataIsolation.value()));
                 }

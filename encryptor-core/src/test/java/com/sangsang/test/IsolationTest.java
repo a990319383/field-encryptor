@@ -47,6 +47,9 @@ public class IsolationTest {
             "\tfrom tb_user tu \n" +
             "\tWHERE tu.id in (select id from tb_user)";
 
+    //union all
+    String s6 = "select * from tb_user where id = 2 union all select * from tb_user where id = 3";
+
     /**
      * mysql转换为达梦的语法转换器测试
      *
@@ -57,7 +60,7 @@ public class IsolationTest {
     @Test
     public void isolationTest() throws Exception {
         //需要的sql
-        String sql = s3;
+        String sql = s6;
         //mock数据
         InitTableInfo.initTable();
         InitTableInfo.initIsolation();

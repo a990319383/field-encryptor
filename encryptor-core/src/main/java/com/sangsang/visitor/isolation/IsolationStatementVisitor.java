@@ -1,6 +1,5 @@
 package com.sangsang.visitor.isolation;
 
-import com.sangsang.util.StringUtils;
 import com.sangsang.visitor.fieldparse.FieldParseParseTableSelectVisitor;
 import lombok.Getter;
 import net.sf.jsqlparser.statement.*;

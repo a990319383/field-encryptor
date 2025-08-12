@@ -73,18 +73,18 @@ public class DefaultStrategyBase<T> {
         }
 
         @Override
-        public String getIsolationField() {
-            return defaultStrategyInstance.getIsolationField();
+        public String getIsolationField(String tableName) {
+            return defaultStrategyInstance.getIsolationField(tableName);
         }
 
         @Override
-        public IsolationRelationEnum getIsolationRelation() {
-            return defaultStrategyInstance.getIsolationRelation();
+        public IsolationRelationEnum getIsolationRelation(String tableName) {
+            return defaultStrategyInstance.getIsolationRelation(tableName);
         }
 
         @Override
-        public Object getIsolationData() {
-            return defaultStrategyInstance.getIsolationData();
+        public Object getIsolationData(String tableName) {
+            return defaultStrategyInstance.getIsolationData(tableName);
         }
     }
 
