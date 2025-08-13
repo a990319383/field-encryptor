@@ -1,18 +1,22 @@
 package com.sangsang.domain.dto;
 
 
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
 import java.io.Serializable;
-import java.util.Objects;
 
 /**
- * todo-ltq 这个lombok暂时替换不了，会改变字段顺序，后面换
  *
  * @author liutangqi
  * @date 2024/3/6 10:30
  */
 @Data
+@Builder
+@AllArgsConstructor
+@NoArgsConstructor
 public class FieldInfoDto implements Serializable {
     /**
      * 字段的别名或者是原字段名
@@ -35,173 +39,6 @@ public class FieldInfoDto implements Serializable {
      * 栗子：select user_name   from tb_user    user_name 这个字段真实属于tb_user的，这个值就是ture
      * select a.userName from (select user_name   from tb_user )a    userName这个字段是来自于表a 的，表a不是真实的数据来源表，所以这个值是false
      **/
-
+    @Builder.Default
     private boolean fromSourceTable = false;
-
-
-    //------------------------lombok分割线（尽量少引依赖的原则，项目不引入lombok，下面拷贝lombok编译后的结果）---------------------------------------------------------
-
-    private static boolean $default$fromSourceTable() {
-        return false;
-    }
-
-    public static FieldInfoDtoBuilder builder() {
-        return new FieldInfoDtoBuilder();
-    }
-
-    public FieldInfoDto(String columnName, String sourceColumn, String sourceTableName, boolean fromSourceTable) {
-        this.columnName = columnName;
-        this.sourceColumn = sourceColumn;
-        this.sourceTableName = sourceTableName;
-        this.fromSourceTable = fromSourceTable;
-    }
-
-    public FieldInfoDto() {
-        this.fromSourceTable = $default$fromSourceTable();
-    }
-
-    public String getColumnName() {
-        return this.columnName;
-    }
-
-    public String getSourceColumn() {
-        return this.sourceColumn;
-    }
-
-    public String getSourceTableName() {
-        return this.sourceTableName;
-    }
-
-    public boolean isFromSourceTable() {
-        return this.fromSourceTable;
-    }
-
-    public void setColumnName(String columnName) {
-        this.columnName = columnName;
-    }
-
-    public void setSourceColumn(String sourceColumn) {
-        this.sourceColumn = sourceColumn;
-    }
-
-    public void setSourceTableName(String sourceTableName) {
-        this.sourceTableName = sourceTableName;
-    }
-
-    public void setFromSourceTable(boolean fromSourceTable) {
-        this.fromSourceTable = fromSourceTable;
-    }
-
-    @Override
-    public boolean equals(Object o) {
-        if (o == this) {
-            return true;
-        } else if (!(o instanceof FieldInfoDto)) {
-            return false;
-        } else {
-            FieldInfoDto other = (FieldInfoDto) o;
-            if (!other.canEqual(this)) {
-                return false;
-            } else if (this.isFromSourceTable() != other.isFromSourceTable()) {
-                return false;
-            } else {
-                label49:
-                {
-                    Object this$columnName = this.getColumnName();
-                    Object other$columnName = other.getColumnName();
-                    if (this$columnName == null) {
-                        if (other$columnName == null) {
-                            break label49;
-                        }
-                    } else if (this$columnName.equals(other$columnName)) {
-                        break label49;
-                    }
-
-                    return false;
-                }
-
-                Object this$sourceColumn = this.getSourceColumn();
-                Object other$sourceColumn = other.getSourceColumn();
-                if (this$sourceColumn == null) {
-                    if (other$sourceColumn != null) {
-                        return false;
-                    }
-                } else if (!this$sourceColumn.equals(other$sourceColumn)) {
-                    return false;
-                }
-
-                Object this$sourceTableName = this.getSourceTableName();
-                Object other$sourceTableName = other.getSourceTableName();
-                if (this$sourceTableName == null) {
-                    if (other$sourceTableName != null) {
-                        return false;
-                    }
-                } else if (!this$sourceTableName.equals(other$sourceTableName)) {
-                    return false;
-                }
-
-                return true;
-            }
-        }
-    }
-
-    protected boolean canEqual(Object other) {
-        return other instanceof FieldInfoDto;
-    }
-
-    @Override
-    public int hashCode() {
-        return Objects.hash(columnName, sourceColumn, sourceTableName, fromSourceTable);
-    }
-
-    @Override
-    public String toString() {
-        return "FieldInfoDto(columnName=" + this.getColumnName() + ", sourceColumn=" + this.getSourceColumn() + ", sourceTableName=" + this.getSourceTableName() + ", fromSourceTable=" + this.isFromSourceTable() + ")";
-    }
-
-    public static class FieldInfoDtoBuilder {
-        private String columnName;
-        private String sourceColumn;
-        private String sourceTableName;
-        private boolean fromSourceTable$set;
-        private boolean fromSourceTable$value;
-
-        FieldInfoDtoBuilder() {
-        }
-
-        public FieldInfoDtoBuilder columnName(String columnName) {
-            this.columnName = columnName;
-            return this;
-        }
-
-        public FieldInfoDtoBuilder sourceColumn(String sourceColumn) {
-            this.sourceColumn = sourceColumn;
-            return this;
-        }
-
-        public FieldInfoDtoBuilder sourceTableName(String sourceTableName) {
-            this.sourceTableName = sourceTableName;
-            return this;
-        }
-
-        public FieldInfoDtoBuilder fromSourceTable(boolean fromSourceTable) {
-            this.fromSourceTable$value = fromSourceTable;
-            this.fromSourceTable$set = true;
-            return this;
-        }
-
-        public FieldInfoDto build() {
-            boolean fromSourceTable$value = this.fromSourceTable$value;
-            if (!this.fromSourceTable$set) {
-                fromSourceTable$value = FieldInfoDto.$default$fromSourceTable();
-            }
-
-            return new FieldInfoDto(this.columnName, this.sourceColumn, this.sourceTableName, fromSourceTable$value);
-        }
-
-        @Override
-        public String toString() {
-            return "FieldInfoDto.FieldInfoDtoBuilder(columnName=" + this.columnName + ", sourceColumn=" + this.sourceColumn + ", sourceTableName=" + this.sourceTableName + ", fromSourceTable$value=" + this.fromSourceTable$value + ")";
-        }
-    }
 }
