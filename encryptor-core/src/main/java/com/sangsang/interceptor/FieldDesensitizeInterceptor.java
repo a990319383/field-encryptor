@@ -2,8 +2,8 @@ package com.sangsang.interceptor;
 
 import cn.hutool.core.lang.Pair;
 import com.sangsang.cache.desensitize.DesensitizeInstanceCache;
-import com.sangsang.domain.annos.desensitize.FieldDesensitize;
 import com.sangsang.domain.annos.FieldInterceptorOrder;
+import com.sangsang.domain.annos.desensitize.FieldDesensitize;
 import com.sangsang.domain.annos.desensitize.MapperDesensitize;
 import com.sangsang.domain.constants.FieldConstant;
 import com.sangsang.domain.constants.InterceptorOrderConstant;

@@ -3,7 +3,6 @@ package com.sangsang.util;
 import cn.hutool.core.date.DateUtil;
 import com.sangsang.cache.fielddefault.FieldDefaultInstanceCache;
 import com.sangsang.domain.constants.SymbolConstant;
-import com.sangsang.domain.enums.SqlCommandEnum;
 import com.sangsang.domain.exception.FieldDefaultException;
 import com.sangsang.domain.exception.IsolationException;
 import com.sangsang.domain.strategy.fielddefault.FieldDefaultStrategy;

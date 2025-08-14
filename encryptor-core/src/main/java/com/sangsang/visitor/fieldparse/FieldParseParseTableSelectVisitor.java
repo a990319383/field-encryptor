@@ -5,7 +5,6 @@ import com.sangsang.domain.constants.NumberConstant;
 import com.sangsang.domain.dto.BaseFieldParseTable;
 import com.sangsang.domain.dto.FieldInfoDto;
 import com.sangsang.util.CollectionUtils;
-import com.sangsang.visitor.transformation.TransformationOrderByVisitor;
 import net.sf.jsqlparser.statement.select.*;
 
 import java.util.*;

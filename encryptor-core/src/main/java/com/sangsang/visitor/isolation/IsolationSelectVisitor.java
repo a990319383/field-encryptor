@@ -61,7 +61,7 @@ public class IsolationSelectVisitor extends BaseFieldParseTable implements Selec
     @Override
     public void visit(ParenthesedSelect parenthesedSelect) {
         //注意：这里层数是当前层，这个的解析结果需要和外层在同一层级
-        Optional.ofNullable(parenthesedSelect.getPlainSelect()).ifPresent(p -> p.accept(IsolationSelectVisitor.newInstanceCurLayer(this)));
+        Optional.ofNullable(parenthesedSelect.getSelect()).ifPresent(p -> p.accept(IsolationSelectVisitor.newInstanceCurLayer(this)));
     }
 
     /**
@@ -102,7 +102,10 @@ public class IsolationSelectVisitor extends BaseFieldParseTable implements Selec
         //4.3.判断其中是否存在数据隔离的表
         for (Map.Entry<String, Set<FieldInfoDto>> fieldTableEntry : fieldTableMap.entrySet()) {
             //4.3.1 随便获取一个字段，得到这个字段所属的真实表名（因为这些字段都是属于同一张真实表，所以随便获取一个即可）
-            FieldInfoDto anyFieldInfo = fieldTableEntry.getValue().stream().findAny().get();
+            FieldInfoDto anyFieldInfo = fieldTableEntry.getValue().stream().findAny().orElse(null);
+            if (anyFieldInfo == null || !anyFieldInfo.isFromSourceTable() || StringUtils.isBlank(anyFieldInfo.getSourceTableName())) {
+                continue;
+            }
             //4.3.2 通过表名获取到当前的数据隔离的相关信息（外层获取，避免方法重复调用）
             DataIsolationStrategy dataIsolationStrategy = IsolationInstanceCache.getInstance(anyFieldInfo.getSourceTableName());
             if (dataIsolationStrategy == null) {

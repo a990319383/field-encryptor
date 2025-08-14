@@ -12,7 +12,6 @@ import net.sf.jsqlparser.expression.operators.relational.ExpressionList;
 import net.sf.jsqlparser.statement.select.*;
 
 import java.util.*;
-import java.util.stream.Collectors;
 
 /**
  * @author liutangqi

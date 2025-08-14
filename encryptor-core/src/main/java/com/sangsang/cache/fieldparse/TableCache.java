@@ -14,8 +14,6 @@ import com.sangsang.util.ClassScanerUtil;
 import com.sangsang.util.ReflectUtils;
 import com.sangsang.util.StringUtils;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.BeansException;
-import org.springframework.beans.factory.config.BeanPostProcessor;
 import org.springframework.util.CollectionUtils;
 
 import java.lang.reflect.Field;

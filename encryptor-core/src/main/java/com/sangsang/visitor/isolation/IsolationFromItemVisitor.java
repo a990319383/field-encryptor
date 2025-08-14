@@ -47,7 +47,7 @@ public class IsolationFromItemVisitor extends BaseFieldParseTable implements Fro
     @Override
     public void visit(ParenthesedSelect selectBody) {
         //注意：这里存在嵌套，所以是下一层
-        Optional.ofNullable(selectBody.getPlainSelect())
+        Optional.ofNullable(selectBody.getSelect())
                 .ifPresent(p -> p.accept(IsolationSelectVisitor.newInstanceNextLayer(this)));
     }
 

@@ -3,7 +3,6 @@ package com.sangsang.visitor.isolation;
 import com.sangsang.domain.dto.BaseFieldParseTable;
 import com.sangsang.domain.dto.FieldInfoDto;
 import com.sangsang.visitor.fieldparse.FieldParseParseTableSelectVisitor;
-import com.sangsang.visitor.transformation.TransformationSelectVisitor;
 import net.sf.jsqlparser.expression.*;
 import net.sf.jsqlparser.expression.operators.arithmetic.*;
 import net.sf.jsqlparser.expression.operators.conditional.AndExpression;
