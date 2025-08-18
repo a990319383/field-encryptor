@@ -1,6 +1,7 @@
 package com.sangsang.cache.desensitize;
 
 import com.sangsang.config.other.DefaultBeanPostProcessor;
+import com.sangsang.domain.dto.ClasssCacheKey;
 import com.sangsang.domain.exception.DesensitizeException;
 import com.sangsang.domain.strategy.desensitize.DesensitizeStrategy;
 
@@ -13,7 +14,7 @@ import java.util.*;
 public class DesensitizeInstanceCache extends DefaultBeanPostProcessor {
 
     //缓存脱敏对象，避免重复创建大量对象
-    private final static Map<Class, DesensitizeStrategy> INSTANCE_MAP = new HashMap<>();
+    private final static Map<ClasssCacheKey, DesensitizeStrategy> INSTANCE_MAP = new HashMap<>();
 
 
     /**
@@ -26,7 +27,7 @@ public class DesensitizeInstanceCache extends DefaultBeanPostProcessor {
     public void init(List<DesensitizeStrategy> strategies) {
         List<DesensitizeStrategy> desensitizeStrategies = Optional.ofNullable(strategies).orElse(new ArrayList<>());
         for (DesensitizeStrategy strategy : desensitizeStrategies) {
-            INSTANCE_MAP.put(strategy.getClass(), strategy);
+            INSTANCE_MAP.put(ClasssCacheKey.buildKey(strategy.getClass()), strategy);
         }
     }
 
@@ -39,13 +40,13 @@ public class DesensitizeInstanceCache extends DefaultBeanPostProcessor {
      **/
     public static final DesensitizeStrategy getInstance(Class<? extends DesensitizeStrategy> clazz) {
         //1.先从本地缓存好的里面找
-        DesensitizeStrategy instance = INSTANCE_MAP.get(clazz);
+        DesensitizeStrategy instance = INSTANCE_MAP.get(ClasssCacheKey.buildKey(clazz));
 
         //2.本地缓存找不到，根据无参构造进行实例化，然后放缓存
         if (instance == null) {
             try {
                 instance = clazz.newInstance();
-                INSTANCE_MAP.put(clazz, instance);
+                INSTANCE_MAP.put(ClasssCacheKey.buildKey(clazz), instance);
             } catch (Exception e) {
                 throw new DesensitizeException(String.format("脱敏策略无参实例化失败 %s", clazz.getName()));
             }

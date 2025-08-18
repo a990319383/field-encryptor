@@ -18,7 +18,9 @@ import com.sangsang.visitor.pojoencrtptor.PlaceholderExpressionVisitor;
 import com.sangsang.visitor.transformation.TransformationExpressionVisitor;
 import com.sangsang.visitor.transformation.wrap.ExpressionWrapper;
 import net.sf.jsqlparser.JSQLParserException;
-import net.sf.jsqlparser.expression.*;
+import net.sf.jsqlparser.expression.BinaryExpression;
+import net.sf.jsqlparser.expression.Expression;
+import net.sf.jsqlparser.expression.Function;
 import net.sf.jsqlparser.expression.operators.relational.ComparisonOperator;
 import net.sf.jsqlparser.expression.operators.relational.ExpressionList;
 import net.sf.jsqlparser.parser.CCJSqlParserUtil;
@@ -74,28 +76,57 @@ public class JsqlparserUtil {
      * @Param [selectItem, layerFieldTableMap 当前层的表拥有的全部字段 ]
      **/
     public static List<SelectItem> perfectAllColumns(SelectItem selectItem, Map<String, Set<FieldInfoDto>> layerFieldTableMap) {
-        //只有查询的这张表有需要加密的字段才将* 转换为每个字段，避免不必要的性能损耗
-        if (layerFieldTableMap.values().stream().flatMap(Collection::stream).filter(f -> TableCache.getFieldEncryptTable().contains(f.getSourceTableName())).count() == 0) {
-            return Arrays.asList(selectItem);
-        }
         Expression expression = selectItem.getExpression();
 
-        //select 别名.*  （注意：AllColumns AllTableColumns 有继承关系，这里判断顺序不能改）
+        //1. select 别名.*  （注意：AllColumns AllTableColumns 有继承关系，这里判断顺序不能改）
         if (expression instanceof AllTableColumns) {
             String tableName = ((AllTableColumns) expression).getTable().getName().toLowerCase();
-            return Optional.ofNullable(CollectionUtils.getValueIgnoreFloat(layerFieldTableMap, tableName)).orElse(new HashSet<>()).stream().map(m -> {
+            Set<FieldInfoDto> fieldInfoSet = CollectionUtils.getValueIgnoreFloat(layerFieldTableMap, tableName);
+            //1.1没有配置此表的字段信息，返回原表达式
+            if (CollectionUtils.isEmpty(fieldInfoSet)) {
+                return Arrays.asList(selectItem);
+            }
+            //1.2 配置了此表，此表是个虚拟表或此表不需要密文存储，则保持原样
+            FieldInfoDto fieldInfoDto = new ArrayList<FieldInfoDto>(fieldInfoSet).get(0);
+            if (!fieldInfoDto.isFromSourceTable() || !TableCache.getFieldEncryptTable().contains(fieldInfoDto.getSourceTableName())) {
+                return Arrays.asList(selectItem);
+            }
+            //1.3配置了此表的字段信息，将配置的所有字段去替换*
+            return fieldInfoSet.stream().map(m -> {
                 Column column = new Column(m.getColumnName());
                 column.setTable(new Table(tableName));
                 return SelectItem.from(column);
             }).collect(Collectors.toList());
         }
 
-        // select *  未指定别名，表示当前层只有一张表，直接将当前层的全部字段作为结果集返回
+        //2. select *  未指定别名，将当前层的全部字段作为结果集返回 (如果当前层的表需要密文存储，则使用全部字段替换，否则还是用原来的*，不过这里修改为别名.*)
         if (expression instanceof AllColumns) {
-            return layerFieldTableMap.values().stream().flatMap(Collection::stream).map(m -> SelectItem.from(new Column(m.getColumnName()))).collect(Collectors.toList());
+            List<SelectItem> selectItems = new ArrayList<>();
+            for (Map.Entry<String, Set<FieldInfoDto>> fieldInfoEntry : layerFieldTableMap.entrySet()) {
+                //2.1 此表字段没有配置拥有哪些字段，则使用 别名.*
+                if (CollectionUtils.isEmpty(fieldInfoEntry.getValue())) {
+                    SelectItem<?> item = SelectItem.from(new AllTableColumns(new Table(fieldInfoEntry.getKey())));
+                    selectItems.add(item);
+                }
+                //2.2 此表如果配置的有，此表是个虚拟表或这张表不需要密文存储，则也返回别名.*
+                else if (!new ArrayList<FieldInfoDto>(fieldInfoEntry.getValue()).get(0).isFromSourceTable()
+                        || !TableCache.getFieldEncryptTable().contains(new ArrayList<FieldInfoDto>(fieldInfoEntry.getValue()).get(0).getSourceTableName())) {
+                    SelectItem<?> item = SelectItem.from(new AllTableColumns(new Table(fieldInfoEntry.getKey())));
+                    selectItems.add(item);
+                }
+                //2.3 此表配置了表字段信息，并且需要密文存储，使用配置的字段替换*
+                else {
+                    for (FieldInfoDto fieldInfoDto : fieldInfoEntry.getValue()) {
+                        Column column = new Column(fieldInfoDto.getColumnName());
+                        column.setTable(new Table(fieldInfoEntry.getKey()));
+                        selectItems.add(SelectItem.from(column));
+                    }
+                }
+            }
+            return selectItems;
         }
 
-        //不包含*
+        //3. 不包含*
         return Arrays.asList(selectItem);
     }
 

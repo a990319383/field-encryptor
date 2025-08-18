@@ -14,8 +14,6 @@ import com.sangsang.util.ClassScanerUtil;
 import com.sangsang.util.ReflectUtils;
 import com.sangsang.util.StringUtils;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.BeansException;
-import org.springframework.beans.factory.config.BeanPostProcessor;
 import org.springframework.util.CollectionUtils;
 
 import java.lang.reflect.Field;
@@ -34,7 +32,7 @@ import java.util.stream.Collectors;
 @Slf4j
 public class TableCache extends DefaultBeanPostProcessor {
 
-    public FieldProperties fieldProperties;
+    private static FieldProperties fieldProperties;
 
     public TableCache(FieldProperties fieldProperties) {
         this.fieldProperties = fieldProperties;
@@ -146,7 +144,7 @@ public class TableCache extends DefaultBeanPostProcessor {
 
             //6.组装结果集
             result.add(TableInfoDto.builder()
-                    .tableName(tableName.value())
+                    .tableName(tableName.value().toLowerCase())
                     .tableFields(tableFieldDtos)
                     .build());
 
@@ -277,6 +275,18 @@ public class TableCache extends DefaultBeanPostProcessor {
      **/
     public static Map<String, Set<String>> getTableFieldMap() {
         return TABLE_FIELD_MAP;
+    }
+
+
+    /**
+     * 获取当前项目的配置
+     *
+     * @author liutangqi
+     * @date 2025/8/15 17:52
+     * @Param []
+     **/
+    public static FieldProperties getCurConfig() {
+        return fieldProperties;
     }
 
 }

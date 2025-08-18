@@ -17,21 +17,22 @@ public interface DataIsolationStrategy<T> {
     /**
      * 获取数据隔离的数据库字段名
      * 注意：这里返回的是数据库的表字段名，不是实体类的字段名
+     * 这里返回的值是空的，则不进行数据隔离
      *
      * @author liutangqi
      * @date 2025/6/21 19:23
-     * @Param []
+     * @Param [tableName 小写表名]
      **/
-    String getIsolationField();
+    String getIsolationField(String tableName);
 
     /**
      * 获取表字段和具体隔离字段的关系
      *
      * @author liutangqi
      * @date 2025/6/21 19:24
-     * @Param []
+     * @Param [tableName 小写表名]
      **/
-    IsolationRelationEnum getIsolationRelation();
+    IsolationRelationEnum getIsolationRelation(String tableName);
 
 
     /**
@@ -40,9 +41,9 @@ public interface DataIsolationStrategy<T> {
      *
      * @author liutangqi
      * @date 2025/6/21 19:49
-     * @Param []
+     * @Param [tableName 小写表名]
      **/
-    T getIsolationData();
+    T getIsolationData(String tableName);
 
     /**
      * 泛型 T 允许的值

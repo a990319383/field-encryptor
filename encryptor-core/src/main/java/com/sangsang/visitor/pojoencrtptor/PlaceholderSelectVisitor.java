@@ -127,7 +127,7 @@ public class PlaceholderSelectVisitor extends PlaceholderFieldParseTable impleme
     @Override
     public void visit(ParenthesedSelect subSelect) {
         //处理子查询内容（注意：这里层数是当前层，这个的解析结果需要和外层在同一层级）
-        Optional.ofNullable(subSelect.getPlainSelect())
+        Optional.ofNullable(subSelect.getSelect())
                 .ifPresent(p -> p.accept(PlaceholderSelectVisitor.newInstanceCurLayer(this, this.upstreamExpressionList)));
     }
 

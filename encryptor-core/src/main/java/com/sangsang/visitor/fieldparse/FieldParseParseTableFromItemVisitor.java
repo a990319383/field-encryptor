@@ -87,7 +87,7 @@ public class FieldParseParseTableFromItemVisitor extends BaseFieldParseTable imp
 
         //1.解析子查询下一层，层数 + 1
         FieldParseParseTableSelectVisitor fieldParseTableSelectVisitor = FieldParseParseTableSelectVisitor.newInstanceNextLayer(this);
-        subSelect.getPlainSelect().accept(fieldParseTableSelectVisitor);
+        subSelect.getSelect().accept(fieldParseTableSelectVisitor);
 
         //2.解析这一层涉及到的表的全部字段，子查询的时，本层的表的全部字段就是下一层的全部select的字段，本层的表名就是别名
         Map<String, Set<FieldInfoDto>> selectTableFieldMap = this.getLayerSelectTableFieldMap().getOrDefault(String.valueOf(this.getLayer() + 1), new HashMap<>());

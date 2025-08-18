@@ -1,18 +1,23 @@
 package com.sangsang.visitor.isolation;
 
+import com.sangsang.cache.fieldparse.TableCache;
 import com.sangsang.cache.isolation.IsolationInstanceCache;
+import com.sangsang.domain.annos.isolation.DataIsolation;
 import com.sangsang.domain.dto.BaseFieldParseTable;
 import com.sangsang.domain.dto.FieldInfoDto;
-import com.sangsang.domain.enums.IsolationRelationEnum;
+import com.sangsang.domain.enums.IsolationConditionalRelationEnum;
 import com.sangsang.domain.strategy.isolation.DataIsolationStrategy;
 import com.sangsang.util.CollectionUtils;
 import com.sangsang.util.ExpressionsUtil;
 import com.sangsang.util.StringUtils;
 import com.sangsang.visitor.fieldparse.FieldParseParseTableSelectVisitor;
 import net.sf.jsqlparser.expression.Expression;
+import net.sf.jsqlparser.expression.Parenthesis;
+import net.sf.jsqlparser.expression.operators.conditional.AndExpression;
 import net.sf.jsqlparser.statement.select.*;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * @author liutangqi
@@ -61,7 +66,7 @@ public class IsolationSelectVisitor extends BaseFieldParseTable implements Selec
     @Override
     public void visit(ParenthesedSelect parenthesedSelect) {
         //注意：这里层数是当前层，这个的解析结果需要和外层在同一层级
-        Optional.ofNullable(parenthesedSelect.getPlainSelect()).ifPresent(p -> p.accept(IsolationSelectVisitor.newInstanceCurLayer(this)));
+        Optional.ofNullable(parenthesedSelect.getSelect()).ifPresent(p -> p.accept(IsolationSelectVisitor.newInstanceCurLayer(this)));
     }
 
     /**
@@ -94,65 +99,108 @@ public class IsolationSelectVisitor extends BaseFieldParseTable implements Selec
         }
 
         //4.处理当前层的数据隔离
-        //4.1.存储当前拼接的权限过滤条件
+        //4.1.存储当前拼接的权限过滤条件(这里list存储的是不同的表的隔离字段)
         List<Expression> isolationExpressions = new ArrayList<>();
         //4.2.获取当前层字段信息
         Map<String, Set<FieldInfoDto>> fieldTableMap = this.getLayerFieldTableMap().get(String.valueOf(this.getLayer()));
 
         //4.3.判断其中是否存在数据隔离的表
         for (Map.Entry<String, Set<FieldInfoDto>> fieldTableEntry : fieldTableMap.entrySet()) {
-            //4.3.1 随便获取一个字段，得到这个字段所属的真实表名（因为这些字段都是属于同一张真实表，所以随便获取一个即可）
-            FieldInfoDto anyFieldInfo = fieldTableEntry.getValue().stream().findAny().get();
-            //4.3.2 通过表名获取到当前的数据隔离的相关信息（外层获取，避免方法重复调用）
-            DataIsolationStrategy dataIsolationStrategy = IsolationInstanceCache.getInstance(anyFieldInfo.getSourceTableName());
-            String isolationField = dataIsolationStrategy.getIsolationField();
-            IsolationRelationEnum isolationRelation = dataIsolationStrategy.getIsolationRelation();
-            Object isolationData = dataIsolationStrategy.getIsolationData();
-            //4.3.3 依次处理每个字段，判断这些字段是否需要数据隔离
+            //4.3.1 随便获取一个字段，得到这个字段所属的真实表名（因为这些字段都是属于同一张真实表，所以随便获取一个即可），如果这个表所属的表不是来源真实表则直接跳过
+            FieldInfoDto anyFieldInfo = fieldTableEntry.getValue().stream().findAny().orElse(null);
+            if (anyFieldInfo == null || !anyFieldInfo.isFromSourceTable() || StringUtils.isBlank(anyFieldInfo.getSourceTableName())) {
+                continue;
+            }
+            //4.3.2 通过表名获取到当前的表隔离的相关信息（外层获取，避免方法重复调用），不需要隔离则跳过这个表
+            List<DataIsolationStrategy> dataIsolationStrategies = IsolationInstanceCache.getInstance(anyFieldInfo.getSourceTableName());
+            DataIsolation dataIsolation = IsolationInstanceCache.getDataIsolationByTableName(anyFieldInfo.getSourceTableName());
+            if (CollectionUtils.isEmpty(dataIsolationStrategies) || dataIsolation == null) {
+                continue;
+            }
+
+            //4.3.3 当前表可能存在多个隔离策略，将其格式转换为key是表字段小写，value是隔离字段
+            Map<String, List<DataIsolationStrategy>> isolationFieldMap = dataIsolationStrategies.stream()
+                    .filter(f -> StringUtils.isNotBlank(f.getIsolationField(anyFieldInfo.getSourceTableName())))
+                    .collect(Collectors.groupingBy(g -> g.getIsolationField(anyFieldInfo.getSourceTableName()).toLowerCase()));
+            if (org.springframework.util.CollectionUtils.isEmpty(isolationFieldMap)) {
+                continue;
+            }
+
+            //4.3.4 存储当前表字段的隔离条件拼凑的隔离条件
+            List<Expression> tableIsolationExpressions = new ArrayList<>();
+
+            //4.3.5 依次处理每个字段，判断这些字段是否需要数据隔离
             for (FieldInfoDto fieldInfo : fieldTableEntry.getValue()) {
-                //4.3.3.1 此表不存在隔离字段，跳过这张表
-                if (dataIsolationStrategy == null) {
-                    break;
-                }
-                //4.3.3.2当前字段不是直接来自真实表的，跳过
+                //4.3.5.1当前字段不是直接来自真实表的，跳过
                 if (!fieldInfo.isFromSourceTable()) {
                     continue;
                 }
-                //4.3.3.3 当前字段和数据隔离字段不同，跳过
-                if (!StringUtils.equalIgnoreFieldSymbol(fieldInfo.getColumnName(), isolationField)) {
+                //4.3.5.2查看当前字段是否需要参与数据隔离
+                List<DataIsolationStrategy> dataIsolationStrategy = CollectionUtils.getValueIgnoreFloat(isolationFieldMap, fieldInfo.getSourceColumn());
+                if (CollectionUtils.isEmpty(dataIsolationStrategy)) {
                     continue;
                 }
-                //4.3.3.4 当前数据隔离值为空，跳过 （拼凑个为空的条件，sql肯定执行出问题，所以打个警告日志后跳过）
-                if (isolationData == null) {
-                    log.warn("【isolation】当前表的权限隔离字段获取为空，请留意是否正常 tableName:{} DataIsolationStrategy:{}", fieldInfo.getSourceTableName(), dataIsolationStrategy.getClass().getName());
-                    break;
+                //4.3.5.3开拼
+                for (DataIsolationStrategy isolationStrategy : dataIsolationStrategy) {
+                    Expression isolationExpression = IsolationInstanceCache.buildIsolationExpression(isolationStrategy.getIsolationField(anyFieldInfo.getSourceTableName())
+                            , fieldTableEntry.getKey()
+                            , isolationStrategy.getIsolationRelation(anyFieldInfo.getSourceTableName())
+                            , isolationStrategy.getIsolationData(anyFieldInfo.getSourceTableName()));
+                    //4.3.5.4 将拼接好的条件维护到这个表的隔离条件集合中
+                    tableIsolationExpressions.add(isolationExpression);
                 }
-                //4.3.3.5开拼
-                Expression isolationExpression = IsolationInstanceCache.buildIsolationExpression(isolationField, fieldTableEntry.getKey(), isolationRelation, isolationData);
-                isolationExpressions.add(isolationExpression);
-                break;
+            }
+
+            //4.3.6 处理这一张表不同的条件
+            //4.3.6.1 这张表没有额外加隔离条件，或者只加了一个隔离条件，则不处理，只需要将这个隔离条件加到表级别的list中即可
+            if (tableIsolationExpressions.size() <= 1) {
+                isolationExpressions.addAll(tableIsolationExpressions);
+                continue;
+            }
+            //4.3.6.1 单表不同字段之间是and
+            if (IsolationConditionalRelationEnum.AND.equals(dataIsolation.conditionalRelation())) {
+                isolationExpressions.add(ExpressionsUtil.buildAndExpression(tableIsolationExpressions));
+            }
+            //4.3.6.2 单表不同字段之间是or ，使用or拼接完成后，再将整个表达式使用括号包裹起来
+            if (IsolationConditionalRelationEnum.OR.equals(dataIsolation.conditionalRelation())) {
+                Expression tableIsoExp = ExpressionsUtil.buildOrExpression(tableIsolationExpressions);
+                isolationExpressions.add(ExpressionsUtil.buildParenthesis(tableIsoExp));
             }
         }
 
-        //4.没有需要额外新增的隔离字段吗，则不处理
+        //5.没有需要额外新增的隔离字段吗，则不处理
         if (CollectionUtils.isEmpty(isolationExpressions)) {
             return;
         }
 
-        //5.处理where条件
-        //5.1 旧的存在where的话，就把这个也追加到需要处理的表达式里面，注意：旧表达式整体括号扩起来，避免里面存在or导致语义错误
-        Optional.ofNullable(plainSelect.getWhere()).ifPresent(p -> isolationExpressions.add(ExpressionsUtil.buildParenthesis(p)));
-        //5.2条件表达式只有一个则直接赋值
-        if (isolationExpressions.size() == 1) {
-            plainSelect.setWhere(isolationExpressions.get(0));
+        //6.处理不同表之间的条件关联关系
+        Expression whereIsolation = null;
+        if (IsolationConditionalRelationEnum.AND.equals(TableCache.getCurConfig().getIsolation().getConditionalRelation())) {
+            whereIsolation = ExpressionsUtil.buildAndExpression(isolationExpressions);
         }
-        //5.3 条件表达式有多个，用and拼接
+        if (IsolationConditionalRelationEnum.OR.equals(TableCache.getCurConfig().getIsolation().getConditionalRelation())) {
+            whereIsolation = ExpressionsUtil.buildOrExpression(isolationExpressions);
+        }
+
+        //7.处理where条件
+        //7.1 旧sql不存在where
+        if (plainSelect.getWhere() == null) {
+            plainSelect.setWhere(whereIsolation);
+        }
+        //7.2 旧sql存在where， 旧的表达式的关系和现在肯定是and的关系，将旧表达用括号包起来，否则里面存在or的话会有语义错误
         else {
-            Expression preExpression = isolationExpressions.get(0);
-            for (int i = 1; i < isolationExpressions.size(); i++) {
-                preExpression = ExpressionsUtil.buildAndExpression(preExpression, isolationExpressions.get(i));
+            //7.2.1 旧的where 表达式中可能存在or的话，则使用括号包裹起来
+            Expression plainSelectWhere = plainSelect.getWhere();
+            if (!(plainSelectWhere instanceof Parenthesis) && !StringUtils.notExist(plainSelectWhere.toString(), "or")) {
+                plainSelectWhere = ExpressionsUtil.buildParenthesis(plainSelectWhere);
             }
-            plainSelect.setWhere(preExpression);
+            //7.2.2 额外新增的隔离条件中可能存在or的话，使用括号包裹起来
+            if (!(whereIsolation instanceof Parenthesis) && !StringUtils.notExist(whereIsolation.toString(), "or")) {
+                whereIsolation = ExpressionsUtil.buildParenthesis(whereIsolation);
+            }
+            //7.2.3 将旧的where表达式和额外增加的隔离表达式使用and拼接
+            AndExpression whereExpression = ExpressionsUtil.buildAndExpression(plainSelectWhere, whereIsolation);
+            plainSelect.setWhere(whereExpression);
         }
     }
 
