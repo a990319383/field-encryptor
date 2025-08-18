@@ -7,16 +7,24 @@
 
 ## 简介
 
-> 基于mybatis拦截器 + jsqlparser ，动态改写sql。减少重复性工作，使客户专注业务开发
+> 用于等保，秘评，信创，数据安全等场景。实现业务快速改造，减少重复性工作，使客户专注业务开发
+>
+> 基于mybatis拦截器 + jsqlparser ，动态改写sql。
 >
 > 此文档针对3.5.0以后的版本
+>
+> 请使用最新版本，没有特殊情况，bug都会在最新版本修改。当前最新git版本为3.5.0,还在测试阶段，尚未发布稳定版本到git仓库
 
 ## 功能清单
 
-> - 数据库字段自动加解密
+> - 数据库字段自动加解密（自动改写sql实现密文存储，明文查询）
+>   - 使用数据库自带的加解密算法
+>   - 使用java可以实现的加解密算法
 > - 数据库字段查询脱敏
-> - sql语法自动切换（栗如：mysql的语法自动转换为达梦数据库语法）
-> - 业务数据自动隔离
+> - sql语法自动切换
+>   - mysql的语法自动转换为达梦数据库语法
+> - 业务数据自动隔离（执行的sql自动拼接上权限隔离的条件）
+> - 数据变更时维护默认值(数据新增，修改时自动填充值)
 
 ## 功能介绍
 
@@ -24,7 +32,9 @@
 
 #### 应用场景
 
-> 用于敏感数据数据库存储加密的项目改造，能解决等保，秘评等常见问题，实现项目快速改造
+> 用于敏感数据数据库存储加密的项目改造
+>
+> 能解决等保，秘评，数据安全等常见问题，实现项目快速改造
 
 #### 方案对比
 
@@ -40,7 +50,7 @@
 
 - db
   - 特点
-    - **依赖数据库的加解密算法**，通过自动改造原sql，实现字段的自动加解密
+    - **依赖数据库的加解密算法**，通过自动改造原sql，在对应字段自动调用库函数，实现字段的自动加解密
   - 优点
     - 加解密场景适应性强，支持列运算的字符加解密
     - **支持密文模糊查询**
@@ -84,7 +94,7 @@ select  phone,user_name FROM tb_user WHERE phone = ?
 
 ##### db,pojo模式均不兼容的场景
 
-- 项目基于jsqlparser解析，其版本不支持的sql语法，此框架无法兼容
+- 项目基于jsqlparser4.9解析，其版本不支持的sql语法，此框架无法兼容
 - INSERT INTO 表名 VALUES (所有字段);   表名后面没有跟具体字段的，无法兼容
 
 ##### pojo模式不兼容的场景
@@ -140,6 +150,27 @@ select  phone,user_name FROM tb_user WHERE phone = ?
 | 使用对比 | 封装一个注解，标注在方法上或者具体的mapper上，上面指定数据隔离字段，进行隔离 | 仅需在实体类上标注即可                                       |
 | 项目规范 | 封装的注解，团队中可能有的人会有，有的人不用自己sql拼，不统一，后续权限改动的话，改造困难 | 仅建表的人写即可，业务开发人员大家都不自己写，也不用自己标注解，项目统一 |
 | 扩展性   | 一般的封装对不同场景支持较弱，有的场景需要 = 有的需要like，有的需要in，而且有的需要同一个sql不同场景下使用不同字段进行隔离 | 均支持                                                       |
+
+### 5.数据变更时维护默认值
+
+#### 应用场景
+
+> 一些固有字段，每次新增，或者修改时都会设置固定的值
+>
+> 配合功能4的数据隔离，可以轻松实现项目的数据隔离管理
+>
+> 栗如：
+>
+> ​	创建时间，修改时间，创建人，修改人      
+>
+> ​	数据隔离字段(组织id)    租户id
+
+#### 方案对比
+
+|          | 一般方案                                                    | 本框架                 |
+| -------- | ----------------------------------------------------------- | ---------------------- |
+| 使用方式 | 利用mybatis-plus的MetaObjectHandler，在实体类字段上标注即可 | 在实体类字段上标注即可 |
+| 适配场景 | 必须要求插入和修改的入参类拥有需要维护的字段才行            | 无限制                 |
 
 ## 快速接入
 
@@ -507,6 +538,8 @@ public class TIsolationBeanStrategy implements DataIsolationStrategy<Long> {
 ##### 标注
 
 > 标注在实体类上，一个实体类表示一种抽象数据，一种数据的权限所属一般情况是固定的
+>
+> 一个@DataIsolation 可以同时指定多个策略，并且可以指定多个策略之间是and 还是 or
 
 ```java
 /**
@@ -558,6 +591,27 @@ List<OrderEntity> getPage();
 field.lruCapacity=100
 ```
 
+##### 配置多个数据隔离策略之间的关系是属于and还是or
+
+- 一个sql中多个表均有数据隔离条件，在全局配置中配置
+
+```
+#一个sql中多个表均有数据隔离条件，这里配置不同表的隔离之间的关系，默认是 and
+field.isolation.conditionalRelation=or
+```
+
+- 一个sql中同一张表有多个数据隔离条件，在这个表的@DataIsolation中使用conditionalRelation进行配置
+
+```
+#一个sql中同一张表有多个数据隔离条件，这里配置不同策略之间的关系，默认是 and
+@TableName("sys_user")
+@DataIsolation(conditionalRelation = IsolationConditionalRelationEnum.OR, 
+value = {策略1.class, 策略2.class})
+public class SysUserEntity {
+    ... 略
+}
+```
+
 ##### 复杂场景的业务隔离
 
 - 模拟系统简介
@@ -601,6 +655,86 @@ public class TIsolationBeanStrategy implements DataIsolationStrategy<String> {
     }
 }
 ```
+
+### 5.数据变更时维护默认值
+
+#### 快速使用
+
+##### 基本配置
+
+```
+#配置@TableName标注的实体类路径
+field.scanEntityPackage[0]=com.sangsang.*.entity
+#开启数据变更时设置默认值
+field.fieldDefault.enable=true
+```
+
+##### 自定义默认值策略
+
+```
+/**
+* 创建时间默认值
+*
+* @author liutangqi
+* @date 2025/7/24 14:20
+* @Param
+**/
+public  class CreateTimeStrategy implements FieldDefaultStrategy<LocalDateTime> {
+
+    @Override
+    public boolean whetherToHandle(SqlCommandEnum sqlCommandEnum) {
+        //新增时设置默认值
+        return SqlCommandEnum.INSERT.equals(sqlCommandEnum);
+    }
+
+    @Override
+    public LocalDateTime getDefaultValue() {
+        return LocalDateTime.now();
+    }
+}
+```
+
+##### 标注
+
+```
+/**
+*
+*这个是所有实体类的基类，也可以直接标注在实体类(@TableName)上面
+*/
+public class BasePo {
+    @TableId(type = IdType.AUTO)
+    private Long id;
+
+    /**
+     * 创建者
+     */
+    @FieldDefault(CreateTimeStrategy.class)//新增时维护默认值
+    private String createBy;
+
+    ...略
+}
+```
+
+#### 进阶使用
+
+##### 强制覆盖原sql的值
+
+> 当我们需要设置的值在原业务sql中存在，我们不想要业务sql的值，想要强制用我们策略的值覆盖sql的值
+
+```
+# 进行字段标注的时候，使用mandatoryOverride为true，设置强制覆盖原值
+@FieldDefault(value = CreateTimeStrategy.class,mandatoryOverride = true)
+```
+
+##### 配合数据隔离实现隔离字段自动写入，查询自动增加隔离条件
+
+>  继续4.业务数据隔离---进阶使用---复杂场景的业务隔离
+
+我们接入了数据隔离功能后，数据查询会自动增加上数据隔离的条件，但是我们数据写入仍然需要手动去维护
+
+此时我们可以用上本功能，在对应字段上标注，自动维护org_seq的值，实现真正的全自动0侵入数据隔离
+
+
 
 ## 附录
 
