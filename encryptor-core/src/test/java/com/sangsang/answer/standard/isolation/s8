@@ -1,0 +1,1 @@
+SELECT * FROM sys_user WHERE (loginName LIKE 'xxx' OR mobile = '18432154844') AND (sys_user.role_id = 1111111 OR sys_user.id = 333)

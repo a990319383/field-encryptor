@@ -57,7 +57,14 @@ public class IsolationInstanceCache extends DefaultBeanPostProcessor {
      * @date 2025/6/13 10:32
      * @Param
      **/
-    private static final Map<String, DataIsolationStrategy> TABLE_ISOLATION_MAP = new HashMap<>();
+    private static final Map<String, List<DataIsolationStrategy>> TABLE_ISOLATION_MAP = new HashMap<>();
+
+    /**
+     * 缓存当前表头上的注解
+     * key: 表名小写
+     * value: 表头上的注解
+     **/
+    private static final Map<String, DataIsolation> TABLE_ISOLATION_ANNO_MAP = new HashMap<>();
 
     /**
      * 存储当前需要进行数据隔离的小写的表名
@@ -123,21 +130,27 @@ public class IsolationInstanceCache extends DefaultBeanPostProcessor {
             TableName tableName = (TableName) entityClass.getAnnotation(TableName.class);
             DataIsolation dataIsolation = (DataIsolation) entityClass.getAnnotation(DataIsolation.class);
             String lowerTableName = tableName.value().toLowerCase();
-            //2.2校验配置是否正确
-            DataIsolationStrategy dataIsolationStrategy = INSTANCE_MAP.get(ClasssCacheKey.buildKey(dataIsolation.value()));
-            //2.3容器中找不到，尝试使用无参构造进行实例化
-            if (dataIsolationStrategy == null) {
-                try {
-                    dataIsolationStrategy = dataIsolation.value().newInstance();
-                    INSTANCE_MAP.put(ClasssCacheKey.buildKey(dataIsolation.value()), dataIsolationStrategy);
-                } catch (Exception e) {
-                    throw new IsolationException(String.format("当前表%s 配置的隔离策略 %s spring容器中找不到，无参构造实例化失败", tableName.value(), dataIsolation.value()));
+            //2.2获取类上面的策略，如果当前缓存不存在，则实例化一份放缓存中
+            Class<? extends DataIsolationStrategy>[] strategies = dataIsolation.value();
+            List<DataIsolationStrategy> strategyBeans = new ArrayList<>();
+            for (Class<? extends DataIsolationStrategy> strategy : strategies) {
+                DataIsolationStrategy dataIsolationStrategy = INSTANCE_MAP.get(ClasssCacheKey.buildKey(strategy));
+                if (dataIsolationStrategy == null) {
+                    try {
+                        dataIsolationStrategy = strategy.newInstance();
+                        INSTANCE_MAP.put(ClasssCacheKey.buildKey(strategy), dataIsolationStrategy);
+                    } catch (Exception e) {
+                        throw new IsolationException(String.format("当前表%s 配置的隔离策略 %s spring容器中找不到，无参构造实例化失败", tableName.value(), strategy));
+                    }
                 }
+                strategyBeans.add(dataIsolationStrategy);
             }
             //2.4缓存表和数据隔离实例关系
-            TABLE_ISOLATION_MAP.put(lowerTableName, dataIsolationStrategy);
+            TABLE_ISOLATION_MAP.put(lowerTableName, strategyBeans);
             //2.5记录当前需要涉及到数据隔离的所有表
             ISOLATION_TABLE.add(lowerTableName);
+            //2.6缓存表头上的注解
+            TABLE_ISOLATION_ANNO_MAP.put(lowerTableName, dataIsolation);
         }
     }
 
@@ -151,9 +164,20 @@ public class IsolationInstanceCache extends DefaultBeanPostProcessor {
      * @date 2025/6/13 10:58
      * @Param [tableName]
      **/
-    public static DataIsolationStrategy getInstance(String tableName) {
+    public static List<DataIsolationStrategy> getInstance(String tableName) {
         //看这个表是否需要数据隔离
         return CollectionUtils.getValueIgnoreFloat(TABLE_ISOLATION_MAP, tableName.toLowerCase());
+    }
+
+    /**
+     * 根据表名获取表名头上面的@DataIsolation
+     *
+     * @author liutangqi
+     * @date 2025/8/15 16:38
+     * @Param [tableName]
+     **/
+    public static DataIsolation getDataIsolationByTableName(String tableName) {
+        return CollectionUtils.getValueIgnoreFloat(TABLE_ISOLATION_ANNO_MAP, tableName.toLowerCase());
     }
 
 
@@ -196,7 +220,7 @@ public class IsolationInstanceCache extends DefaultBeanPostProcessor {
             return equalsTo;
         }
 
-        //field lile 'value%'
+        //field like 'value%'
         if (IsolationRelationEnum.LIKE_PREFIX.equals(isolationRelationEnum)) {
             LikeExpression likeExpression = new LikeExpression();
             likeExpression.setLeftExpression(column);

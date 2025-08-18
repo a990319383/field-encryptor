@@ -8,6 +8,7 @@ import com.sangsang.domain.exception.IsolationException;
 import com.sangsang.domain.strategy.fielddefault.FieldDefaultStrategy;
 import net.sf.jsqlparser.expression.*;
 import net.sf.jsqlparser.expression.operators.conditional.AndExpression;
+import net.sf.jsqlparser.expression.operators.conditional.OrExpression;
 import net.sf.jsqlparser.expression.operators.relational.ExpressionList;
 import net.sf.jsqlparser.expression.operators.relational.IsNullExpression;
 import net.sf.jsqlparser.schema.Column;
@@ -42,6 +43,64 @@ public class ExpressionsUtil {
         andExpression.setRightExpression(rightExpression);
         return andExpression;
     }
+
+    /**
+     * 构建or表达式
+     *
+     * @author liutangqi
+     * @date 2025/8/15 14:41
+     * @Param [leftExpression, rightExpression]
+     **/
+    public static OrExpression buildOrExpression(Expression leftExpression, Expression rightExpression) {
+        OrExpression orExpression = new OrExpression();
+        orExpression.setLeftExpression(leftExpression);
+        orExpression.setRightExpression(rightExpression);
+        return orExpression;
+    }
+
+    /**
+     * 多个表达式之间使用and连接起来
+     *
+     * @author liutangqi
+     * @date 2025/8/15 17:32
+     * @Param [expressions]
+     **/
+    public static Expression buildAndExpression(List<Expression> expressions) {
+        if (CollectionUtils.isEmpty(expressions)) {
+            return null;
+        }
+        if (expressions.size() == 1) {
+            return expressions.get(0);
+        }
+        Expression preExp = expressions.get(0);
+        for (int i = 1; i < expressions.size(); i++) {
+            preExp = buildAndExpression(preExp, expressions.get(i));
+        }
+        return preExp;
+    }
+
+    /**
+     * 多个表达式之间使用or连接起来
+     * 注意：请根据使用场景，判断是否需要使用括号包裹起来
+     *
+     * @author liutangqi
+     * @date 2025/8/15 17:32
+     * @Param [expressions]
+     **/
+    public static Expression buildOrExpression(List<Expression> expressions) {
+        if (CollectionUtils.isEmpty(expressions)) {
+            return null;
+        }
+        if (expressions.size() == 1) {
+            return expressions.get(0);
+        }
+        Expression preExp = expressions.get(0);
+        for (int i = 1; i < expressions.size(); i++) {
+            preExp = buildOrExpression(preExp, expressions.get(i));
+        }
+        return preExp;
+    }
+
 
     /**
      * 构建括号

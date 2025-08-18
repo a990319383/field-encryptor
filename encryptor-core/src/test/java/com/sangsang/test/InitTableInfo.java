@@ -49,6 +49,10 @@ public class InitTableInfo {
         IsolationProperties isolationProperties = new IsolationProperties();
         isolationProperties.setEnable(true);
         fieldProperties.setIsolation(isolationProperties);
+        //初始化表结构
+        new TableCache(fieldProperties).init();
+        //初始化数据解析缓存
+        SqlParseCache.init(new FieldProperties());
         new IsolationInstanceCache().init(fieldProperties, Arrays.asList(new TestDataIsolationStrategy()));
     }
 

@@ -50,6 +50,16 @@ public class IsolationTest {
     //union all
     String s6 = "select * from tb_user where id = 2 union all select * from tb_user where id = 3";
 
+    // select from (union all)
+    String s7 = "\tselect \n" +
+            "\t\t*\n" +
+            "\t\tfrom (\n" +
+            "\t\tselect * from tb_user where id = 2 union all select * from tb_user where id = 3\n" +
+            "\t\t)a";
+
+    //单表多策略，且单表不同策略之间关系是or
+    String s8 = "select * from sys_user where loginName like 'xxx' or mobile = '18432154844'";
+
     /**
      * mysql转换为达梦的语法转换器测试
      *
@@ -60,9 +70,8 @@ public class IsolationTest {
     @Test
     public void isolationTest() throws Exception {
         //需要的sql
-        String sql = s6;
+        String sql = s8;
         //mock数据
-        InitTableInfo.initTable();
         InitTableInfo.initIsolation();
 
         //开始进行数据隔离
@@ -85,7 +94,7 @@ public class IsolationTest {
     //----------------------------------------校验当前程序是否正确分割线---------------------------------------------------------
     //需要测试的sql
     List<String> sqls = Arrays.asList(
-            s1, s2, s3, s4, s5
+            s1, s2, s3, s4, s5, s6, s7, s8
     );
 
 

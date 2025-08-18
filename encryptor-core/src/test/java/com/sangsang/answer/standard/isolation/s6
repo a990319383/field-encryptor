@@ -1,0 +1,1 @@
+SELECT * FROM tb_user WHERE id = 2 AND tb_user.role_id = 1111111 UNION ALL SELECT * FROM tb_user WHERE id = 3 AND tb_user.role_id = 1111111
