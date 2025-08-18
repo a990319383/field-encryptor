@@ -1,9 +1,7 @@
 package com.sangsang.config;
 
 import com.sangsang.cache.fielddefault.FieldDefaultInstanceCache;
-import com.sangsang.config.properties.FieldProperties;
 import com.sangsang.domain.strategy.fielddefault.FieldDefaultStrategy;
-import com.sangsang.domain.strategy.isolation.DataIsolationStrategy;
 import com.sangsang.interceptor.FieldDefaultInterceptor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;

@@ -9,11 +9,11 @@ import com.sangsang.domain.strategy.isolation.DataIsolationStrategy;
  * @author liutangqi
  * @date 2025/6/13 15:12
  */
-public class TestDataIsolationStrategy implements DataIsolationStrategy<Long> {
+public class Test222DataIsolationStrategy implements DataIsolationStrategy<Long> {
 
     @Override
     public String getIsolationField(String tableName) {
-        return "role_id";
+        return "id";
     }
 
     @Override
@@ -23,7 +23,7 @@ public class TestDataIsolationStrategy implements DataIsolationStrategy<Long> {
 
     @Override
     public Long getIsolationData(String tableName) {
-        return 1111111L;
+        return 333L;
     }
 
 }

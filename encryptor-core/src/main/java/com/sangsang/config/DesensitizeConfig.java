@@ -2,7 +2,7 @@ package com.sangsang.config;
 
 import com.sangsang.cache.desensitize.DesensitizeInstanceCache;
 import com.sangsang.domain.strategy.desensitize.DesensitizeStrategy;
-import com.sangsang.interceptor.*;
+import com.sangsang.interceptor.FieldDesensitizeInterceptor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;

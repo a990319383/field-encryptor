@@ -239,7 +239,7 @@ public class TransformationTest {
     @Test
     public void mysql2dmTransformation() throws JSQLParserException, NoSuchFieldException {
         //需要的sql
-        String sql = s21;
+        String sql = s20;
         System.out.println("----------------------原始sql-----------------------");
         System.out.println(sql);
         //mock数据

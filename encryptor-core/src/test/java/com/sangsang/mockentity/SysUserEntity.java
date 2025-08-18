@@ -3,6 +3,10 @@ package com.sangsang.mockentity;
 import com.baomidou.mybatisplus.annotation.FieldFill;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableName;
+import com.sangsang.domain.annos.isolation.DataIsolation;
+import com.sangsang.domain.enums.IsolationConditionalRelationEnum;
+import com.sangsang.strategy.Test222DataIsolationStrategy;
+import com.sangsang.strategy.TestDataIsolationStrategy;
 
 /**
  * 系统用户表
@@ -10,12 +14,17 @@ import com.baomidou.mybatisplus.annotation.TableName;
  * @author hgwlpt
  */
 @TableName("sys_user")
+@DataIsolation(conditionalRelation = IsolationConditionalRelationEnum.OR, value = {TestDataIsolationStrategy.class, Test222DataIsolationStrategy.class})
 public class SysUserEntity {
-
     /**
      * 主键
      */
     private Long id;
+
+    /**
+     * 角色id
+     */
+    private Long roleId;
 
     /**
      * 登录名

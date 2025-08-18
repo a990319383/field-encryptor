@@ -52,7 +52,7 @@ public class TransformationFromItemVisitor extends BaseFieldParseTable implement
     @Override
     public void visit(ParenthesedSelect selectBody) {
         //解密子查询内容（注意：这里是下一层的）
-        Optional.ofNullable(selectBody.getPlainSelect())
+        Optional.ofNullable(selectBody.getSelect())
                 .ifPresent(p -> p.accept(TransformationSelectVisitor.newInstanceNextLayer(this)));
     }
 

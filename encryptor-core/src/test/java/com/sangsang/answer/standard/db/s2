@@ -1,1 +1,1 @@
-SELECT login_name, phone, id, login_pwd, update_time, create_time, role_id, user_name FROM (SELECT role_id, user_name, update_time, create_time, id, login_pwd, login_name, CAST(AES_DECRYPT(FROM_BASE64(phone), '7uq?q8g3@q') AS CHAR) AS phone FROM tb_user) a WHERE a.id > 0 AND a.phone = ?
+SELECT a.* FROM (SELECT tb_user.user_name, tb_user.id, tb_user.update_time, tb_user.role_id, tb_user.login_name, tb_user.create_time, CAST(AES_DECRYPT(FROM_BASE64(tb_user.phone), '7uq?q8g3@q') AS CHAR) AS phone, tb_user.login_pwd FROM tb_user) a WHERE a.id > 0 AND a.phone = ?

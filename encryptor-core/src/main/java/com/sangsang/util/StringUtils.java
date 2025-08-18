@@ -1,5 +1,6 @@
 package com.sangsang.util;
 
+import cn.hutool.core.collection.CollUtil;
 import cn.hutool.crypto.digest.DigestUtil;
 import com.sangsang.domain.constants.FieldConstant;
 import com.sangsang.domain.constants.SymbolConstant;
@@ -185,6 +186,18 @@ public class StringUtils {
 
         //4.都不包含
         return true;
+    }
+
+    /**
+     * 判断sql中是否一定不存在 keyword 中涉及的关键字
+     * 备注：sql会转成小写 ，keyword需要自己转
+     *
+     * @author liutangqi
+     * @date 2025/8/18 10:35
+     * @Param [sql, keyword]
+     **/
+    public static boolean notExist(String sql, String keyword) {
+        return notExist(sql, CollUtil.newHashSet(keyword));
     }
 
     /**

@@ -1,1 +1,1 @@
-SELECT * FROM tb_user WHERE tb_user.role_id = 1111111 AND (phone LIKE 'xxx' AND user_name = 'xxx' OR phone = 'xxx')
+SELECT * FROM tb_user WHERE (phone LIKE 'xxx' AND user_name = 'xxx' OR phone = 'xxx') AND tb_user.role_id = 1111111

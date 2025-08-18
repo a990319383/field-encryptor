@@ -49,7 +49,7 @@ public class DBDecryptFromItemVisitor extends BaseFieldParseTable implements Fro
     @Override
     public void visit(ParenthesedSelect subSelect) {
         //解密子查询内容（注意：这里是下一层的）
-        Optional.ofNullable(subSelect.getPlainSelect())
+        Optional.ofNullable(subSelect.getSelect())
                 .ifPresent(p -> p.accept(DBDecryptSelectVisitor.newInstanceNextLayer(this)));
     }
 

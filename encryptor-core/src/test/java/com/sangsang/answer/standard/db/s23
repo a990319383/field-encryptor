@@ -1,1 +1,1 @@
-SELECT role_id, user_name, update_time, create_time, id, login_pwd, login_name, CAST(AES_DECRYPT(FROM_BASE64(phone), '7uq?q8g3@q') AS CHAR) AS phone FROM tb_user tu WHERE concat("aaa", CAST(AES_DECRYPT(FROM_BASE64(tu.phone), '7uq?q8g3@q') AS CHAR)) IN (?, ?)
+SELECT tu.user_name, tu.id, tu.update_time, tu.role_id, tu.login_name, tu.create_time, CAST(AES_DECRYPT(FROM_BASE64(tu.phone), '7uq?q8g3@q') AS CHAR) AS phone, tu.login_pwd FROM tb_user tu WHERE concat("aaa", CAST(AES_DECRYPT(FROM_BASE64(tu.phone), '7uq?q8g3@q') AS CHAR)) IN (?, ?)

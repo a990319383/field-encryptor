@@ -1,1 +1,1 @@
-SELECT a.*, (SELECT tu.phone FROM tb_user tu WHERE tu.role_id = 1111111) AS ppp FROM (SELECT * FROM tb_user WHERE tb_user.role_id = 1111111 AND (phone = 'xxx')) a
+SELECT a.*, (SELECT tu.phone FROM tb_user tu WHERE tu.role_id = 1111111) AS ppp FROM (SELECT * FROM tb_user WHERE phone = 'xxx' AND tb_user.role_id = 1111111) a

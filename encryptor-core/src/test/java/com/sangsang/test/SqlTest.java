@@ -448,6 +448,19 @@ public class SqlTest {
             "  left join tb_role tr \n" +
             "  on tu.id = tr.id ";
 
+    //select from (union all)
+    String s41 = "select * from (SELECT  *\n" +
+            "FROM tb_user tu\n" +
+            "WHERE tu.phone = ?\n" +
+            "UNION ALL\n" +
+            "select *\n" +
+            "FROM  tb_user tu2\n" +
+            "WHERE tu2.phone = ?\n" +
+            "UNION\n" +
+            "SELECT  *\n" +
+            "FROM tb_user tu3\n" +
+            "WHERE  tu3.phone = ?)a";
+
     // -----------------insert 测试语句---------------------
     String i1 = "insert into tb_user(id, user_name ,phone) \n" +
             "values(1,?,'18243512315'),(2,'南瓜',?)";
@@ -557,7 +570,7 @@ public class SqlTest {
         InitTableInfo.initTable();
 
         //需要测试的sql
-        String sql = s40;
+        String sql = s41;
         System.out.println("----------------------------------------------------------------------------");
         System.out.println(sql);
         System.out.println("----------------------------------------------------------------------------");
