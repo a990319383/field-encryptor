@@ -30,13 +30,13 @@ public class TableFieldMsgDto {
      */
     private String dataType;
     /**
-     * 字段索引
+     * 是否是主键
      */
-    private String columnKey;
+    private boolean pk;
     /**
-     * 字段大概长度
+     * 大小或者字段长度
      */
-    private Integer fieldLength;
+    private Long fieldLength;
 
     /**
      * 字段的备注

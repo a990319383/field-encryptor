@@ -515,21 +515,22 @@ import org.springframework.stereotype.Component;
 @Component
 public class TIsolationBeanStrategy implements DataIsolationStrategy<Long> {
     //返回需要进行数据隔离的表字段名字 
+    //这里入参的tableName可以获取到当前是哪张表，一般是表名小写
     //一般项目会将登录用户存threadlocal中，这里可以取出来，根据不同的登录用户选择不同的字段隔离
     @Override
-    public String getIsolationField() {
+    public String getIsolationField(String tableName) {
         return "org_id";
     }
 
     //目前支持 "="  "in"  "like 'xxx%'" 三种模式
     @Override
-    public IsolationRelationEnum getIsolationRelation() {
+    public IsolationRelationEnum getIsolationRelation(String tableName) {
         return IsolationRelationEnum.EQUALS;
     }
 
     //从当前登录用户的theadlocal中获取到用于数据隔离的字段即可，比如当前登录用户组织id之类的
     @Override
-    public Long getIsolationData() {
+    public Long getIsolationData(String tableName) {
         return 777777777L;
     }
 }
@@ -736,11 +737,29 @@ public class BasePo {
 
 
 
-## 常见问题
+## 常见问题Q&A
 
 ### Q1项目没有使用mybatis-plus，没有实体类这个概念，怎么快速接入
 
 > 可以单独建立一个文件夹，利用第三方工具（比如代码生成器）将整个表的字段信息导入到指定文件夹
+>
+> 也可以使用本项目提供的生成实体类工具（目前仅用于mysql和oracle，其它数据库尚未测试过）
+
+```
+-- 提供的专门的工具类，可以生成实体类
+com.sangsang.util.EntityGenerateUtil#generateEntity(GenerateDto dto)
+-- 栗子
+EntityGenerateUtil.generateEntity(GenerateDto.builder()
+    .packageName("com.sangsang.es.entity")//生成实体类包名
+    .outputDir("D:\resource\draft\test")//生成实体类路径
+    .url("jdbc:mysql://127.0.0.1:3306/your_database")//数据库地址
+    .username(username)//数据库账号
+    .password(password)//数据库密码
+    .catalog("sjj-dts")//目录，可不传
+    .schemaPattern(null)//模式：Oracle一般传用户名/模式名（大写）;mysql一般传null
+    .tableNamePattern("%")//表名过滤规则，% 匹配任意多个字符  _ 匹配单个字符 null表示不限制
+    .build());
+```
 
 ### Q2:项目没有使用mybatis-plus，新写的实体类，我不想把字段写全，有什么影响
 
@@ -772,6 +791,26 @@ public class BasePo {
 - 5.数据变更时维护默认值
 
   - 需要维护的字段必须存在，其它字段不存在，暂未发现影响
+
+### Q3:我项目已经存在了，我想利用db模式对项目进行加密，历史数据清洗有没有什么建议
+
+> 项目提供了生成备份，回滚的脚本生成逻辑可供参考
+>
+> 具体根据自己项目数据量权衡具体实现方式
+
+```
+-- 再自己配置好的项目中调用这个方案
+-- 注意：确保自己项目密文存储字段标注完成，并确保spring环境启动好了，再调用下面方法
+com.sangsang.bak.BakSqlCreater#bakSql()
+
+-- 栗子
+BakSqlCreater.bakSql("jdbc:mysql://127.0.0.1:3306/your_database",//数据库地址
+    username,//数据库用户名
+    password, //数据库密码
+    suffix,//备份表后缀
+    expansionMultiple,//原表名扩容倍数，建议值 5 
+    "D:\resource\draft\test")//脚本输出路径
+```
 
 
 
