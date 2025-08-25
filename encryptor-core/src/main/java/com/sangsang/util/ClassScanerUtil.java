@@ -1,6 +1,5 @@
 package com.sangsang.util;
 
-import com.baomidou.mybatisplus.annotation.TableName;
 import org.springframework.beans.factory.BeanDefinitionStoreException;
 import org.springframework.context.ResourceLoaderAware;
 import org.springframework.core.io.Resource;
@@ -137,11 +136,4 @@ public class ClassScanerUtil implements ResourceLoaderAware {
         return false;
     }
 
-
-    public static void main(String[] args) {
-
-        Set<Class> scan = scan("com.sangsang.domain.dto", TableName.class);
-        System.out.println(scan);
-
-    }
 }
