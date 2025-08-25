@@ -680,20 +680,20 @@ public class SysUserEntity {
 public class TIsolationBeanStrategy implements DataIsolationStrategy<String> {
    
     @Override
-    public String getIsolationField() {
+    public String getIsolationField(String tableName) {
     	//从threadLocal中获取用户类型，是司机的话就返回 司机id字段(driver_id)否则返回 org_seq
         return null;
     }
 
     //目前支持 "="  "in"  "like 'xxx%'" 三种模式
     @Override
-    public IsolationRelationEnum getIsolationRelation() {
+    public IsolationRelationEnum getIsolationRelation(String tableName) {
     //根据当前登录用户类型，司机的话就是  "="  组织的话就  "like 'xxx%'"
         return null;
     }
    
     @Override
-    public String getIsolationData() {
+    public String getIsolationData(String tableName) {
     //根据当前登录用户类型，返回登录用户的driverId或者orgSeq即可
         return null;
     }
