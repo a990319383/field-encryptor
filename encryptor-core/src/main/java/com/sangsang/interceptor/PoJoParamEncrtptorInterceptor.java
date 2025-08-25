@@ -44,9 +44,7 @@ import java.util.*;
  * @date 2024/7/9 14:06
  */
 @FieldInterceptorOrder(InterceptorOrderConstant.ENCRYPTOR)
-@Intercepts({
-        @Signature(type = StatementHandler.class, method = "prepare", args = {Connection.class, Integer.class})
-})
+@Intercepts({@Signature(type = StatementHandler.class, method = "prepare", args = {Connection.class, Integer.class})})
 @Slf4j
 public class PoJoParamEncrtptorInterceptor implements Interceptor, BeanPostProcessor {
 
@@ -81,7 +79,7 @@ public class PoJoParamEncrtptorInterceptor implements Interceptor, BeanPostProce
         Pair<Map<String, ColumnTableDto>, List<FieldEncryptorInfoDto>> pair = parseSql(originalSql);
 
         //4.处理入参
-        Map<String, String> propertyMap = disposeParam(boundSql, pair);
+        disposeParam(boundSql, pair);
 
         //5.执行sql
         Object proceed = invocation.proceed();
@@ -138,13 +136,11 @@ public class PoJoParamEncrtptorInterceptor implements Interceptor, BeanPostProce
     /**
      * 将入参中需要加密的进行加密处理
      *
-     * @return 反射替换过的property；key:替换后的值 value:替换前的值
      * @author liutangqi
      * @date 2024/7/18 15:18
      * @Param [parameterObject, pair]
      **/
-    private Map<String, String> disposeParam(BoundSql boundSql, Pair<Map<String, ColumnTableDto>, List<FieldEncryptorInfoDto>> pair) {
-        Map<String, String> propertyMap = new HashMap<>();
+    private void disposeParam(BoundSql boundSql, Pair<Map<String, ColumnTableDto>, List<FieldEncryptorInfoDto>> pair) {
         //1.获取所有入参（这个的顺序和占位符顺序一致）
         List<ParameterMapping> parameterMappings = boundSql.getParameterMappings();
 
@@ -172,7 +168,6 @@ public class PoJoParamEncrtptorInterceptor implements Interceptor, BeanPostProce
         for (int i = 0; i < parameterMappings.size(); i++) {
             boundSql.setAdditionalParameter(parameterMappings.get(i).getProperty(), parameterValue.get(String.valueOf(i)));
         }
-        return propertyMap;
     }
 
 
