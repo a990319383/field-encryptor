@@ -25,6 +25,14 @@ public class FieldProperties {
      * 默认100
      */
     private Integer lruCapacity = NumberConstant.HUNDRED;
+
+    /**
+     * 是否自动补齐当前库的表结构信息到本地缓存，只会缓存需要用到的表结构
+     * 默认值是不补齐
+     * 如果项目有查询表结构的权限的话，建议开启此配置
+     * 如果项目是mybatis项目，本身没有实体类的话，可以开启此配置，实体类只保留需要标注的字段即可
+     */
+    private boolean autoFill = false;
     /**
      * 加解密相关的配置
      **/

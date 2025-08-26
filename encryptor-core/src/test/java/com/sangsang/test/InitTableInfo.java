@@ -30,8 +30,7 @@ public class InitTableInfo {
     public static void initTable() {
         FieldProperties fieldProperties = new FieldProperties();
         fieldProperties.setScanEntityPackage(Arrays.asList("com.sangsang.mockentity"));
-        TableCache tableCache = new TableCache(fieldProperties);
-        tableCache.init();
+        TableCache.init(null, fieldProperties);
         //初始化数据解析缓存
         SqlParseCache.init(new FieldProperties());
     }
@@ -50,7 +49,7 @@ public class InitTableInfo {
         isolationProperties.setEnable(true);
         fieldProperties.setIsolation(isolationProperties);
         //初始化表结构
-        new TableCache(fieldProperties).init();
+        TableCache.init(null, fieldProperties);
         //初始化数据解析缓存
         SqlParseCache.init(new FieldProperties());
         new IsolationInstanceCache().init(fieldProperties, Arrays.asList(new TestDataIsolationStrategy()));

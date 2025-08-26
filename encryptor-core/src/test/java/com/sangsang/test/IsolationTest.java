@@ -109,7 +109,6 @@ public class IsolationTest {
     @Test
     public void isolationCheck() throws Exception {
         //mock数据
-        InitTableInfo.initTable();
         InitTableInfo.initIsolation();
 
         for (int i = 0; i < sqls.size(); i++) {
