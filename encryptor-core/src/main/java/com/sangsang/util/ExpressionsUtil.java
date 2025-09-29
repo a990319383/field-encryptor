@@ -10,7 +10,9 @@ import net.sf.jsqlparser.expression.*;
 import net.sf.jsqlparser.expression.operators.conditional.AndExpression;
 import net.sf.jsqlparser.expression.operators.conditional.OrExpression;
 import net.sf.jsqlparser.expression.operators.relational.ExpressionList;
+import net.sf.jsqlparser.expression.operators.relational.InExpression;
 import net.sf.jsqlparser.expression.operators.relational.IsNullExpression;
+import net.sf.jsqlparser.expression.operators.relational.ParenthesedExpressionList;
 import net.sf.jsqlparser.schema.Column;
 import net.sf.jsqlparser.schema.Table;
 import net.sf.jsqlparser.statement.update.UpdateSet;
@@ -256,4 +258,20 @@ public class ExpressionsUtil {
         isNullExpression.setLeftExpression(condition);
         return buildIf(isNullExpression, exp, exp);
     }
+
+
+    /**
+     * 构建in 表达式 ，注意：in 的后边是括号括起来的表达式集合
+     *
+     * @author liutangqi
+     * @date 2025/9/29 10:51
+     * @Param [column, valueExpression]
+     **/
+    public static InExpression buildInExpression(Column column, ParenthesedExpressionList valueExpression) {
+        InExpression inExpression = new InExpression();
+        inExpression.setLeftExpression(column);
+        inExpression.setRightExpression(valueExpression);
+        return inExpression;
+    }
+
 }

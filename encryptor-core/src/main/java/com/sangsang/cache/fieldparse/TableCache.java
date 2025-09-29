@@ -11,7 +11,6 @@ import com.sangsang.domain.annos.fielddefault.FieldDefault;
 import com.sangsang.domain.annos.isolation.DataIsolation;
 import com.sangsang.domain.dto.TableFieldDto;
 import com.sangsang.domain.dto.TableInfoDto;
-import com.sangsang.domain.exception.FieldEncryptorException;
 import com.sangsang.util.ClassScanerUtil;
 import com.sangsang.util.FieldFillUtil;
 import com.sangsang.util.ReflectUtils;

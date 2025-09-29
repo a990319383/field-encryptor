@@ -1,5 +1,6 @@
 package com.sangsang.cache.isolation;
 
+import cn.hutool.core.collection.ListUtil;
 import com.sangsang.cache.fieldparse.TableCache;
 import com.sangsang.config.other.DefaultBeanPostProcessor;
 import com.sangsang.config.properties.FieldProperties;
@@ -147,12 +148,20 @@ public class IsolationInstanceCache extends DefaultBeanPostProcessor {
 
         //3.拼凑值
         Expression valueExpression = null;
+        List<ParenthesedExpressionList> inExpressionList = new ArrayList<>();
+        //3.1  避免in 后面的值过大导致sql执行报错，这里进行分段
         if (isolationValue instanceof List) {
-            List expressionList = ExpressionsUtil.buildExpressionList((List) isolationValue);
-            ParenthesedExpressionList parenthesedExpressionList = new ParenthesedExpressionList();
-            parenthesedExpressionList.addAll(expressionList);
-            valueExpression = parenthesedExpressionList;
-        } else {
+            Integer subsectionSize = TableCache.getCurConfig().getIsolation().getInRelationSubsectionSize();
+            List<List> isolationValueList = ListUtil.split((List) isolationValue, subsectionSize);
+            for (List iValue : isolationValueList) {
+                List expressionList = ExpressionsUtil.buildExpressionList(iValue);
+                ParenthesedExpressionList parenthesedExpressionList = new ParenthesedExpressionList();
+                parenthesedExpressionList.addAll(expressionList);
+                inExpressionList.add(parenthesedExpressionList);
+            }
+        }
+        //3.2 其它类型，直接构建表达式
+        else {
             valueExpression = ExpressionsUtil.buildConstant(isolationValue);
         }
 
@@ -175,10 +184,18 @@ public class IsolationInstanceCache extends DefaultBeanPostProcessor {
 
         // field in (xxx,xxx)
         if (IsolationRelationEnum.IN.equals(isolationRelationEnum)) {
-            InExpression inExpression = new InExpression();
-            inExpression.setLeftExpression(column);
-            inExpression.setRightExpression(valueExpression);
-            return inExpression;
+            //将分段in 的每一段构建成一个 in
+            List<Expression> inExpressions = inExpressionList.stream()
+                    .map(m -> ExpressionsUtil.buildInExpression(column, m))
+                    .collect(Collectors.toList());
+            //将不同段的in 使用 or 分隔开
+            Expression orInExp = ExpressionsUtil.buildOrExpression(inExpressions);
+            //多个in的话，使用括号包裹起来
+            if (inExpressions.size() > 1) {
+                return ExpressionsUtil.buildParenthesis(orInExp);
+            }
+            //只有一个in 返回这个表达式
+            return orInExp;
         }
 
         throw new IsolationException(String.format("错误的数据隔离关系 %s", isolationRelationEnum));

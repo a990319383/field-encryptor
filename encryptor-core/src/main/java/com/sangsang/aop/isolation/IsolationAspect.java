@@ -23,10 +23,10 @@ public class IsolationAspect {
         //1.获取头上注解
         MethodSignature signature = (MethodSignature) pjp.getSignature();
         Method method = pjp.getTarget().getClass().getDeclaredMethod(signature.getName(), signature.getParameterTypes());
-        ForbidIsolation reSubscribe = method.getAnnotation(ForbidIsolation.class);
+        ForbidIsolation forbidIsolation = method.getAnnotation(ForbidIsolation.class);
         try {
             //2.标记当前方法禁用数据隔离
-            IsolationHolder.setForbidIsolation(reSubscribe);
+            IsolationHolder.setForbidIsolation(forbidIsolation);
             //3.执行方法
             return pjp.proceed();
         } finally {
