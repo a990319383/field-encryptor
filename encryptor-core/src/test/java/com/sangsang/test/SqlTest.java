@@ -461,6 +461,9 @@ public class SqlTest {
             "FROM tb_user tu3\n" +
             "WHERE  tu3.phone = ?)a";
 
+    //on 后面字段对应的算法不一致
+    String s42 = "select * from tb_user tb left join tb_role tr on tb.phone = tr.role_name where tb.phone = ? ";
+
     // -----------------insert 测试语句---------------------
     String i1 = "insert into tb_user(id, user_name ,phone) \n" +
             "values(1,?,'18243512315'),(2,'南瓜',?)";
@@ -570,7 +573,7 @@ public class SqlTest {
         InitTableInfo.initTable();
 
         //需要测试的sql
-        String sql = s41;
+        String sql = s42;
         System.out.println("----------------------------------------------------------------------------");
         System.out.println(sql);
         System.out.println("----------------------------------------------------------------------------");
