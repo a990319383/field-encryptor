@@ -22,9 +22,9 @@ public class FieldProperties {
     private List<String> scanEntityPackage = new ArrayList<>();
     /**
      * sql语法解析的LRU缓存长度
-     * 默认100
+     * 默认500
      */
-    private Integer lruCapacity = NumberConstant.HUNDRED;
+    private Integer lruCapacity = NumberConstant.FIVE_HUNDRED;
 
     /**
      * 是否自动补齐当前库的表结构信息到本地缓存，只会缓存需要用到的表结构

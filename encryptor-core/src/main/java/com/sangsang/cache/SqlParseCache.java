@@ -34,7 +34,7 @@ public class SqlParseCache extends DefaultBeanPostProcessor {
      * @Param [fieldProperties]
      **/
     public static void init(FieldProperties fieldProperties) {
-        Integer lruCapacity = Optional.ofNullable(fieldProperties.getLruCapacity()).orElse(NumberConstant.HUNDRED);
+        Integer lruCapacity = Optional.ofNullable(fieldProperties.getLruCapacity()).orElse(NumberConstant.FIVE_HUNDRED);
         SQL_PARSE_CACHE = CacheUtil.newLRUCache(lruCapacity);
     }
 
