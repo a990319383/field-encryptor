@@ -1,5 +1,6 @@
 package com.sangsang.domain.dto;
 
+import com.sangsang.domain.annos.isolation.DataIsolation;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -25,4 +26,9 @@ public class TableInfoDto {
      * 该表拥有的全部字段（小写）
      */
     private Set<TableFieldDto> tableFields;
+
+    /**
+     * 表名上面标注@DataIsolation
+     */
+    private DataIsolation dataIsolation;
 }

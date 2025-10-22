@@ -5,6 +5,8 @@ import com.sangsang.util.JsqlparserUtil;
 import com.sangsang.util.ReflectUtils;
 import com.sangsang.util.StringUtils;
 import com.sangsang.visitor.isolation.IsolationStatementVisitor;
+import net.sf.jsqlparser.JSQLParserException;
+import net.sf.jsqlparser.parser.CCJSqlParserUtil;
 import net.sf.jsqlparser.statement.Statement;
 import org.junit.jupiter.api.Test;
 
@@ -87,7 +89,10 @@ public class IsolationTest {
     }
 
     @Test
-    public void otherTest() {
+    public void otherTest() throws JSQLParserException {
+        String sql = "select * from test2 where id2 = id1";
+        Statement parse = CCJSqlParserUtil.parse(sql);
+        System.out.println(parse);
     }
 
 
@@ -109,7 +114,6 @@ public class IsolationTest {
     @Test
     public void isolationCheck() throws Exception {
         //mock数据
-        InitTableInfo.initTable();
         InitTableInfo.initIsolation();
 
         for (int i = 0; i < sqls.size(); i++) {

@@ -1,6 +1,7 @@
 package com.sangsang.cache.isolation;
 
-import com.baomidou.mybatisplus.annotation.TableName;
+import cn.hutool.core.collection.ListUtil;
+import com.sangsang.cache.fieldparse.TableCache;
 import com.sangsang.config.other.DefaultBeanPostProcessor;
 import com.sangsang.config.properties.FieldProperties;
 import com.sangsang.domain.annos.isolation.DataIsolation;
@@ -10,16 +11,13 @@ import com.sangsang.domain.enums.IsolationRelationEnum;
 import com.sangsang.domain.exception.IsolationException;
 import com.sangsang.domain.strategy.DefaultStrategyBase;
 import com.sangsang.domain.strategy.isolation.DataIsolationStrategy;
-import com.sangsang.util.ClassScanerUtil;
 import com.sangsang.util.CollectionUtils;
 import com.sangsang.util.ExpressionsUtil;
 import com.sangsang.util.StringUtils;
-import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import net.sf.jsqlparser.expression.Expression;
 import net.sf.jsqlparser.expression.StringValue;
 import net.sf.jsqlparser.expression.operators.relational.EqualsTo;
-import net.sf.jsqlparser.expression.operators.relational.InExpression;
 import net.sf.jsqlparser.expression.operators.relational.LikeExpression;
 import net.sf.jsqlparser.expression.operators.relational.ParenthesedExpressionList;
 import net.sf.jsqlparser.schema.Column;
@@ -49,34 +47,6 @@ public class IsolationInstanceCache extends DefaultBeanPostProcessor {
     private static final Map<ClasssCacheKey, DataIsolationStrategy> INSTANCE_MAP = new HashMap<>();
 
     /**
-     * 缓存当前表的数据隔离信息
-     * key: 表名小写
-     * value: 此表对应的隔离策略实例对象
-     *
-     * @author liutangqi
-     * @date 2025/6/13 10:32
-     * @Param
-     **/
-    private static final Map<String, List<DataIsolationStrategy>> TABLE_ISOLATION_MAP = new HashMap<>();
-
-    /**
-     * 缓存当前表头上的注解
-     * key: 表名小写
-     * value: 表头上的注解
-     **/
-    private static final Map<String, DataIsolation> TABLE_ISOLATION_ANNO_MAP = new HashMap<>();
-
-    /**
-     * 存储当前需要进行数据隔离的小写的表名
-     *
-     * @author liutangqi
-     * @date 2025/7/3 10:36
-     * @Param
-     **/
-    @Getter
-    private static final Set<String> ISOLATION_TABLE = new HashSet<>();
-
-    /**
      * 初始化
      *
      * @author liutangqi
@@ -100,62 +70,33 @@ public class IsolationInstanceCache extends DefaultBeanPostProcessor {
             INSTANCE_MAP.put(ClasssCacheKey.buildKey(dataIsolationStrategy.getClass()), dataIsolationStrategy);
         }
 
-        //4.缓存表和@DataIsolation 的对应关系 ，顺便记录哪些表涉及到数据隔离
-        for (String scanEntityPackage : fieldProperties.getScanEntityPackage()) {
-            doScanEntityPackage(scanEntityPackage);
-        }
-
-        log.info("【isolation】初始化完毕，耗时:{}ms", (System.currentTimeMillis() - startTime));
-    }
-
-    /**
-     * 扫描指定路径下标注了@TableName 的@DataIsolation 的类信息，维护表名和@DataIsolation 的对应关系
-     * 并将spring容器中不存在的bean但是存在@DataIsolation有使用到的，进行实例化，并缓存
-     *
-     * @author liutangqi
-     * @date 2025/6/13 10:40
-     * @Param [scanEntityPackage]
-     **/
-    private void doScanEntityPackage(String scanEntityPackage) {
-        //1.扫描指定路径下的的标注类
-        Set<Class> entityClasses = ClassScanerUtil.scan(scanEntityPackage, TableName.class, DataIsolation.class).stream().filter(f -> f.getAnnotation(TableName.class) != null && f.getAnnotation(DataIsolation.class) != null).collect(Collectors.toSet());
-        if (CollectionUtils.isEmpty(entityClasses)) {
-            log.warn("【isolation】未找到标注了@TableName 的@DataIsolation 的类信息，请检查配置");
-            return;
-        }
-
-        //2.处理表和对应表的数据隔离信息
-        for (Class entityClass : entityClasses) {
-            //2.1获取类上面的两个注解
-            TableName tableName = (TableName) entityClass.getAnnotation(TableName.class);
-            DataIsolation dataIsolation = (DataIsolation) entityClass.getAnnotation(DataIsolation.class);
-            String lowerTableName = tableName.value().toLowerCase();
-            //2.2获取类上面的策略，如果当前缓存不存在，则实例化一份放缓存中
-            Class<? extends DataIsolationStrategy>[] strategies = dataIsolation.value();
-            List<DataIsolationStrategy> strategyBeans = new ArrayList<>();
-            for (Class<? extends DataIsolationStrategy> strategy : strategies) {
-                DataIsolationStrategy dataIsolationStrategy = INSTANCE_MAP.get(ClasssCacheKey.buildKey(strategy));
-                if (dataIsolationStrategy == null) {
-                    try {
-                        dataIsolationStrategy = strategy.newInstance();
-                        INSTANCE_MAP.put(ClasssCacheKey.buildKey(strategy), dataIsolationStrategy);
-                    } catch (Exception e) {
-                        throw new IsolationException(String.format("当前表%s 配置的隔离策略 %s spring容器中找不到，无参构造实例化失败", tableName.value(), strategy));
-                    }
-                }
-                strategyBeans.add(dataIsolationStrategy);
-            }
-            //2.4缓存表和数据隔离实例关系
-            TABLE_ISOLATION_MAP.put(lowerTableName, strategyBeans);
-            //2.5记录当前需要涉及到数据隔离的所有表
-            ISOLATION_TABLE.add(lowerTableName);
-            //2.6缓存表头上的注解
-            TABLE_ISOLATION_ANNO_MAP.put(lowerTableName, dataIsolation);
-        }
+        log.debug("【isolation】初始化完毕，耗时:{}ms", (System.currentTimeMillis() - startTime));
     }
 
     //--------------------------------------------下面是对外提供的方法---------------------------------------------------------------
 
+    /**
+     * 从当前缓存中获取策略实例，如果获取不到，尝试使用反射实例化，并缓存到本地
+     *
+     * @author liutangqi
+     * @date 2025/8/25 17:02
+     * @Param [cls]
+     **/
+    public static DataIsolationStrategy getInstance(Class<? extends DataIsolationStrategy> clazz) {
+        //1.先从本地缓存好的里面找
+        DataIsolationStrategy instance = INSTANCE_MAP.get(ClasssCacheKey.buildKey(clazz));
+
+        //2.本地缓存找不到，根据无参构造进行实例化，然后放缓存
+        if (instance == null) {
+            try {
+                instance = clazz.newInstance();
+                INSTANCE_MAP.put(ClasssCacheKey.buildKey(clazz), instance);
+            } catch (Exception e) {
+                throw new IsolationException(String.format("数据隔离策略无参构造实例化失败 %s", clazz.getName()));
+            }
+        }
+        return instance;
+    }
 
     /**
      * 根据表名得到获取当前登录的数据隔离信息
@@ -165,8 +106,12 @@ public class IsolationInstanceCache extends DefaultBeanPostProcessor {
      * @Param [tableName]
      **/
     public static List<DataIsolationStrategy> getInstance(String tableName) {
-        //看这个表是否需要数据隔离
-        return CollectionUtils.getValueIgnoreFloat(TABLE_ISOLATION_MAP, tableName.toLowerCase());
+        DataIsolation dataIsolation = CollectionUtils.getValueIgnoreFloat(TableCache.getTableIsolationInfo(), tableName.toLowerCase());
+        if (dataIsolation == null) {
+            return null;
+        }
+
+        return Arrays.stream(dataIsolation.value()).map(m -> IsolationInstanceCache.getInstance(m)).collect(Collectors.toList());
     }
 
     /**
@@ -177,7 +122,7 @@ public class IsolationInstanceCache extends DefaultBeanPostProcessor {
      * @Param [tableName]
      **/
     public static DataIsolation getDataIsolationByTableName(String tableName) {
-        return CollectionUtils.getValueIgnoreFloat(TABLE_ISOLATION_ANNO_MAP, tableName.toLowerCase());
+        return CollectionUtils.getValueIgnoreFloat(TableCache.getTableIsolationInfo(), tableName.toLowerCase());
     }
 
 
@@ -202,12 +147,20 @@ public class IsolationInstanceCache extends DefaultBeanPostProcessor {
 
         //3.拼凑值
         Expression valueExpression = null;
+        List<ParenthesedExpressionList> inExpressionList = new ArrayList<>();
+        //3.1  避免in 后面的值过大导致sql执行报错，这里进行分段
         if (isolationValue instanceof List) {
-            List expressionList = ExpressionsUtil.buildExpressionList((List) isolationValue);
-            ParenthesedExpressionList parenthesedExpressionList = new ParenthesedExpressionList();
-            parenthesedExpressionList.addAll(expressionList);
-            valueExpression = parenthesedExpressionList;
-        } else {
+            Integer subsectionSize = TableCache.getCurConfig().getIsolation().getInRelationSubsectionSize();
+            List<List> isolationValueList = ListUtil.split((List) isolationValue, subsectionSize);
+            for (List iValue : isolationValueList) {
+                List expressionList = ExpressionsUtil.buildExpressionList(iValue);
+                ParenthesedExpressionList parenthesedExpressionList = new ParenthesedExpressionList();
+                parenthesedExpressionList.addAll(expressionList);
+                inExpressionList.add(parenthesedExpressionList);
+            }
+        }
+        //3.2 其它类型，直接构建表达式
+        else {
             valueExpression = ExpressionsUtil.buildConstant(isolationValue);
         }
 
@@ -230,10 +183,18 @@ public class IsolationInstanceCache extends DefaultBeanPostProcessor {
 
         // field in (xxx,xxx)
         if (IsolationRelationEnum.IN.equals(isolationRelationEnum)) {
-            InExpression inExpression = new InExpression();
-            inExpression.setLeftExpression(column);
-            inExpression.setRightExpression(valueExpression);
-            return inExpression;
+            //将分段in 的每一段构建成一个 in
+            List<Expression> inExpressions = inExpressionList.stream()
+                    .map(m -> ExpressionsUtil.buildInExpression(column, m))
+                    .collect(Collectors.toList());
+            //将不同段的in 使用 or 分隔开
+            Expression orInExp = ExpressionsUtil.buildOrExpression(inExpressions);
+            //多个in的话，使用括号包裹起来
+            if (inExpressions.size() > 1) {
+                return ExpressionsUtil.buildParenthesis(orInExp);
+            }
+            //只有一个in 返回这个表达式
+            return orInExp;
         }
 
         throw new IsolationException(String.format("错误的数据隔离关系 %s", isolationRelationEnum));

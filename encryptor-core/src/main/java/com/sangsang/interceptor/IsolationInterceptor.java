@@ -1,5 +1,6 @@
 package com.sangsang.interceptor;
 
+import com.sangsang.cache.fieldparse.TableCache;
 import com.sangsang.cache.isolation.IsolationInstanceCache;
 import com.sangsang.domain.annos.FieldInterceptorOrder;
 import com.sangsang.domain.annos.isolation.ForbidIsolation;
@@ -50,7 +51,7 @@ public class IsolationInterceptor implements Interceptor, BeanPostProcessor {
         String oldSql = boundSql.getSql();
 
         //4.如果当前sql的表不涉及数据权限隔离，则不处理，直接返回
-        if (StringUtils.notExist(oldSql, IsolationInstanceCache.getISOLATION_TABLE())) {
+        if (StringUtils.notExist(oldSql, TableCache.getIsolationTable())) {
             return invocation.proceed();
         }
 

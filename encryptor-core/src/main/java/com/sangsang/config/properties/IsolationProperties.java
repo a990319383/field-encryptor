@@ -23,4 +23,10 @@ public class IsolationProperties {
      **/
     private IsolationConditionalRelationEnum conditionalRelation = IsolationConditionalRelationEnum.AND;
 
+    /**
+     * 当隔离条件使用in的时候，因为数据库有参数长度限制，不分段的话会报错，这里是每段的长度
+     * 栗子： 原本是  id in (xxx,xxx,xxx 共计1000个)，分段后 (id in (xxx,xxx共计500个) or id in (xxx,xxx共计500个))
+     */
+    private Integer inRelationSubsectionSize = 500;
+
 }
