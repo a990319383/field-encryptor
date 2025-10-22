@@ -134,4 +134,17 @@ public class CollectionUtils {
         return res;
     }
 
+
+    /**
+     * 忽略大小写，忽略` 和 " ，判断集合中中是否存在指定值
+     *
+     * @author liutangqi
+     * @date 2025/8/25 14:28
+     * @Param [set, key]
+     **/
+    public static boolean containsIgnoreFieldSymbol(Collection<String> coll, String key) {
+        return coll.stream().filter(f -> StringUtils.equalIgnoreFieldSymbol(f, key))
+                .findFirst()
+                .orElse(null) != null;
+    }
 }

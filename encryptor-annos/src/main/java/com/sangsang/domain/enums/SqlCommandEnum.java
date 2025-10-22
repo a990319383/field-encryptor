@@ -12,8 +12,9 @@ import lombok.AllArgsConstructor;
 public enum SqlCommandEnum {
     INSERT("插入语句"),
     UPDATE("修改语句"),
-    DELETE("删除语句"),
-    SELECT("查询语句");
+//    DELETE("删除语句"), 目前删除和查询暂未相应使用场景，暂时注释掉
+//    SELECT("查询语句"),
+    ;
 
     private String desc;
 }
