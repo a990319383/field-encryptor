@@ -24,7 +24,7 @@ public class SqlParseCache extends DefaultBeanPostProcessor {
      * key: sql的长度_sha256  com.sangsang.util.StringUtils#getSqlUniqueKey()
      * value: 解析结果
      **/
-    private static LRUCache<String, Statement> SQL_PARSE_CACHE;
+    private static LRUCache<String, Statement> SQL_PARSE_CACHE = CacheUtil.newLRUCache(NumberConstant.FIVE_HUNDRED);
 
     /**
      * 初始化缓存
@@ -34,8 +34,9 @@ public class SqlParseCache extends DefaultBeanPostProcessor {
      * @Param [fieldProperties]
      **/
     public static void init(FieldProperties fieldProperties) {
-        Integer lruCapacity = Optional.ofNullable(fieldProperties.getLruCapacity()).orElse(NumberConstant.FIVE_HUNDRED);
-        SQL_PARSE_CACHE = CacheUtil.newLRUCache(lruCapacity);
+        if (fieldProperties.getLruCapacity() != null && !fieldProperties.getLruCapacity().equals(NumberConstant.FIVE_HUNDRED)) {
+            SQL_PARSE_CACHE = CacheUtil.newLRUCache(fieldProperties.getLruCapacity());
+        }
     }
 
 
