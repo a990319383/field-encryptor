@@ -8,7 +8,6 @@ import com.sangsang.domain.constants.NumberConstant;
 import com.sangsang.util.StringUtils;
 import net.sf.jsqlparser.statement.Statement;
 
-import java.util.Optional;
 
 /**
  * sql语句解析的本地缓存
