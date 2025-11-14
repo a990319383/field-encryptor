@@ -30,6 +30,9 @@ public class InitTableInfo {
     public static void initTable() {
         FieldProperties fieldProperties = new FieldProperties();
         fieldProperties.setScanEntityPackage(Arrays.asList("com.sangsang.mockentity"));
+        //当前设置大小写不敏感
+        fieldProperties.setCaseSensitive(false);
+        fieldProperties.setIdentifierQuote("`");
         TableCache.init(null, fieldProperties);
         //初始化数据解析缓存
         SqlParseCache.init(new FieldProperties());
@@ -48,6 +51,8 @@ public class InitTableInfo {
         IsolationProperties isolationProperties = new IsolationProperties();
         isolationProperties.setEnable(true);
         fieldProperties.setIsolation(isolationProperties);
+        fieldProperties.setIdentifierQuote("`");
+        fieldProperties.setCaseSensitive(false);
         //初始化表结构
         TableCache.init(null, fieldProperties);
         //初始化数据解析缓存

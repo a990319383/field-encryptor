@@ -33,6 +33,20 @@ public class FieldProperties {
      * 如果项目是mybatis项目，本身没有实体类的话，可以开启此配置，实体类只保留需要标注的字段即可
      */
     private boolean autoFill = false;
+
+    /**
+     * 是否区分大小写敏感
+     * 默认是大小写不敏感
+     */
+    private boolean caseSensitive = false;
+
+    /**
+     * 数据库标识符的引用符，比如mysql是 ` 达梦数据库是 "
+     * 默认不配置的话，会从第一个dataSource中获取
+     * 目前暂不支持不同类型数据库的多数据源项目
+     */
+    private String identifierQuote;
+
     /**
      * 加解密相关的配置
      **/

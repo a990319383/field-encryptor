@@ -1,12 +1,10 @@
 package com.sangsang.test;
 
 import cn.hutool.core.util.ObjectUtil;
+import cn.hutool.json.JSONUtil;
 import com.sangsang.domain.dto.ColumnTableDto;
 import com.sangsang.domain.dto.FieldEncryptorInfoDto;
-import com.sangsang.util.AnswerUtil;
-import com.sangsang.util.JsqlparserUtil;
-import com.sangsang.util.ReflectUtils;
-import com.sangsang.util.StringUtils;
+import com.sangsang.util.*;
 import com.sangsang.visitor.dbencrtptor.DBDencryptStatementVisitor;
 import com.sangsang.visitor.fieldparse.FieldParseParseTableSelectVisitor;
 import com.sangsang.visitor.pojoencrtptor.PoJoEncrtptorStatementVisitor;
@@ -572,7 +570,7 @@ public class SqlTest {
         InitTableInfo.initTable();
 
         //需要测试的sql
-        String sql = s42;
+        String sql = s41;
         System.out.println("----------------------------------------------------------------------------");
         System.out.println(sql);
         System.out.println("----------------------------------------------------------------------------");
@@ -604,7 +602,7 @@ public class SqlTest {
         InitTableInfo.initTable();
 
         //需要测试的sql
-        String sql = s40;
+        String sql = s11;
         System.out.println("----------------------------------------------------------------------------");
         System.out.println(sql);
         System.out.println("----------------------------------------------------------------------------");
@@ -616,8 +614,8 @@ public class SqlTest {
         Statement statement = JsqlparserUtil.parse(placeholderSql);
         PoJoEncrtptorStatementVisitor poJoEncrtptorStatementVisitor = new PoJoEncrtptorStatementVisitor();
         statement.accept(poJoEncrtptorStatementVisitor);
-        System.out.println(poJoEncrtptorStatementVisitor.getFieldEncryptorInfos());
-        System.out.println(poJoEncrtptorStatementVisitor.getPlaceholderColumnTableMap());
+        System.out.println(JSONUtil.toJsonStr(poJoEncrtptorStatementVisitor.getFieldEncryptorInfos()));
+        System.out.println(JSONUtil.toJsonStr(poJoEncrtptorStatementVisitor.getPlaceholderColumnTableMap()));
     }
 
 
@@ -625,7 +623,7 @@ public class SqlTest {
 
     //需要测试的sql
     List<String> sqls = Arrays.asList(s1, s2, s3, s4, s5, s6, s7, s8, s9, s10, s11, s12, s13, s14, s15, s16, s17, s18, s19,
-            s20, s21, s22, s23, s24, s25, s26, s27, s28, s29, s30, s31, s33, s34, s35, s36, s37, s38, s39, s40,
+            s20, s21, s22, s23, s24, s25, s26, s27, s28, s29, s30, s31, s33, s34, s35, s36, s37, s38, s39, s40, s41, s42,
             i1, i2, i3, i5, i6,//i4,
             d1, d2,
             u1, u2, u3, u4, u5
@@ -663,7 +661,7 @@ public class SqlTest {
                 System.out.println("原始sql: " + sql);
                 return;
             }
-            if (answer.equalsIgnoreCase(resultSql)) {
+            if (StringUtils.sqlEquals(answer, resultSql)) {
                 System.out.println("成功: " + sqlFieldName);
             } else {
                 System.out.println("错误: " + sqlFieldName);
@@ -713,21 +711,21 @@ public class SqlTest {
                 System.out.println("原始sql: " + sql);
                 return;
             }
-            if (Objects.equals(answer.getKey(), fieldEncryptorInfos.toString())
-                    && Objects.equals(answer.getValue(), placeholderColumnTableMap.toString())) {
+            if (CollectionUtils.jsonArrayEquals(JSONUtil.parseArray(answer.getKey()), JSONUtil.parseArray(JSONUtil.toJsonStr(fieldEncryptorInfos)))
+                    && CollectionUtils.jsonObjectEquals(JSONUtil.parseObj(answer.getValue()), JSONUtil.parseObj(JSONUtil.toJsonStr(placeholderColumnTableMap)))) {
                 System.out.println("成功: " + sqlFieldName);
             } else {
                 System.out.println("错误: " + sqlFieldName);
                 System.out.println("原始sql: " + sql);
                 System.out.println("-------------------------------------------------------");
-                if (!Objects.equals(answer.getKey(), fieldEncryptorInfos.toString())) {
+                if (!Objects.equals(answer.getKey(), JSONUtil.toJsonStr(fieldEncryptorInfos))) {
                     System.out.println("正确答案list： " + answer.getKey());
-                    System.out.println("当前答案list： " + fieldEncryptorInfos.toString());
+                    System.out.println("当前答案list： " + JSONUtil.toJsonStr(fieldEncryptorInfos));
                     System.out.println("-------------------------------------------------------");
                 }
-                if (!Objects.equals(answer.getValue(), placeholderColumnTableMap.toString())) {
+                if (!Objects.equals(answer.getValue(), JSONUtil.toJsonStr(placeholderColumnTableMap))) {
                     System.out.println("正确答案Map： " + answer.getValue());
-                    System.out.println("当前答案Map： " + placeholderColumnTableMap.toString());
+                    System.out.println("当前答案Map： " + JSONUtil.toJsonStr(placeholderColumnTableMap));
                 }
                 return;
             }

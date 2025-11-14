@@ -560,7 +560,7 @@ import org.springframework.stereotype.Component;
 @Component
 public class TIsolationBeanStrategy implements DataIsolationStrategy<Long> {
     //返回需要进行数据隔离的表字段名字 
-    //这里入参的tableName可以获取到当前是哪张表，一般是表名小写
+    //这里入参的tableName可以获取到当前是哪张表，一般是表名
     //一般项目会将登录用户存threadlocal中，这里可以取出来，根据不同的登录用户选择不同的字段隔离
     @Override
     public String getIsolationField(String tableName) {

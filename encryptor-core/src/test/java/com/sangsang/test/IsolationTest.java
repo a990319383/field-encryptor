@@ -1,17 +1,17 @@
 package com.sangsang.test;
 
-import com.sangsang.util.AnswerUtil;
-import com.sangsang.util.JsqlparserUtil;
-import com.sangsang.util.ReflectUtils;
-import com.sangsang.util.StringUtils;
+import cn.hutool.json.JSONUtil;
+import com.sangsang.cache.fieldparse.TableCache;
+import com.sangsang.config.properties.FieldProperties;
+import com.sangsang.domain.dto.FieldCacheKey;
+import com.sangsang.util.*;
 import com.sangsang.visitor.isolation.IsolationStatementVisitor;
 import net.sf.jsqlparser.JSQLParserException;
 import net.sf.jsqlparser.parser.CCJSqlParserUtil;
 import net.sf.jsqlparser.statement.Statement;
 import org.junit.jupiter.api.Test;
 
-import java.util.Arrays;
-import java.util.List;
+import java.util.*;
 
 
 /**
@@ -90,9 +90,16 @@ public class IsolationTest {
 
     @Test
     public void otherTest() throws JSQLParserException {
-        String sql = "select * from test2 where id2 = id1";
-        Statement parse = CCJSqlParserUtil.parse(sql);
-        System.out.println(parse);
+        InitTableInfo.initTable();
+//        String sql1 = "SELECT tm.update_time, CAST(AES_DECRYPT(FROM_BASE64(tm.path), '7uq?q8g3@q') AS CHAR) AS path, tm.id, tm.menu_name, tm.create_time, tm.parent_id, tu.user_name, tu.id, tu.update_time, tu.role_id, tu.login_name, tu.create_time, CAST(AES_DECRYPT(FROM_BASE64(tu.phone), '7uq?q8g3@q') AS CHAR) AS phone, tu.login_pwd FROM tb_user tu LEFT JOIN tb_menu tm ON tu.id = tm.id WHERE CAST(AES_DECRYPT(FROM_BASE64(tu.phone), '7uq?q8g3@q') AS CHAR) LIKE ? AND CASE CAST(AES_DECRYPT(FROM_BASE64(tu.phone), '7uq?q8g3@q') AS CHAR) WHEN ? THEN CAST(AES_DECRYPT(FROM_BASE64(tu.phone), '7uq?q8g3@q') AS CHAR) LIKE ? WHEN 'xxx' THEN tm.id > ? END";
+//        String sql2 = "SELECT tu.user_name, CAST(AES_DECRYPT(FROM_BASE64(tu.`PHONE`), '7uq?q8g3@q') AS CHAR) AS `PHONE`, tu.id, tu.update_time, tu.role_id, tu.login_name, tu.create_time, tu.login_pwd, CAST(AES_DECRYPT(FROM_BASE64(tm.`path`), '7uq?q8g3@q') AS CHAR) AS `path`, tm.update_time, tm.id, tm.menu_name, tm.create_time, tm.parent_id FROM tb_user tu LEFT JOIN tb_menu tm ON tu.id = tm.id WHERE CAST(AES_DECRYPT(FROM_BASE64(tu.phone), '7uq?q8g3@q') AS CHAR) LIKE ? AND CASE CAST(AES_DECRYPT(FROM_BASE64(tu.phone), '7uq?q8g3@q') AS CHAR) WHEN ? THEN CAST(AES_DECRYPT(FROM_BASE64(tu.phone), '7uq?q8g3@q') AS CHAR) LIKE ? WHEN 'xxx' THEN tm.id > ? END";
+//        InitTableInfo.initTable();
+//        System.out.println(StringUtils.sqlEquals(sql1, sql2));
+        String json1 = "[{\"columnName\":\"user_name\",\"sourceColumn\":\"user_name\",\"sourceTableName\":\"tb_user\"},{\"columnName\":\"id\",\"sourceColumn\":\"id\",\"sourceTableName\":\"tb_user\"},{\"columnName\":\"update_time\",\"sourceColumn\":\"update_time\",\"sourceTableName\":\"tb_user\"},{\"columnName\":\"role_id\",\"sourceColumn\":\"role_id\",\"sourceTableName\":\"tb_user\"},{\"columnName\":\"login_name\",\"sourceColumn\":\"login_name\",\"sourceTableName\":\"tb_user\"},{\"columnName\":\"create_time\",\"sourceColumn\":\"create_time\",\"sourceTableName\":\"tb_user\"},{\"columnName\":\"phone\",\"sourceColumn\":\"phone\",\"sourceTableName\":\"tb_user\",\"fieldEncryptor\":{}},{\"columnName\":\"login_pwd\",\"sourceColumn\":\"login_pwd\",\"sourceTableName\":\"tb_user\"},{\"columnName\":\"menu_name\",\"sourceColumn\":\"menu_name\",\"sourceTableName\":\"tb_menu\"}]";
+        String json2 = "[{\"columnName\":\"user_name\",\"sourceColumn\":\"user_name\",\"sourceTableName\":\"tb_user\"},{\"columnName\":\"id\",\"sourceColumn\":\"id\",\"sourceTableName\":\"tb_user\"},{\"columnName\":\"update_time\",\"sourceColumn\":\"update_time\",\"sourceTableName\":\"tb_user\"},{\"columnName\":\"role_id\",\"sourceColumn\":\"role_id\",\"sourceTableName\":\"tb_user\"},{\"columnName\":\"login_name\",\"sourceColumn\":\"login_name\",\"sourceTableName\":\"tb_user\"},{\"columnName\":\"create_time\",\"sourceColumn\":\"create_time\",\"sourceTableName\":\"tb_user\"},{\"columnName\":\"phone\",\"sourceColumn\":\"phone\",\"sourceTableName\":\"tb_user\",\"fieldEncryptor\":{}},{\"columnName\":\"login_pwd\",\"sourceColumn\":\"login_pwd\",\"sourceTableName\":\"tb_user\"},{\"columnName\":\"menu_name\",\"sourceColumn\":\"menu_name\",\"sourceTableName\":\"tb_menu\"}]";
+        System.out.println(CollectionUtils.jsonArrayEquals(JSONUtil.parseArray(json1), JSONUtil.parseArray(json2)));
+        ;
+
     }
 
 
@@ -132,7 +139,7 @@ public class IsolationTest {
                 System.out.println("原始sql: " + sql);
                 return;
             }
-            if (answer.equalsIgnoreCase(resultSql)) {
+            if (StringUtils.sqlEquals(answer, resultSql)) {
                 System.out.println("成功: " + sqlFieldName);
             } else {
                 System.out.println("错误: " + sqlFieldName);
