@@ -2,22 +2,15 @@ package com.sangsang.test;
 
 import cn.hutool.cache.CacheUtil;
 import cn.hutool.cache.impl.LRUCache;
-import com.sangsang.cache.SqlParseCache;
-import com.sangsang.cache.fieldparse.TableCache;
-import com.sangsang.cache.transformation.TransformationInstanceCache;
 import com.sangsang.config.properties.FieldProperties;
-import com.sangsang.config.properties.TransformationProperties;
-import com.sangsang.domain.constants.TransformationPatternTypeConstant;
 import com.sangsang.util.AnswerUtil;
 import com.sangsang.util.JsqlparserUtil;
 import com.sangsang.util.ReflectUtils;
 import com.sangsang.util.StringUtils;
 import com.sangsang.visitor.transformation.TransformationStatementVisitor;
-import net.sf.jsqlparser.JSQLParserException;
 import net.sf.jsqlparser.statement.Statement;
 import org.junit.jupiter.api.Test;
 
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
@@ -248,32 +241,21 @@ public class TransformationTest {
      * @Param []
      **/
     @Test
-    public void mysql2dmTransformation() throws JSQLParserException, NoSuchFieldException {
+    public void mysql2dmTransformation() throws Exception {
+        //设置测试配置
+        FieldProperties fieldProperties = CacheTestHelper.buildTestProperties();
+        //初始化缓存
+        CacheTestHelper.testInit(fieldProperties);
+
         //需要的sql
         String sql = s_test;
         System.out.println("----------------------原始sql-----------------------");
         System.out.println(sql);
-        //mock数据
-        FieldProperties fieldProperties = new FieldProperties();
-        fieldProperties.setScanEntityPackage(Arrays.asList("com.sangsang.mockentity"));
-        //当前设置大小写不敏感
-        fieldProperties.setCaseSensitive(false);
-        fieldProperties.setIdentifierQuote("`");
-        //设置语法转换
-        TransformationProperties transformationProperties = new TransformationProperties();
-        transformationProperties.setPatternType(TransformationPatternTypeConstant.MYSQL_2_DM);
-        fieldProperties.setTransformation(transformationProperties);
-        TableCache.init(null, fieldProperties);
-        //初始化数据解析缓存
-        SqlParseCache.init(new FieldProperties());
-        //初始化转换器实例缓存
-        new TransformationInstanceCache().init(fieldProperties);
 
         //开始进行语法转换
         Statement statement = JsqlparserUtil.parse(sql);
         TransformationStatementVisitor transformationStatementVisitor = new TransformationStatementVisitor();
         statement.accept(transformationStatementVisitor);
-
 
         System.out.println("----------------------语法转换后sql-----------------------");
         System.out.println(transformationStatementVisitor.getResultSql());
@@ -311,23 +293,11 @@ public class TransformationTest {
      * @Param []
      **/
     @Test
-    public void tfCheck() throws NoSuchFieldException, JSQLParserException, IllegalAccessException {
-        //mock数据
-        FieldProperties fieldProperties = new FieldProperties();
-        fieldProperties.setScanEntityPackage(Arrays.asList("com.sangsang.mockentity"));
-        //当前设置大小写不敏感
-        fieldProperties.setCaseSensitive(false);
-        fieldProperties.setIdentifierQuote("`");
-        //设置语法转换
-        TransformationProperties transformationProperties = new TransformationProperties();
-        transformationProperties.setPatternType(TransformationPatternTypeConstant.MYSQL_2_DM);
-        fieldProperties.setTransformation(transformationProperties);
-        TableCache.init(null, fieldProperties);
-        //初始化数据解析缓存
-        SqlParseCache.init(new FieldProperties());
-
-        //初始化转换器实例缓存
-        new TransformationInstanceCache().init(fieldProperties);
+    public void tfCheck() throws Exception {
+        //设置测试配置
+        FieldProperties fieldProperties = CacheTestHelper.buildTestProperties();
+        //初始化缓存
+        CacheTestHelper.testInit(fieldProperties);
 
         for (int i = 0; i < sqls.size(); i++) {
             String sql = sqls.get(i);
@@ -374,15 +344,10 @@ public class TransformationTest {
      **/
     @Test
     public void transformationAnswerWrite() throws Exception {
-        //mock数据
-        InitTableInfo.initTable();
-
-        //初始化转换器实例缓存
-        FieldProperties fieldProperties = new FieldProperties();
-        TransformationProperties transformationProperties = new TransformationProperties();
-        transformationProperties.setPatternType(TransformationPatternTypeConstant.MYSQL_2_DM);
-        fieldProperties.setTransformation(transformationProperties);
-        new TransformationInstanceCache().init(fieldProperties);
+        //设置测试配置
+        FieldProperties fieldProperties = CacheTestHelper.buildTestProperties();
+        //初始化缓存
+        CacheTestHelper.testInit(fieldProperties);
 
         for (String sql : sqls) {
             //开始解析sql

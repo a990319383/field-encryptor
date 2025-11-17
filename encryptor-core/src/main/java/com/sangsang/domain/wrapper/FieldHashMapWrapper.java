@@ -2,6 +2,7 @@ package com.sangsang.domain.wrapper;
 
 import com.sangsang.domain.dto.FieldCacheKey;
 import com.sangsang.domain.exception.FieldException;
+import com.sangsang.domain.funinterface.EntryFilterInterface;
 import com.sangsang.util.StringUtils;
 import lombok.ToString;
 
@@ -11,6 +12,7 @@ import java.util.stream.Collectors;
 
 /**
  * 装饰器模式将HashMap<String,T> 进行一次包装，其中的key 进行大小写敏感处理，忽略关键字符的处理
+ * 注意：这里的keySet() entrySet() 返回的都是新的引用信息，entry的key无法修改，所以无法复用之前的引用，所以是无法使用迭代器对里面的元素进行删除的，使用时需要注意
  *
  * @author liutangqi
  * @date 2025/11/6 9:28
@@ -121,4 +123,22 @@ public class FieldHashMapWrapper<T> implements Map<String, T>, Serializable {
         }
     }
 
+
+    /**
+     * 过滤此Map的元素
+     *
+     * @author liutangqi
+     * @date 2025/11/17 9:58
+     * @Param [entryFilter]
+     **/
+    public void filter(EntryFilterInterface<T> entryFilter) {
+        Iterator<Entry<FieldCacheKey, T>> iterator = this.fieldCacheMap.entrySet().iterator();
+        while (iterator.hasNext()) {
+            Entry<FieldCacheKey, T> entry = iterator.next();
+            Map.Entry<String, T> simpleEntry = new AbstractMap.SimpleEntry<>(entry.getKey().getCacheKey(), entry.getValue());
+            if (!entryFilter.retain(simpleEntry)) {
+                iterator.remove();
+            }
+        }
+    }
 }

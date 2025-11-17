@@ -2,13 +2,9 @@ package com.sangsang.util;
 
 import cn.hutool.core.collection.CollUtil;
 import cn.hutool.crypto.digest.DigestUtil;
-import cn.hutool.json.JSONObject;
-import cn.hutool.json.JSONUtil;
 import com.sangsang.cache.fieldparse.TableCache;
 import com.sangsang.domain.constants.FieldConstant;
 import com.sangsang.domain.constants.SymbolConstant;
-import com.sangsang.domain.wrapper.FieldHashMapWrapper;
-import com.sangsang.domain.wrapper.FieldHashSetWrapper;
 
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;

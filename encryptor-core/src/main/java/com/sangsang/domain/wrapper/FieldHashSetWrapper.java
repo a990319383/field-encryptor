@@ -10,6 +10,8 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
+ * 装饰器模式将Set<String> 进行一次包装，其中值进行大小写敏感处理，忽略关键字符的处理
+ *
  * @author liutangqi
  * @date 2025/11/6 10:19
  */

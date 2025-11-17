@@ -3,11 +3,8 @@ package com.sangsang.util;
 import cn.hutool.core.collection.CollUtil;
 import cn.hutool.json.JSONArray;
 import cn.hutool.json.JSONObject;
-import cn.hutool.json.JSONUtil;
 import com.sangsang.cache.fieldparse.TableCache;
 import com.sangsang.domain.constants.SymbolConstant;
-import com.sangsang.domain.wrapper.FieldHashMapWrapper;
-import com.sangsang.domain.wrapper.FieldHashSetWrapper;
 
 import java.util.*;
 
@@ -34,28 +31,6 @@ public class CollectionUtils {
      */
     public static boolean isNotEmpty(Collection<?> coll) {
         return !isEmpty(coll);
-    }
-
-    /**
-     * 判断FieldHashSetWrapper存储的元素是否为空
-     *
-     * @author liutangqi
-     * @date 2025/11/6 13:34
-     * @Param [fieldHashSetWrapper]
-     **/
-    public static boolean isEmpty(FieldHashSetWrapper fieldHashSetWrapper) {
-        return (fieldHashSetWrapper == null || fieldHashSetWrapper.isEmpty());
-    }
-
-    /**
-     * 判断FieldHashSetWrapper存储的元素是否不为空
-     *
-     * @author liutangqi
-     * @date 2025/11/6 13:35
-     * @Param [fieldHashSetWrapper]
-     **/
-    public static boolean isNotEmpty(FieldHashSetWrapper fieldHashSetWrapper) {
-        return !isEmpty(fieldHashSetWrapper);
     }
 
     /**

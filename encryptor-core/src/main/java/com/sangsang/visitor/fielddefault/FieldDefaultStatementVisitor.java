@@ -9,6 +9,7 @@ import com.sangsang.domain.constants.NumberConstant;
 import com.sangsang.domain.constants.SymbolConstant;
 import com.sangsang.domain.dto.ColumnUniqueDto;
 import com.sangsang.domain.enums.SqlCommandEnum;
+import com.sangsang.domain.wrapper.FieldHashMapWrapper;
 import com.sangsang.domain.wrapper.FieldHashSetWrapper;
 import com.sangsang.util.CollectionUtils;
 import com.sangsang.util.ExpressionsUtil;
@@ -200,7 +201,7 @@ public class FieldDefaultStatementVisitor implements StatementVisitor {
         //4.处理 insert into table(字段...) 的字段部分   (依次解析获取每个字段上面标注的@FieldDefault信息，如果设置了默认值的字段没有在insert into(字段) 中出现，则手动添加)
         //下标是字段的顺序，从0开始，存的值是对应字段头上的@FieldDefault
         List<FieldDefault> insertFieldDefaultColumns = new ArrayList<>();
-        //把存储当前表的默认值设置信息深克隆一份，避免对缓存数据的影响 todo-ltq 这个看看拷贝后和原来那个是否是一样的，contains能否正常
+        //把存储当前表的默认值设置信息深克隆一份，避免对缓存数据的影响
         Map<String, FieldDefault> cloneFieldDefaultMap = ObjectUtil.cloneByStream(stringFieldDefaultMap);
         //4.1 将现有的字段需要维护insert的标注信息维护到上面的list中
         for (Column column : columns) {
@@ -234,7 +235,7 @@ public class FieldDefaultStatementVisitor implements StatementVisitor {
             //6.1 过滤出需要维护update的默认值的字段
             Map<String, FieldDefault> updateFieldDefaultMap = stringFieldDefaultMap.entrySet().stream()
                     .filter(f -> f.getValue() != null && FieldDefaultInstanceCache.getInstance(f.getValue().value()).whetherToHandle(SqlCommandEnum.UPDATE))
-                    .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
+                    .collect(FieldHashMapWrapper::new, (map, entry) -> map.put(entry.getKey(), entry.getValue()), (map1, map2) -> map1.putAll(map2));
             //6.2 字段之前就存在，且开启了强制覆盖，则采用if的方式，覆盖掉原值
             for (int i = 0; i < duplicateUpdateSets.size(); i++) {
                 FieldDefault fieldDefault = CollectionUtils.getAndRemove(updateFieldDefaultMap, duplicateUpdateSets.get(i).getColumn(0).getColumnName());

@@ -553,7 +553,11 @@ public class FieldParseParseExpressionVisitor extends BaseFieldParseTable implem
 
         //获取其中叫这个别名的全部字段
         String tableName = allTableColumns.getTable().getName();
-        Map<String, Set<FieldInfoDto>> fieldMap = fieldTableMap.entrySet().stream().filter(f -> StringUtils.fieldEquals(f.getKey(), tableName)).collect(Collectors.toMap(m -> m.getKey(), m -> m.getValue()));
+        Map<String, Set<FieldInfoDto>> fieldMap = fieldTableMap
+                .entrySet()
+                .stream()
+                .filter(f -> StringUtils.fieldEquals(f.getKey(), tableName))
+                .collect(FieldHashMapWrapper::new, (map, entry) -> map.put(entry.getKey(), entry.getValue()), (map1, map2) -> map1.putAll(map2));
 
         //将本层全部字段放到 select的map中
         for (Map.Entry<String, Set<FieldInfoDto>> fieldInfoEntry : fieldMap.entrySet()) {

@@ -1,7 +1,7 @@
 package com.sangsang.test;
 
-import cn.hutool.core.util.ObjectUtil;
 import cn.hutool.json.JSONUtil;
+import com.sangsang.config.properties.FieldProperties;
 import com.sangsang.domain.dto.ColumnTableDto;
 import com.sangsang.domain.dto.FieldEncryptorInfoDto;
 import com.sangsang.util.*;
@@ -9,7 +9,6 @@ import com.sangsang.visitor.dbencrtptor.DBDencryptStatementVisitor;
 import com.sangsang.visitor.fieldparse.FieldParseParseTableSelectVisitor;
 import com.sangsang.visitor.pojoencrtptor.PoJoEncrtptorStatementVisitor;
 import cn.hutool.core.lang.Pair;
-import net.sf.jsqlparser.JSQLParserException;
 import net.sf.jsqlparser.statement.Statement;
 import net.sf.jsqlparser.statement.select.PlainSelect;
 import org.junit.jupiter.api.Test;
@@ -563,11 +562,11 @@ public class SqlTest {
      * @Param []
      **/
     @Test
-    public void testdbEncryptor() throws JSQLParserException, NoSuchFieldException {
-        //初始化加解密函数
-        InitTableInfo.initDBEncryptor();
-        //mock数据
-        InitTableInfo.initTable();
+    public void testdbEncryptor() throws Exception {
+        //设置测试配置
+        FieldProperties fieldProperties = CacheTestHelper.buildTestProperties();
+        //初始化缓存
+        CacheTestHelper.testInit(fieldProperties);
 
         //需要测试的sql
         String sql = s41;
@@ -596,10 +595,10 @@ public class SqlTest {
      **/
     @Test
     public void testPoJoEncryptor() throws Exception {
-        //初始化加解密函数
-        InitTableInfo.initDBEncryptor();
-        //mock数据
-        InitTableInfo.initTable();
+        //设置测试配置
+        FieldProperties fieldProperties = CacheTestHelper.buildTestProperties();
+        //初始化缓存
+        CacheTestHelper.testInit(fieldProperties);
 
         //需要测试的sql
         String sql = s11;
@@ -638,11 +637,11 @@ public class SqlTest {
      * @Param []
      **/
     @Test
-    public void dbCheck() throws NoSuchFieldException, JSQLParserException, IllegalAccessException {
-        //初始化加解密函数
-        InitTableInfo.initDBEncryptor();
-        //mock数据
-        InitTableInfo.initTable();
+    public void dbCheck() throws Exception {
+        //设置测试配置
+        FieldProperties fieldProperties = CacheTestHelper.buildTestProperties();
+        //初始化缓存
+        CacheTestHelper.testInit(fieldProperties);
 
         for (int i = 0; i < sqls.size(); i++) {
             String sql = sqls.get(i);
@@ -685,11 +684,11 @@ public class SqlTest {
      * @Param []
      **/
     @Test
-    public void pojoCheck() throws NoSuchFieldException, JSQLParserException, IllegalAccessException {
-        //初始化加解密函数
-        InitTableInfo.initDBEncryptor();
-        //mock数据
-        InitTableInfo.initTable();
+    public void pojoCheck() throws Exception {
+        //设置测试配置
+        FieldProperties fieldProperties = CacheTestHelper.buildTestProperties();
+        //初始化缓存
+        CacheTestHelper.testInit(fieldProperties);
 
         for (int i = 0; i < sqls.size(); i++) {
             String sql = sqls.get(i);
@@ -746,10 +745,10 @@ public class SqlTest {
      **/
     @Test
     public void dbAnswerWrite() throws Exception {
-        //初始化加解密函数
-        InitTableInfo.initDBEncryptor();
-        //mock数据
-        InitTableInfo.initTable();
+        //设置测试配置
+        FieldProperties fieldProperties = CacheTestHelper.buildTestProperties();
+        //初始化缓存
+        CacheTestHelper.testInit(fieldProperties);
 
         for (String sql : sqls) {
             //开始解析sql
@@ -771,10 +770,10 @@ public class SqlTest {
      **/
     @Test
     public void pojoAnswerWrite() throws Exception {
-        //初始化加解密函数
-        InitTableInfo.initDBEncryptor();
-        //mock数据
-        InitTableInfo.initTable();
+        //设置测试配置
+        FieldProperties fieldProperties = CacheTestHelper.buildTestProperties();
+        //初始化缓存
+        CacheTestHelper.testInit(fieldProperties);
 
         for (String sql : sqls) {
             //将原sql ？ 替换为自定义的占位符
@@ -791,11 +790,11 @@ public class SqlTest {
     }
 
     @Test
-    public void testParse() throws JSQLParserException, NoSuchFieldException {
-        //初始化加解密函数
-        InitTableInfo.initDBEncryptor();
-        //mock数据
-        InitTableInfo.initTable();
+    public void testParse() throws Exception {
+        //设置测试配置
+        FieldProperties fieldProperties = CacheTestHelper.buildTestProperties();
+        //初始化缓存
+        CacheTestHelper.testInit(fieldProperties);
 
         String sql = "select tu.* from tb_user tu";
         Statement statement = JsqlparserUtil.parse(sql);

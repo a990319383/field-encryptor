@@ -3,6 +3,7 @@ package com.sangsang.cache.fieldparse;
 import cn.hutool.core.util.StrUtil;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableName;
+import com.sangsang.cache.fielddefault.FieldDefaultInstanceCache;
 import com.sangsang.config.other.DefaultBeanPostProcessor;
 import com.sangsang.config.properties.FieldProperties;
 import com.sangsang.domain.annos.encryptor.FieldEncryptor;
@@ -13,6 +14,7 @@ import com.sangsang.domain.constants.SymbolConstant;
 import com.sangsang.domain.constants.TransformationPatternTypeConstant;
 import com.sangsang.domain.dto.TableFieldDto;
 import com.sangsang.domain.dto.TableInfoDto;
+import com.sangsang.domain.enums.SqlCommandEnum;
 import com.sangsang.domain.wrapper.FieldHashMapWrapper;
 import com.sangsang.domain.wrapper.FieldHashSetWrapper;
 import com.sangsang.util.*;
@@ -25,6 +27,7 @@ import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.*;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  * 优先加载这个bean，避免有些@PostConstruct 加载数据库东西到redis时，此时还没处理完，导致redis中存储了密文
@@ -77,7 +80,7 @@ public class TableCache extends DefaultBeanPostProcessor {
 
     /**
      * key: 表名
-     * value: 改表实体类上所有的字段
+     * value: 该表所有的字段
      */
     private static final Map<String, Set<String>> TABLE_FIELD_MAP = new FieldHashMapWrapper<>();
 
@@ -111,7 +114,31 @@ public class TableCache extends DefaultBeanPostProcessor {
         if (fieldProperties.isAutoFill()) {
             FieldFillUtil.fieldFill(dataSources, fieldProperties);
         }
+
+        //6.去掉不必要表的缓存，避免某些逻辑进行不必要的循环
+        simplificationCache(fieldProperties);
+
         log.info("【field-encryptor】初始化表结构信息，处理完毕 耗时：{}ms", (System.currentTimeMillis() - startTime));
+    }
+
+    /**
+     * 去掉不必要表的缓存，避免某些逻辑进行不必要的循环
+     * 当项目中使用到了语法转换，则不进行精简，因为语法转化需要使用的整个库的全部表结构信息
+     * 其它功能目前只需要对应的表的字段是全的即可
+     *
+     * @author liutangqi
+     * @date 2025/11/14 16:11
+     * @Param []
+     **/
+    private static void simplificationCache(FieldProperties fieldProperties) {
+        //1.如果开启了语法转换功能，则不进行精简，因为这个功能需要使用到整个库的全部表结构
+        if (fieldProperties.getTransformation() != null && StringUtils.isNotBlank(fieldProperties.getTransformation().getPatternType())) {
+            return;
+        }
+
+        //2.过滤只要我们功能中需要的表
+        ((FieldHashMapWrapper) TABLE_FIELD_MAP)
+                .filter(f -> TableCache.getCurConfigTable().contains(f.getKey()));
     }
 
     /**
@@ -241,8 +268,12 @@ public class TableCache extends DefaultBeanPostProcessor {
         tableInfoDtos.stream().filter(f -> f.getDataIsolation() != null).forEach(f -> ISOLATION_TABLE.add(f.getTableName()));
 
         //TABLE_FIELD_MAP
-        tableInfoDtos.stream().forEach(f -> TABLE_FIELD_MAP.put(f.getTableName(), f.getTableFields().stream().map(TableFieldDto::getFieldName).collect(Collectors.toSet())));
-
+        tableInfoDtos.stream()
+                .forEach(f -> TABLE_FIELD_MAP.put(f.getTableName(), f.getTableFields()
+                        .stream()
+                        .map(TableFieldDto::getFieldName)
+                        .collect(FieldHashSetWrapper::new, Set::add, Set::addAll)
+                ));
     }
 
 
@@ -351,6 +382,22 @@ public class TableCache extends DefaultBeanPostProcessor {
         TABLE_FIELD_MAP.clear();
         //2.使用新的替换旧的
         TABLE_FIELD_MAP.putAll(tableFieldMap);
+    }
+
+    /**
+     * 获取到当前项目功能涉及到的表名
+     * 加解密+设置默认值+数据隔离
+     *
+     * @author liutangqi
+     * @date 2025/11/14 16:14
+     * @Param []
+     **/
+    public static FieldHashSetWrapper getCurConfigTable() {
+        return Stream.of(TableCache.getFieldEncryptTable(),
+                        TableCache.getFieldDefaultTable(),
+                        TableCache.getIsolationTable())
+                .flatMap(Collection::stream)
+                .collect(FieldHashSetWrapper::new, Set::add, Set::addAll);
     }
 
 }

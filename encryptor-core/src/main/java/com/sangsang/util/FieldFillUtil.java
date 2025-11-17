@@ -42,29 +42,15 @@ public class FieldFillUtil {
             }
 
             //2.获取本项目中需要使用到的所有实体类
-            Set<String> needTableNames = new FieldHashSetWrapper();
-            //如果开启了语法转换的话，需要整个库的所有表的字段信息，如果没有开启语法转换的话，只需要我们需要的功能中涉及到的表结构信息即可
-            if (fieldProperties.getTransformation() == null || StringUtils.isBlank(fieldProperties.getTransformation().getPatternType())) {
-                //2.1 加解密涉及的表
-                Set<String> fieldEncryptTable = TableCache.getFieldEncryptTable();
-                //2.2 变更默认值涉及的表
-                Set<String> fieldDefaultTable = TableCache.getFieldDefaultTable();
-                //2.3 数据隔离涉及的表
-                Set<String> isolationTable = TableCache.getIsolationTable();
-
-                needTableNames.addAll(fieldEncryptTable);
-                needTableNames.addAll(fieldDefaultTable);
-                needTableNames.addAll(isolationTable);
-            }
-
+            Set<String> needTableNames = TableCache.getCurConfigTable();
 
             //3.解析出所有库我们需要解析的表的字段信息
             Map<String, Set<String>> tableFieldMap = new FieldHashMapWrapper();
             for (DataSource dataSource : dataSources) {
                 //3.1 获取所有的表名
                 List<String> tableNames = EntityGenerateUtil.getTableNames(dataSource, GenerateDto.builder().build());
-                //3.2 只处理我们需要的表名
-                if (CollectionUtils.isNotEmpty(needTableNames)) {
+                //3.2 如果没有开启语法转换功能的话，只处理我们需要的表名。（因为语法转换这个功能需要整个库的所有表结构信息）
+                if (fieldProperties.getTransformation() == null || StringUtils.isBlank(fieldProperties.getTransformation().getPatternType())) {
                     tableNames = tableNames.stream().filter(f -> needTableNames.contains(f)).collect(Collectors.toList());
                 }
                 //3.3 使用多线程，读取这些表的字段信息
@@ -83,7 +69,7 @@ public class FieldFillUtil {
                         .forEach(f -> tableFieldMap.put(f.getTableName(), f.getColumns()
                                 .stream()
                                 .map(Column::getName)
-                                .collect(Collectors.toSet())));
+                                .collect(FieldHashSetWrapper::new, Set::add, Set::addAll)));
             }
 
             //4.将本项目核心缓存TableCache中缓存表结构的信息给替换成处理之后的

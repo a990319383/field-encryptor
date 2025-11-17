@@ -6,7 +6,6 @@ import com.sangsang.domain.constants.NumberConstant;
 import com.sangsang.domain.dto.BaseFieldParseTable;
 import com.sangsang.domain.dto.FieldInfoDto;
 import com.sangsang.domain.wrapper.FieldHashSetWrapper;
-import com.sangsang.util.CollectionUtils;
 import com.sangsang.util.JsqlparserUtil;
 import net.sf.jsqlparser.expression.Alias;
 import net.sf.jsqlparser.schema.Table;

@@ -1,14 +1,11 @@
 package com.sangsang.test;
 
-import com.sangsang.cache.fielddefault.FieldDefaultInstanceCache;
-import com.sangsang.config.properties.FieldDefaultProperties;
+import com.sangsang.config.properties.FieldProperties;
 import com.sangsang.util.AnswerUtil;
 import com.sangsang.util.JsqlparserUtil;
 import com.sangsang.util.ReflectUtils;
 import com.sangsang.util.StringUtils;
 import com.sangsang.visitor.fielddefault.FieldDefaultStatementVisitor;
-import com.sangsang.visitor.isolation.IsolationStatementVisitor;
-import net.sf.jsqlparser.JSQLParserException;
 import net.sf.jsqlparser.statement.Statement;
 import org.junit.jupiter.api.Test;
 
@@ -91,13 +88,14 @@ public class FieldDefaultTest {
 
 
     @Test
-    public void fieldDefaultTest() throws JSQLParserException {
+    public void fieldDefaultTest() throws Exception {
+        //设置测试配置
+        FieldProperties fieldProperties = CacheTestHelper.buildTestProperties();
+        //初始化缓存
+        CacheTestHelper.testInit(fieldProperties);
+
         //需要的sql
         String sql = i1;
-        //mock数据
-        InitTableInfo.initTable();
-        FieldDefaultInstanceCache instanceCache = new FieldDefaultInstanceCache();
-        instanceCache.init(null);
 
         //开始进行数据隔离
         Statement statement = JsqlparserUtil.parse(sql);
@@ -143,10 +141,10 @@ public class FieldDefaultTest {
      **/
     @Test
     public void defaultCheck() throws Exception {
-        //mock数据
-        InitTableInfo.initTable();
-        FieldDefaultInstanceCache instanceCache = new FieldDefaultInstanceCache();
-        instanceCache.init(null);
+        //设置测试配置
+        FieldProperties fieldProperties = CacheTestHelper.buildTestProperties();
+        //初始化缓存
+        CacheTestHelper.testInit(fieldProperties);
 
         for (int i = 0; i < sqls.size(); i++) {
             String sql = sqls.get(i);
@@ -185,10 +183,10 @@ public class FieldDefaultTest {
 
     @Test
     public void defaultAnswerWrite() throws Exception {
-        //mock数据
-        InitTableInfo.initTable();
-        FieldDefaultInstanceCache instanceCache = new FieldDefaultInstanceCache();
-        instanceCache.init(null);
+        //设置测试配置
+        FieldProperties fieldProperties = CacheTestHelper.buildTestProperties();
+        //初始化缓存
+        CacheTestHelper.testInit(fieldProperties);
 
         for (String sql : sqls) {
             Statement statement = JsqlparserUtil.parse(sql);
