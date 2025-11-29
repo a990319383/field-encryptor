@@ -43,8 +43,8 @@ public class IsolationHolder {
     public static void removeForbidIsolation() {
         ArrayDeque<ForbidIsolation> forbidIsolations = ISOLATION_HOLDER.get();
         if (forbidIsolations != null) {
-            //尾部移除
-            forbidIsolations.removeLast();
+            //头部移除
+            forbidIsolations.removeFirst();
             //如果移除完毕了，就整个清除了
             if (forbidIsolations.isEmpty()) {
                 ISOLATION_HOLDER.remove();
@@ -64,7 +64,7 @@ public class IsolationHolder {
         if (forbidIsolations == null) {
             return null;
         }
-        //头部获取，头部是最新的
+        //当前层存在禁止数据隔离标识则表示禁止，这里随便返回第一个即可
         return forbidIsolations.getFirst();
     }
 

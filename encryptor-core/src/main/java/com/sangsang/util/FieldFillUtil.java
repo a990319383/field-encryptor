@@ -76,7 +76,7 @@ public class FieldFillUtil {
             TableCache.refreshTableField(tableFieldMap);
             log.info("【field-encryptor】自动填充数据库表字段结束 合计维护表：{}张 耗时：{}ms", tableFieldMap.size(), (System.currentTimeMillis() - t1));
         } catch (Exception e) {
-            log.error("【field-encryptor】自动填充数据库表字段异常，请检查当前账号是否有权限", e);
+            log.error("【field-encryptor】自动填充数据库表字段异常，请检查当前账号是否有权限，无权限请手动将扫描路径下的实体类及其字段补全", e);
         }
     }
 

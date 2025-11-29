@@ -133,16 +133,16 @@ public class StringUtils {
     }
 
     /**
-     * 判断sql中是否一定不存在 lowerTableNames 中涉及的表
+     * 判断sql中是否一定不存在 tableNames 中涉及的表
      *
      * @return true:一定不存在  false: 可能存在
      * @author liutangqi
      * @date 2025/7/3 10:40
-     * @Param [sql, lowerTableNames]
+     * @Param [sql, tableNames]
      **/
-    public static boolean notExist(String sql, Set<String> lowerTableNames) {
+    public static boolean notExist(String sql, Set<String> tableNames) {
         //1.表名为空，或者sql为空 肯定不存在
-        if (StringUtils.isBlank(sql) || CollectionUtils.isEmpty(lowerTableNames)) {
+        if (StringUtils.isBlank(sql) || CollectionUtils.isEmpty(tableNames)) {
             return true;
         }
 
@@ -153,7 +153,7 @@ public class StringUtils {
         }
 
         //3.获取当前需要处理的表名，并根据当前项目配置进行大小写和关键符号的判断
-        for (String tableName : lowerTableNames) {
+        for (String tableName : tableNames) {
             //3.1 判断当前大小写不敏感的话，将表名转换为小写
             String disposeTableName = tableName;
             if (!TableCache.getCurConfig().isCaseSensitive()) {

@@ -3,7 +3,6 @@ package com.sangsang.cache.fieldparse;
 import cn.hutool.core.util.StrUtil;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableName;
-import com.sangsang.cache.fielddefault.FieldDefaultInstanceCache;
 import com.sangsang.config.other.DefaultBeanPostProcessor;
 import com.sangsang.config.properties.FieldProperties;
 import com.sangsang.domain.annos.encryptor.FieldEncryptor;
@@ -14,7 +13,6 @@ import com.sangsang.domain.constants.SymbolConstant;
 import com.sangsang.domain.constants.TransformationPatternTypeConstant;
 import com.sangsang.domain.dto.TableFieldDto;
 import com.sangsang.domain.dto.TableInfoDto;
-import com.sangsang.domain.enums.SqlCommandEnum;
 import com.sangsang.domain.wrapper.FieldHashMapWrapper;
 import com.sangsang.domain.wrapper.FieldHashSetWrapper;
 import com.sangsang.util.*;
@@ -139,6 +137,7 @@ public class TableCache extends DefaultBeanPostProcessor {
         //2.过滤只要我们功能中需要的表
         ((FieldHashMapWrapper) TABLE_FIELD_MAP)
                 .filter(f -> TableCache.getCurConfigTable().contains(f.getKey()));
+        log.info("【field-encryptor】精简表结构信息，处理完毕 当前缓存表数量:{}张", TABLE_FIELD_MAP.keySet().size());
     }
 
     /**

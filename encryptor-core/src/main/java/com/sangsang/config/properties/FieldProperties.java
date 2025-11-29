@@ -42,7 +42,7 @@ public class FieldProperties {
     /**
      * 数据库标识符的引用符，比如mysql是 ` 达梦数据库是 "
      * 默认不配置的话，会从第一个dataSource中获取
-     * 目前暂不支持不同类型数据库的多数据源项目
+     * 目前暂不支持不同类型数据库的多数据源项目，如果是标识符引用符不同的多数据源项目的话，请保证数据库中的字段和sql的字段的标识符使用情况一致
      */
     private String identifierQuote;
 
