@@ -1,6 +1,8 @@
 package com.sangsang.util;
 
 
+import com.sangsang.domain.exception.FieldException;
+
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 import java.util.ArrayList;
@@ -162,5 +164,20 @@ public class ReflectUtils {
             }
         }
         return null;
+    }
+
+    /**
+     * 将类的全限定名转换为Class对象
+     *
+     * @author liutangqi
+     * @date 2025/12/1 15:20
+     * @Param [className]
+     **/
+    public static Class forName(String className) {
+        try {
+            return Class.forName(className);
+        } catch (ClassNotFoundException e) {
+            throw new FieldException(String.format("此类全限定名无法转换为Class对象 %s  e:%s", className, e.getMessage()));
+        }
     }
 }

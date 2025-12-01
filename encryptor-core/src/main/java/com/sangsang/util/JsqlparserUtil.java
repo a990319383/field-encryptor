@@ -8,6 +8,7 @@ import com.sangsang.cache.fieldparse.TableCache;
 import com.sangsang.domain.annos.encryptor.FieldEncryptor;
 import com.sangsang.domain.annos.fielddefault.FieldDefault;
 import com.sangsang.domain.constants.FieldConstant;
+import com.sangsang.domain.dto.ClassCacheKey;
 import com.sangsang.domain.dto.ColumnTableDto;
 import com.sangsang.domain.dto.ColumnUniqueDto;
 import com.sangsang.domain.dto.FieldInfoDto;
@@ -472,7 +473,7 @@ public class JsqlparserUtil {
             //1.1 两边都需要加密且算法一致时或者两边都不需要加密时，不需要处理
             FieldEncryptor leftFieldEncryptor = JsqlparserUtil.needEncryptFieldEncryptor(expression.getLeftExpression(), dbExpressionVisitor.getLayer(), dbExpressionVisitor.getLayerFieldTableMap());
             FieldEncryptor rightFieldEncryptor = JsqlparserUtil.needEncryptFieldEncryptor(expression.getRightExpression(), dbExpressionVisitor.getLayer(), dbExpressionVisitor.getLayerFieldTableMap());
-            if (Objects.equals(Optional.ofNullable(leftFieldEncryptor).map(FieldEncryptor::value).orElse(null), Optional.ofNullable(rightFieldEncryptor).map(FieldEncryptor::value).orElse(null))) {
+            if (ClassCacheKey.classEquals(Optional.ofNullable(leftFieldEncryptor).map(FieldEncryptor::value).orElse(null), Optional.ofNullable(rightFieldEncryptor).map(FieldEncryptor::value).orElse(null))) {
                 return;
             }
             //1.2 两边算法不一致时，处理右边表达式

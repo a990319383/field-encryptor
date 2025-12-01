@@ -112,14 +112,6 @@ public class FieldDefaultTest {
 
     @Test
     public void otherTest() {
-
-        Map<String, Object> map = new HashMap<>();
-        map.put("aaa", "111");
-        map.put("bbb", "222");
-        map.remove("aaa");
-        System.out.println(map);
-        map.remove("ccc");
-        System.out.println(map);
     }
 
 

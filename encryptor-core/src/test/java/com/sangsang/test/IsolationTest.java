@@ -92,29 +92,6 @@ public class IsolationTest {
 
     @Test
     public void otherTest() throws Exception {
-        //设置测试配置
-        FieldProperties fieldProperties = CacheTestHelper.buildTestProperties();
-        //初始化缓存
-        CacheTestHelper.testInit(fieldProperties);
-
-        Map<String, Object> map = new FieldHashMapWrapper<>();
-        map.put("1", 111);
-        map.put("2", 222);
-        map.put("3", 333);
-        map.put("4", 444);
-        map.put("5", 555);
-
-        Iterator<Map.Entry<String,Object>> iterator = map.entrySet().iterator();
-        while (iterator.hasNext()) {
-            Map.Entry<String, Object> entry = iterator.next();
-            if ("2".equals(entry.getKey())) {
-                iterator.remove();
-            }
-        }
-
-        System.out.println( map);
-
-
 
     }
 

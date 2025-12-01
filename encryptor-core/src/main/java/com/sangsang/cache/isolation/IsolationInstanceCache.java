@@ -6,11 +6,11 @@ import com.sangsang.config.other.DefaultBeanPostProcessor;
 import com.sangsang.config.properties.FieldProperties;
 import com.sangsang.domain.annos.isolation.DataIsolation;
 import com.sangsang.domain.constants.SymbolConstant;
-import com.sangsang.domain.dto.ClasssCacheKey;
 import com.sangsang.domain.enums.IsolationRelationEnum;
 import com.sangsang.domain.exception.IsolationException;
 import com.sangsang.domain.strategy.DefaultStrategyBase;
 import com.sangsang.domain.strategy.isolation.DataIsolationStrategy;
+import com.sangsang.domain.wrapper.ClassHashMapWrapper;
 import com.sangsang.util.CollectionUtils;
 import com.sangsang.util.ExpressionsUtil;
 import com.sangsang.util.StringUtils;
@@ -44,7 +44,7 @@ public class IsolationInstanceCache extends DefaultBeanPostProcessor {
      * @date 2025/6/13 10:31
      * @Param
      **/
-    private static final Map<ClasssCacheKey, DataIsolationStrategy> INSTANCE_MAP = new HashMap<>();
+    private static final Map<Class, DataIsolationStrategy> INSTANCE_MAP = new ClassHashMapWrapper<>();
 
     /**
      * 初始化
@@ -63,11 +63,11 @@ public class IsolationInstanceCache extends DefaultBeanPostProcessor {
 
         //2.实例化默认的策略
         DefaultStrategyBase.BeanIsolationStrategy isolationBeanStrategy = new DefaultStrategyBase.BeanIsolationStrategy(dataIsolationStrategyList);
-        INSTANCE_MAP.put(ClasssCacheKey.buildKey(DefaultStrategyBase.BeanIsolationStrategy.class), isolationBeanStrategy);
+        INSTANCE_MAP.put(DefaultStrategyBase.BeanIsolationStrategy.class, isolationBeanStrategy);
 
         //3.初始化当前spring容器内的实现策略
         for (DataIsolationStrategy dataIsolationStrategy : dataIsolationStrategyList) {
-            INSTANCE_MAP.put(ClasssCacheKey.buildKey(dataIsolationStrategy.getClass()), dataIsolationStrategy);
+            INSTANCE_MAP.put(dataIsolationStrategy.getClass(), dataIsolationStrategy);
         }
 
         log.debug("【isolation】初始化完毕，耗时:{}ms", (System.currentTimeMillis() - startTime));
@@ -84,13 +84,13 @@ public class IsolationInstanceCache extends DefaultBeanPostProcessor {
      **/
     public static DataIsolationStrategy getInstance(Class<? extends DataIsolationStrategy> clazz) {
         //1.先从本地缓存好的里面找
-        DataIsolationStrategy instance = INSTANCE_MAP.get(ClasssCacheKey.buildKey(clazz));
+        DataIsolationStrategy instance = INSTANCE_MAP.get(clazz);
 
         //2.本地缓存找不到，根据无参构造进行实例化，然后放缓存
         if (instance == null) {
             try {
                 instance = clazz.newInstance();
-                INSTANCE_MAP.put(ClasssCacheKey.buildKey(clazz), instance);
+                INSTANCE_MAP.put(clazz, instance);
             } catch (Exception e) {
                 throw new IsolationException(String.format("数据隔离策略无参构造实例化失败 %s", clazz.getName()));
             }

@@ -4,10 +4,11 @@ import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableName;
 import com.sangsang.config.other.DefaultBeanPostProcessor;
 import com.sangsang.domain.annos.encryptor.FieldEncryptor;
-import com.sangsang.domain.dto.ClasssCacheKey;
+import com.sangsang.domain.dto.ClassCacheKey;
 import com.sangsang.domain.exception.FieldEncryptorException;
 import com.sangsang.domain.strategy.DefaultStrategyBase;
 import com.sangsang.domain.strategy.encryptor.FieldEncryptorStrategy;
+import com.sangsang.domain.wrapper.ClassHashMapWrapper;
 import com.sangsang.util.ClassScanerUtil;
 import com.sangsang.util.ReflectUtils;
 import lombok.extern.slf4j.Slf4j;
@@ -32,7 +33,7 @@ public class EncryptorInstanceCache extends DefaultBeanPostProcessor {
      * key: pojo加解密策略的class
      * value: 具体的实例
      **/
-    private static final Map<ClasssCacheKey, FieldEncryptorStrategy> INSTANCE_MAP = new HashMap<>();
+    private static final Map<Class, FieldEncryptorStrategy> INSTANCE_MAP = new ClassHashMapWrapper<>();
 
     /**
      * 初始化spring容器中的加解密策略
@@ -44,11 +45,11 @@ public class EncryptorInstanceCache extends DefaultBeanPostProcessor {
     public void init(List<FieldEncryptorStrategy> strategies) {
         //1.实例化默认策略
         DefaultStrategyBase.EncryptorBeanStrategy beanStrategy = new DefaultStrategyBase.EncryptorBeanStrategy(strategies);
-        INSTANCE_MAP.put(ClasssCacheKey.buildKey(DefaultStrategyBase.EncryptorBeanStrategy.class), beanStrategy);
+        INSTANCE_MAP.put(DefaultStrategyBase.EncryptorBeanStrategy.class, beanStrategy);
 
         //2.初始化当前spring容器内的实现策略
         for (FieldEncryptorStrategy strategy : strategies) {
-            INSTANCE_MAP.put(ClasssCacheKey.buildKey(strategy.getClass()), strategy);
+            INSTANCE_MAP.put(strategy.getClass(), strategy);
         }
     }
 
@@ -62,13 +63,13 @@ public class EncryptorInstanceCache extends DefaultBeanPostProcessor {
      **/
     public static <T> FieldEncryptorStrategy<T> getInstance(Class<? extends FieldEncryptorStrategy> clazz) {
         //1.先从本地缓存中找
-        FieldEncryptorStrategy<T> strategy = INSTANCE_MAP.get(ClasssCacheKey.buildKey(clazz));
+        FieldEncryptorStrategy<T> strategy = INSTANCE_MAP.get(clazz);
 
         //2.本地缓存找不到，尝试通过无参构造方法进行实例化
         if (strategy == null) {
             try {
                 strategy = clazz.newInstance();
-                INSTANCE_MAP.put(ClasssCacheKey.buildKey(clazz), strategy);
+                INSTANCE_MAP.put(clazz, strategy);
             } catch (Exception e) {
                 throw new FieldEncryptorException(String.format("未找到指定类型的加密策略 %s", clazz));
             }
@@ -109,13 +110,13 @@ public class EncryptorInstanceCache extends DefaultBeanPostProcessor {
         //5.实例化这些加解密策略
         for (Class<? extends FieldEncryptorStrategy> strategyClass : strategyClasses) {
             //5.1 默认配置
-            if (DefaultStrategyBase.EncryptorBeanStrategy.class.equals(strategyClass)) {
-                INSTANCE_MAP.put(ClasssCacheKey.buildKey(strategyClass), defaultInstance);
+            if (ClassCacheKey.classEquals(DefaultStrategyBase.EncryptorBeanStrategy.class, strategyClass)) {
+                INSTANCE_MAP.put(strategyClass, defaultInstance);
             }
             //5.2实例化其它的策略
             else {
                 FieldEncryptorStrategy dbFieldEncryptorStrategy = strategyClass.newInstance();
-                INSTANCE_MAP.put(ClasssCacheKey.buildKey(strategyClass), dbFieldEncryptorStrategy);
+                INSTANCE_MAP.put(strategyClass, dbFieldEncryptorStrategy);
             }
         }
     }

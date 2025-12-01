@@ -4,8 +4,9 @@ import com.sangsang.config.other.DefaultBeanPostProcessor;
 import com.sangsang.config.properties.FieldProperties;
 import com.sangsang.domain.constants.SymbolConstant;
 import com.sangsang.domain.context.TransformationHolder;
-import com.sangsang.domain.dto.ClasssCacheKey;
+import com.sangsang.domain.dto.ClassCacheKey;
 import com.sangsang.domain.exception.TransformationException;
+import com.sangsang.domain.wrapper.ClassHashMapWrapper;
 import com.sangsang.transformation.TransformationInterface;
 import com.sangsang.util.ClassScanerUtil;
 import com.sangsang.util.GenericityUtil;
@@ -30,13 +31,13 @@ public class TransformationInstanceCache extends DefaultBeanPostProcessor {
      * key:转换器的父类class (限定是属于Column 还是Function)
      * value:对应转换器实例
      */
-    private static Map<ClasssCacheKey, List<TransformationInterface>> TRANSFORMATION_MAP = null;
+    private static Map<Class, List<TransformationInterface>> TRANSFORMATION_MAP = null;
     /**
      * 实现了TransformationInterface接口的基类转换器的Class和泛型的对应关系
      * key:泛型Class
      * value:类的Class
      */
-    private static final Map<ClasssCacheKey, Class> SUPERTRANSFORMATION_MAP = new HashMap<>();
+    private static final Map<Class, Class> SUPERTRANSFORMATION_MAP = new ClassHashMapWrapper<>();
 
 
     //---------------------------对外提供的方法分割线---------------------------
@@ -59,10 +60,11 @@ public class TransformationInstanceCache extends DefaultBeanPostProcessor {
         }
 
         //3.将对应的转换器子类实例化后存储到对应的缓存中
-        TRANSFORMATION_MAP = classes.stream().collect(Collectors.groupingBy(c -> ClasssCacheKey.buildKey(c.getSuperclass()), Collectors.mapping(c -> (TransformationInterface) ReflectUtils.newInstance(c), Collectors.toList())));
+        Map<Class, List<TransformationInterface>> classListMap = classes.stream().collect(Collectors.groupingBy(c -> c.getSuperclass(), Collectors.mapping(c -> (TransformationInterface) ReflectUtils.newInstance(c), Collectors.toList())));
+        TRANSFORMATION_MAP = ClassHashMapWrapper.mapToClassHashMapWrapper(classListMap);
 
         //4.找到各个转换器父类泛型和对应转换器父类class的对应关系
-        classes.stream().map(Class::getSuperclass).distinct().forEach(f -> SUPERTRANSFORMATION_MAP.put(ClasssCacheKey.buildKey(GenericityUtil.getInterfaceT(f, 0)), f));
+        classes.stream().map(Class::getSuperclass).distinct().forEach(f -> SUPERTRANSFORMATION_MAP.put(GenericityUtil.getInterfaceT(f, 0), f));
     }
 
     /**
@@ -74,11 +76,11 @@ public class TransformationInstanceCache extends DefaultBeanPostProcessor {
      **/
     public static <T> T transformation(T t) {
         //1.先找转换器类型基类中泛型是这个的
-        Class superClass = SUPERTRANSFORMATION_MAP.get(ClasssCacheKey.buildKey(t.getClass()));
+        Class superClass = SUPERTRANSFORMATION_MAP.get(t.getClass());
         Optional.ofNullable(superClass).orElseThrow(() -> new TransformationException(String.format("找不到对应泛型<%s>的基类转换器", t.getClass().getSimpleName())));
 
         //2.找到这个基类转换器的所有实现类实例
-        List<TransformationInterface> transformationList = TRANSFORMATION_MAP.get(ClasssCacheKey.buildKey(superClass));
+        List<TransformationInterface> transformationList = TRANSFORMATION_MAP.get(superClass);
 
         //3.从所有实例中找符合处理条件的
         for (TransformationInterface transformationInterface : transformationList) {
@@ -101,11 +103,11 @@ public class TransformationInstanceCache extends DefaultBeanPostProcessor {
      **/
     public static <T> T transformation(T t, Class typeClass) {
         //1.先找转换器类型基类中泛型是这个的
-        Class superClass = SUPERTRANSFORMATION_MAP.get(ClasssCacheKey.buildKey(typeClass));
+        Class superClass = SUPERTRANSFORMATION_MAP.get(typeClass);
         Optional.ofNullable(superClass).orElseThrow(() -> new TransformationException(String.format("找不到对应泛型<%s>的基类转换器", typeClass.getSimpleName())));
 
         //2.找到这个基类转换器的所有实现类实例
-        List<TransformationInterface> transformationList = TRANSFORMATION_MAP.get(ClasssCacheKey.buildKey(superClass));
+        List<TransformationInterface> transformationList = TRANSFORMATION_MAP.get(superClass);
 
         //3.从所有实例中找符合处理条件的
         for (TransformationInterface transformationInterface : transformationList) {

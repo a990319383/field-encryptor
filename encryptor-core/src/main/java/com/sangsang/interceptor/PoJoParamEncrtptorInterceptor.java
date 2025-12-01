@@ -170,28 +170,6 @@ public class PoJoParamEncrtptorInterceptor implements Interceptor, BeanPostProce
         }
     }
 
-
-    /**
-     * 判断当前映射的值是否存在一个入参，有多个不同值的情况 （比如一个入参，对应不同的表字段，这些表字段的加密算法或者明文，密文存储方式不同）
-     *
-     * @author liutangqi
-     * @date 2025/4/10 9:46
-     * @Param [parameterMappings, parameterValue]
-     **/
-    private boolean oneDataMuchValue(List<ParameterMapping> parameterMappings, Map<String, Object> parameterValue) {
-        Map<String, Object> tmpMap = new HashMap<>();
-        for (int i = 0; i < parameterMappings.size(); i++) {
-            String property = parameterMappings.get(i).getProperty();
-            Object curValue = parameterValue.get(String.valueOf(i));
-            Object tmpValue = tmpMap.get(property);
-            if (tmpValue != null && !Objects.equals(tmpValue, curValue)) {
-                return true;
-            }
-            tmpMap.put(property, curValue);
-        }
-        return false;
-    }
-
     /**
      * 根据占位符名字获取sql解析结果集中字段上的注解
      *

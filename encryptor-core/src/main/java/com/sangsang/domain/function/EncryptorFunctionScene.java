@@ -1,6 +1,7 @@
 package com.sangsang.domain.function;
 
 import com.sangsang.cache.encryptor.EncryptorInstanceCache;
+import com.sangsang.domain.dto.ClassCacheKey;
 import com.sangsang.domain.exception.FieldEncryptorException;
 import net.sf.jsqlparser.expression.Expression;
 
@@ -70,11 +71,11 @@ public class EncryptorFunctionScene {
                 return EncryptorInstanceCache.<Expression>getInstance(currentFieldEncryptor.value()).decryption(expression);
             }
             //4.上下游都为密文，仅算法一致，返回原文
-            if (upstreamFieldEncryptor != null && currentFieldEncryptor != null && upstreamFieldEncryptor.value().equals(currentFieldEncryptor.value())) {
+            if (upstreamFieldEncryptor != null && currentFieldEncryptor != null && ClassCacheKey.classEquals(upstreamFieldEncryptor.value(), currentFieldEncryptor.value())) {
                 return expression;
             }
             //5.上下游都是密文，但是算法不一致，这里需要先使用当前字段算法解密，再使用上游字段算法加密
-            if (upstreamFieldEncryptor != null && currentFieldEncryptor != null && !upstreamFieldEncryptor.value().equals(currentFieldEncryptor.value())) {
+            if (upstreamFieldEncryptor != null && currentFieldEncryptor != null && !ClassCacheKey.classEquals(upstreamFieldEncryptor.value(), currentFieldEncryptor.value())) {
                 //5.1先使用当前字段算法进行解密
                 Expression cleartextExp = EncryptorInstanceCache.<Expression>getInstance(currentFieldEncryptor.value()).decryption(expression);
                 //5.2再使用上游字段进行加密
