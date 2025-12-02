@@ -4,7 +4,6 @@ import com.sangsang.config.other.DefaultBeanPostProcessor;
 import com.sangsang.config.properties.FieldProperties;
 import com.sangsang.domain.constants.SymbolConstant;
 import com.sangsang.domain.context.TransformationHolder;
-import com.sangsang.domain.dto.ClassCacheKey;
 import com.sangsang.domain.exception.TransformationException;
 import com.sangsang.domain.wrapper.ClassHashMapWrapper;
 import com.sangsang.transformation.TransformationInterface;
@@ -31,7 +30,7 @@ public class TransformationInstanceCache extends DefaultBeanPostProcessor {
      * key:转换器的父类class (限定是属于Column 还是Function)
      * value:对应转换器实例
      */
-    private static Map<Class, List<TransformationInterface>> TRANSFORMATION_MAP = null;
+    private static final Map<Class, List<TransformationInterface>> TRANSFORMATION_MAP = new ClassHashMapWrapper<>();
     /**
      * 实现了TransformationInterface接口的基类转换器的Class和泛型的对应关系
      * key:泛型Class
@@ -53,15 +52,18 @@ public class TransformationInstanceCache extends DefaultBeanPostProcessor {
         //1.将TransformationInterface的包路径 + 当前转换类型作为包路径，扫描下面的所有的类
         String basePackage = TransformationInterface.class.getPackage().getName() + SymbolConstant.FULL_STOP + fieldProperties.getTransformation().getPatternType();
 
-        //2.扫描当前配置模式包路径下所有类
-        Set<Class> classes = ClassScanerUtil.scan(basePackage);
+        //2.扫描当前配置模式包路径下所有TransformationInterface的子类
+        List<Class> classes = ClassScanerUtil.scan(basePackage).stream().filter(c -> TransformationInterface.class.isAssignableFrom(c)).collect(Collectors.toList());
         if (CollectionUtils.isEmpty(classes)) {
             log.warn("【db-transformation】未扫描到转换器，请确保transformation.pattern配置的转换类型和存放转换器的包路径名一致");
         }
 
         //3.将对应的转换器子类实例化后存储到对应的缓存中
-        Map<Class, List<TransformationInterface>> classListMap = classes.stream().collect(Collectors.groupingBy(c -> c.getSuperclass(), Collectors.mapping(c -> (TransformationInterface) ReflectUtils.newInstance(c), Collectors.toList())));
-        TRANSFORMATION_MAP = ClassHashMapWrapper.mapToClassHashMapWrapper(classListMap);
+        for (Class tfClz : classes) {
+            List<TransformationInterface> tfList = TRANSFORMATION_MAP.getOrDefault(tfClz.getSuperclass(), new ArrayList<>());
+            tfList.add((TransformationInterface) ReflectUtils.newInstance(tfClz));
+            TRANSFORMATION_MAP.put(tfClz.getSuperclass(), tfList);
+        }
 
         //4.找到各个转换器父类泛型和对应转换器父类class的对应关系
         classes.stream().map(Class::getSuperclass).distinct().forEach(f -> SUPERTRANSFORMATION_MAP.put(GenericityUtil.getInterfaceT(f, 0), f));

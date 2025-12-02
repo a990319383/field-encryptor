@@ -1,7 +1,5 @@
 package com.sangsang.test;
 
-import cn.hutool.cache.CacheUtil;
-import cn.hutool.cache.impl.LRUCache;
 import com.sangsang.config.properties.FieldProperties;
 import com.sangsang.util.AnswerUtil;
 import com.sangsang.util.JsqlparserUtil;
@@ -264,12 +262,7 @@ public class TransformationTest {
 
     @Test
     public void otherTest() {
-        LRUCache<Integer, Integer> lruCache = CacheUtil.newLRUCache(3);
-        for (int i = 0; i < 10; i++) {
-            lruCache.put(i, i);
-            lruCache.get(0);
-            System.out.println(lruCache);
-        }
+
     }
 
 
@@ -315,7 +308,8 @@ public class TransformationTest {
                 System.out.println("原始sql: " + sql);
                 return;
             }
-//            if (StringUtils.sqlEquals(answer, resultSql)) {
+            //注意：这里不能使用工具类里面的比较来判断结果是否正确，工具类里面的比较是把数据库标识符的引用符给全部去掉了判断相等的，语法转换功能涉及到这个符号的转换，所以只能使用忽略大小写的比较
+            //if (StringUtils.sqlEquals(answer, resultSql)) {
             if (answer.equalsIgnoreCase(resultSql)) {
                 System.out.println("成功: " + sqlFieldName);
             } else {

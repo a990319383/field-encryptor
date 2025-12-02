@@ -123,23 +123,4 @@ public class ClassHashMapWrapper<T> implements Map<Class, T>, Serializable {
         }
     }
 
-    /**
-     * 将map转换成ClassHashMapWrapper
-     *
-     * @author liutangqi
-     * @date 2025/12/1 15:46
-     * @Param [map]
-     **/
-    public static <T> ClassHashMapWrapper<T> mapToClassHashMapWrapper(Map<Class, T> map) {
-        ClassHashMapWrapper<T> classHashMapWrapper = new ClassHashMapWrapper<>();
-        if (map == null) {
-            return classHashMapWrapper;
-        }
-
-        for (Entry<Class, T> entry : map.entrySet()) {
-            classHashMapWrapper.put(entry.getKey(), entry.getValue());
-        }
-        return classHashMapWrapper;
-    }
-
 }
