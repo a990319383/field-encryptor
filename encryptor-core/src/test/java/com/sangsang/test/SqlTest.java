@@ -10,7 +10,6 @@ import com.sangsang.visitor.fieldparse.FieldParseParseTableSelectVisitor;
 import com.sangsang.visitor.pojoencrtptor.PoJoEncrtptorStatementVisitor;
 import cn.hutool.core.lang.Pair;
 import net.sf.jsqlparser.statement.Statement;
-import net.sf.jsqlparser.statement.select.PlainSelect;
 import org.junit.jupiter.api.Test;
 
 import java.util.*;
@@ -790,17 +789,13 @@ public class SqlTest {
     }
 
     @Test
-    public void testParse() throws Exception {
-        //设置测试配置
-        FieldProperties fieldProperties = CacheTestHelper.buildTestProperties();
-        //初始化缓存
-        CacheTestHelper.testInit(fieldProperties);
+    public void otherTest() throws Exception {
 
-        String sql = "select tu.* from tb_user tu";
-        Statement statement = JsqlparserUtil.parse(sql);
-        FieldParseParseTableSelectVisitor fieldParseParseTableSelectVisitor = FieldParseParseTableSelectVisitor.newInstanceFirstLayer();
-        ((PlainSelect) statement).accept(fieldParseParseTableSelectVisitor);
-        System.out.println(fieldParseParseTableSelectVisitor);
+        List<String> sqls = Arrays.asList(s1, s1, s1, s1, s1);
+        for (String sql : sqls) {
+            JsqlparserUtil.parse(sql);
+        }
+
     }
 
 }

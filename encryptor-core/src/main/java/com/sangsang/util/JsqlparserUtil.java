@@ -54,14 +54,14 @@ public class JsqlparserUtil {
      * @Param [sql]
      **/
     public static Statement parse(String sql) throws JSQLParserException {
-        //1.去除空白行（Jsqlparser4.9中sql中有空白行会解析报错）
-        String clearSql = StringUtils.replaceLineBreak(sql);
+        //1.从缓存中获取解析结果
+        Statement statement = SqlParseCache.getSqlParseCache(sql);
 
-        //2.判断缓存是否命中，没命中解析一个扔缓存中
-        Statement statement = SqlParseCache.getSqlParseCache(clearSql);
+        //2.缓存未命中，去除空白行后进行解析（Jsqlparser4.9中sql中有空白行会解析报错）
         if (statement == null) {
+            String clearSql = StringUtils.replaceLineBreak(sql);
             statement = CCJSqlParserUtil.parse(clearSql);
-            SqlParseCache.setSqlParseCache(clearSql, statement);
+            SqlParseCache.setSqlParseCache(sql, statement);
         }
 
         //3.将statement深克隆一份给到调用方，这里不能返回缓存对象，缓存对象里面会改，相互影响
