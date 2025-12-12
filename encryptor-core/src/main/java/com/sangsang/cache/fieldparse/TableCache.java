@@ -113,8 +113,10 @@ public class TableCache extends DefaultBeanPostProcessor {
             FieldFillUtil.fieldFill(dataSources, fieldProperties);
         }
 
-        //6.去掉不必要表的缓存，避免某些逻辑进行不必要的循环
-        simplificationCache(fieldProperties);
+        //6.如果没有开启表结构自动填充的话，去掉不必要表的缓存，避免某些逻辑进行不必要的循环（如果开启了自动填充，填充里面会自动过滤掉不需要的缓存信息）
+        if (!fieldProperties.isAutoFill()) {
+            simplificationCache(fieldProperties);
+        }
 
         log.info("【field-encryptor】初始化表结构信息，处理完毕 耗时：{}ms", (System.currentTimeMillis() - startTime));
     }
