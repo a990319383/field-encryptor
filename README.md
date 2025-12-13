@@ -376,6 +376,14 @@ public class OrderEntity extends BaseEntity {
 }
 ```
 
+##### 注意
+
+> 数据隔离时一般从当前登录用户中获取用户信息
+>
+> 此信息一般存ThreadLocal中，遇到异步的场景，请注意父子线程值传递问题
+>
+> 有异步场景，建议使用 TransmittableThreadLocal 替换 ThreadLocal
+
 #### 4.数据变更时维护默认值
 
 ##### 基本配置
