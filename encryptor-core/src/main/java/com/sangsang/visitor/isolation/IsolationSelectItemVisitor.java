@@ -6,8 +6,8 @@ import net.sf.jsqlparser.expression.Expression;
 import net.sf.jsqlparser.statement.select.SelectItem;
 import net.sf.jsqlparser.statement.select.SelectItemVisitor;
 
+import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 /**
  * @author liutangqi
@@ -25,7 +25,7 @@ public class IsolationSelectItemVisitor extends BaseFieldParseTable implements S
         return new IsolationSelectItemVisitor(baseFieldParseTable.getLayer(), baseFieldParseTable.getLayerSelectTableFieldMap(), baseFieldParseTable.getLayerFieldTableMap());
     }
 
-    private IsolationSelectItemVisitor(int layer, Map<String, Map<String, Set<FieldInfoDto>>> layerSelectTableFieldMap, Map<String, Map<String, Set<FieldInfoDto>>> layerFieldTableMap) {
+    private IsolationSelectItemVisitor(int layer, Map<Integer, Map<String, List<FieldInfoDto>>> layerSelectTableFieldMap, Map<Integer, Map<String, List<FieldInfoDto>>> layerFieldTableMap) {
         super(layer, layerSelectTableFieldMap, layerFieldTableMap);
     }
 

@@ -186,7 +186,7 @@ public class ExpressionsUtil {
         }
 
         if (defaultValue instanceof String) {
-            return new StringValue(String.valueOf(defaultValue));
+            return new StringValue((String) defaultValue);
         }
 
         if (defaultValue instanceof Integer) {

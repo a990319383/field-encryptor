@@ -1,0 +1,1 @@
+INSERT INTO tb_user (user_name, login_name, login_pwd, phone, role_id, id, create_time, update_time) (SELECT a.* FROM (SELECT tb_user.user_name, tb_user.login_name, tb_user.login_pwd, tb_user.phone, tb_user.role_id, tb_user.id, tb_user.create_time, tb_user.update_time FROM tb_user) a)

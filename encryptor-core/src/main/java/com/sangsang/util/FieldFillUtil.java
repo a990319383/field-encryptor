@@ -7,7 +7,7 @@ import com.sangsang.cache.fieldparse.TableCache;
 import com.sangsang.config.properties.FieldProperties;
 import com.sangsang.domain.dto.GenerateDto;
 import com.sangsang.domain.wrapper.FieldHashMapWrapper;
-import com.sangsang.domain.wrapper.FieldHashSetWrapper;
+import com.sangsang.domain.wrapper.FieldLinkedListWarpper;
 import lombok.extern.slf4j.Slf4j;
 
 import javax.sql.DataSource;
@@ -45,7 +45,7 @@ public class FieldFillUtil {
             Set<String> needTableNames = TableCache.getCurConfigTable();
 
             //3.解析出所有库我们需要解析的表的字段信息
-            Map<String, Set<String>> tableFieldMap = new FieldHashMapWrapper();
+            Map<String, List<String>> tableFieldMap = new FieldHashMapWrapper();
             for (DataSource dataSource : dataSources) {
                 //3.1 获取所有的表名
                 List<String> tableNames = EntityGenerateUtil.getTableNames(dataSource, GenerateDto.builder().build());
@@ -69,7 +69,7 @@ public class FieldFillUtil {
                         .forEach(f -> tableFieldMap.put(f.getTableName(), f.getColumns()
                                 .stream()
                                 .map(Column::getName)
-                                .collect(FieldHashSetWrapper::new, Set::add, Set::addAll)));
+                                .collect(Collectors.toCollection(FieldLinkedListWarpper::new))));
             }
 
             //4.将本项目核心缓存TableCache中缓存表结构的信息给替换成处理之后的

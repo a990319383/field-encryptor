@@ -3,6 +3,7 @@ package com.sangsang.domain.wrapper;
 import com.sangsang.domain.dto.FieldCacheKey;
 import com.sangsang.domain.exception.FieldException;
 
+import java.io.Serializable;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -15,9 +16,17 @@ import java.util.stream.Collectors;
  * @author liutangqi
  * @date 2025/11/6 10:19
  */
-public class FieldHashSetWrapper implements Set<String> {
+public class FieldHashSetWrapper implements Set<String>, Serializable {
 
     private final Set<FieldCacheKey> fieldCacheSet = new HashSet<>();
+
+    public FieldHashSetWrapper() {
+    }
+
+    public FieldHashSetWrapper(Collection<? extends String> c) {
+        super();
+        this.addAll(c);
+    }
 
     @Override
     public int size() {

@@ -21,7 +21,7 @@ public class TransformationProperties {
     /**
      * 语法转换时是否将字段和表名强制转换为小写
      * 默认是否
-     * 开启时会将字段和表名强制转换为小写，并且使用双引号引起来
+     * 当前是mysql2dm模式，开启时会将字段和表名强制转换为小写，并且使用双引号引起来
      **/
     private boolean forcedLowercase = false;
 }

@@ -5,7 +5,8 @@ import com.sangsang.domain.constants.FieldConstant;
 import com.sangsang.domain.constants.NumberConstant;
 import com.sangsang.domain.dto.BaseFieldParseTable;
 import com.sangsang.domain.dto.FieldInfoDto;
-import com.sangsang.domain.wrapper.FieldHashSetWrapper;
+import com.sangsang.domain.wrapper.FieldHashMapWrapper;
+import com.sangsang.domain.wrapper.FieldLinkedListWarpper;
 import com.sangsang.util.JsqlparserUtil;
 import net.sf.jsqlparser.expression.Alias;
 import net.sf.jsqlparser.schema.Table;
@@ -50,7 +51,7 @@ public class FieldParseParseTableFromItemVisitor extends BaseFieldParseTable imp
                 baseFieldParseTable.getLayerFieldTableMap());
     }
 
-    private FieldParseParseTableFromItemVisitor(int layer, Map<String, Map<String, Set<FieldInfoDto>>> layerSelectTableFieldMap, Map<String, Map<String, Set<FieldInfoDto>>> layerFieldTableMap) {
+    private FieldParseParseTableFromItemVisitor(int layer, Map<Integer, Map<String, List<FieldInfoDto>>> layerSelectTableFieldMap, Map<Integer, Map<String, List<FieldInfoDto>>> layerFieldTableMap) {
         super(layer, layerSelectTableFieldMap, layerFieldTableMap);
     }
 
@@ -61,11 +62,11 @@ public class FieldParseParseTableFromItemVisitor extends BaseFieldParseTable imp
         String aliasTable = Optional.ofNullable(table.getAlias()).map(Alias::getName).orElse(tableName);
 
         //2.获取当前表的全部字段信息
-        Set<FieldInfoDto> fieldInfoSet = Optional.ofNullable(TableCache.getTableFieldMap().get(tableName))
-                .orElse(new FieldHashSetWrapper())
+        List<FieldInfoDto> fieldInfoSet = Optional.ofNullable(TableCache.getTableFieldMap().get(tableName))
+                .orElse(new FieldLinkedListWarpper())
                 .stream()
                 .map(m -> FieldInfoDto.builder().columnName(m).sourceTableName(tableName).fromSourceTable(true).sourceColumn(m).build())
-                .collect(Collectors.toSet());
+                .collect(Collectors.toList());
 
         //3.将这些字段信息维护到 layerFieldTableMap 中
         JsqlparserUtil.putFieldInfo(this.getLayerFieldTableMap(), this.getLayer(), aliasTable, fieldInfoSet);
@@ -90,9 +91,9 @@ public class FieldParseParseTableFromItemVisitor extends BaseFieldParseTable imp
         subSelect.getSelect().accept(fieldParseTableSelectVisitor);
 
         //2.解析这一层涉及到的表的全部字段，子查询的时，本层的表的全部字段就是下一层的全部select的字段，本层的表名就是别名
-        Map<String, Set<FieldInfoDto>> selectTableFieldMap = this.getLayerSelectTableFieldMap().getOrDefault(String.valueOf(this.getLayer() + 1), new HashMap<>());
+        Map<String, List<FieldInfoDto>> selectTableFieldMap = this.getLayerSelectTableFieldMap().getOrDefault((this.getLayer() + 1), new FieldHashMapWrapper<>());
         //本层的字段都是来源于嵌套查询的结果集，不是真实表，所以将 fromSourceTable设置为false
-        Set<FieldInfoDto> fieldInfoSet = selectTableFieldMap
+        List<FieldInfoDto> fieldInfoSet = selectTableFieldMap
                 .values()
                 .stream()
                 .flatMap(Collection::stream)
@@ -102,7 +103,7 @@ public class FieldParseParseTableFromItemVisitor extends BaseFieldParseTable imp
                         .sourceColumn(m.getSourceColumn())
                         .sourceTableName(m.getSourceTableName())
                         .build())
-                .collect(Collectors.toSet());
+                .collect(Collectors.toList());
 
         //3. 将当前层的全部字段维护进 layerFieldTableMap 中
         JsqlparserUtil.putFieldInfo(this.getLayerFieldTableMap(), this.getLayer(), aliasTable, fieldInfoSet);

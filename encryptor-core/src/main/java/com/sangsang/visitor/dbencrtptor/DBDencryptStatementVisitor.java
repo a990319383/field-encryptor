@@ -3,7 +3,9 @@ package com.sangsang.visitor.dbencrtptor;
 import com.sangsang.cache.fieldparse.TableCache;
 import com.sangsang.domain.annos.encryptor.FieldEncryptor;
 import com.sangsang.domain.enums.EncryptorFunctionEnum;
+import com.sangsang.domain.wrapper.FieldHashMapWrapper;
 import com.sangsang.util.CollectionUtils;
+import com.sangsang.util.ExpressionsUtil;
 import com.sangsang.util.JsqlparserUtil;
 import com.sangsang.visitor.fieldparse.FieldParseParseTableFromItemVisitor;
 import com.sangsang.visitor.fieldparse.FieldParseParseTableSelectVisitor;
@@ -48,6 +50,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 /**
  * 解析sql的入口 （crud所有类型的sql ）
@@ -172,16 +175,22 @@ public class DBDencryptStatementVisitor implements StatementVisitor {
     public void visit(Insert insert) {
         //1. insert 的表
         Table table = insert.getTable();
-        Map<String, FieldEncryptor> fieldEncryptMap = TableCache.getTableFieldEncryptInfo().get(table.getName());
+        Map<String, FieldEncryptor> fieldEncryptMap = TableCache.getTableFieldEncryptInfo().getOrDefault(table.getName(), new FieldHashMapWrapper<>());
 
-        //2.获取当前第几个字段是需要加密的
-        // 需要加密的字段的索引
+        //2.通过获取insert的字段信息，解析出每个字段所对应的@FieldEncryptor，方便对插入字段需要加密的进行处理
         List<FieldEncryptor> needEncryptFieldEncryptor = new ArrayList<>();
-        //insert 的字段名
+        // insert into 表  values( ?,?,?,?,?,?,?,?) 这种语法时，这里的 columns 就是空的 ，如果当前配置开启了自动读取表结构的话，我们是能获取到表字段顺序的，这里可以自动填充，否则拿不到表字段顺序，无法兼容此语法
         List<Column> columns = insert.getColumns();
-        if (CollectionUtils.isEmpty(columns)) {
-            log.warn("【field-encryptor】insert 语句未指定表字段顺序，不支持自动加解密，请规范语法 原sql:{}", insert.toString());
-            return;
+        //2.1 遇到了这种语法，且未开启自动读取表结构，给用户警告日志，让用户自行调整
+        if (CollectionUtils.isEmpty(columns) && !TableCache.getCurConfig().isAutoFill()) {
+            //单纯给提示，方便使用方快速定位问题
+            log.warn("【field-encryptor】insert 语句未指定表字段顺序，且当前未开启自动读取表结构，无法获取表字段顺序。此情况可能导致加解密处理错误！！！请规范语法或开启 field.autoFill=true  原sql:{}", insert.toString());
+        }
+        //2.2 当前配置了自动读取表结构，这种情况下才能拿到真实的字段顺序，此时把字段进行补齐
+        if (CollectionUtils.isEmpty(columns) && TableCache.getCurConfig().isAutoFill()) {
+            List<String> fieldLinkedList = TableCache.getTableFieldMap().get(table.getName());
+            columns = fieldLinkedList.stream().map(m -> ExpressionsUtil.buildColumn(m, table.getName())).collect(Collectors.toList());
+            insert.setColumns(new ExpressionList(columns));
         }
 
         for (int i = 0; i < columns.size(); i++) {

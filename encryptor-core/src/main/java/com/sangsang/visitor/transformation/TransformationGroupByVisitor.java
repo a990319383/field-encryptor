@@ -2,7 +2,6 @@ package com.sangsang.visitor.transformation;
 
 import com.sangsang.domain.dto.BaseFieldParseTable;
 import com.sangsang.domain.dto.FieldInfoDto;
-import com.sangsang.util.ExpressionsUtil;
 import com.sangsang.visitor.transformation.wrap.ExpressionWrapper;
 import net.sf.jsqlparser.expression.Expression;
 import net.sf.jsqlparser.expression.operators.relational.ExpressionList;
@@ -32,7 +31,7 @@ public class TransformationGroupByVisitor extends BaseFieldParseTable implements
         );
     }
 
-    private TransformationGroupByVisitor(int layer, Map<String, Map<String, Set<FieldInfoDto>>> layerSelectTableFieldMap, Map<String, Map<String, Set<FieldInfoDto>>> layerFieldTableMap) {
+    private TransformationGroupByVisitor(int layer, Map<Integer, Map<String, List<FieldInfoDto>>> layerSelectTableFieldMap, Map<Integer, Map<String, List<FieldInfoDto>>> layerFieldTableMap) {
         super(layer, layerSelectTableFieldMap, layerFieldTableMap);
     }
 

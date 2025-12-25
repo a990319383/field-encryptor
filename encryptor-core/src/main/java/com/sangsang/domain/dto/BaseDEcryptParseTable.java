@@ -4,8 +4,8 @@ import com.sangsang.domain.annos.encryptor.FieldEncryptor;
 import com.sangsang.domain.enums.EncryptorFunctionEnum;
 import lombok.Getter;
 
+import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 /**
  * 需要进行加解密函数调用的基类
@@ -37,8 +37,8 @@ public class BaseDEcryptParseTable extends BaseFieldParseTable {
     public BaseDEcryptParseTable(int layer,
                                  EncryptorFunctionEnum encryptorFunctionEnum,
                                  FieldEncryptor upstreamFieldEncryptor,
-                                 Map<String, Map<String, Set<FieldInfoDto>>> layerSelectTableFieldMap,
-                                 Map<String, Map<String, Set<FieldInfoDto>>> layerFieldTableMap) {
+                                 Map<Integer, Map<String, List<FieldInfoDto>>> layerSelectTableFieldMap,
+                                 Map<Integer, Map<String, List<FieldInfoDto>>> layerFieldTableMap) {
         super(layer, layerSelectTableFieldMap, layerFieldTableMap);
         this.encryptorFunctionEnum = encryptorFunctionEnum;
         this.upstreamFieldEncryptor = upstreamFieldEncryptor;

@@ -20,7 +20,7 @@ public interface FieldConstant {
     /**
      * 当某些子表没有别名时，将这个前缀 + 层数 作为表别名
      */
-    String VIRTUAL_TABLE_ALIAS  = "VIRTUAL_TABLE_ALIAS_";
+    String VIRTUAL_TABLE_ALIAS = "VIRTUAL_TABLE_ALIAS_";
 
     /**
      * 对于？ 占位符的替换，后面拼接自增序号，从0开始

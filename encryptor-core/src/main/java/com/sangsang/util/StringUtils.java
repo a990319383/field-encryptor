@@ -9,9 +9,8 @@ import com.sangsang.domain.constants.SymbolConstant;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * 避免引入多余的包，这里将commons.lang3的工具类给拷贝过来
@@ -404,18 +403,22 @@ public class StringUtils {
         compare1 = compare1.replaceAll(identifierQuote, SymbolConstant.BLANK);
         compare2 = compare2.replaceAll(identifierQuote, SymbolConstant.BLANK);
 
-        //3.去掉sql中的逗号，查询的字段顺序不同时，最后一个字段会不带逗号，放前面这个逗号会不见
-        compare1 = compare1.replaceAll(SymbolConstant.COMMA, SymbolConstant.BLANK);
-        compare2 = compare2.replaceAll(SymbolConstant.COMMA, SymbolConstant.BLANK);
+        //3.将sql中的逗号，括号用空格隔起来，查询的字段顺序不同时，最后一个字段会不带逗号，放前面这个逗号会不见。所以用空格隔起来，这样分隔的时候能屏蔽掉顺序差异
+        compare1 = compare1.replaceAll(SymbolConstant.COMMA, SymbolConstant.SPACING + SymbolConstant.COMMA + SymbolConstant.SPACING)
+                .replaceAll(SymbolConstant.ESC_LEFT_HALF_BRACKET, SymbolConstant.SPACING + SymbolConstant.LEFT_HALF_BRACKET + SymbolConstant.SPACING)
+                .replaceAll(SymbolConstant.ESC_POST_BRACKET, SymbolConstant.SPACING + SymbolConstant.POST_BRACKET + SymbolConstant.SPACING);
+        compare2 = compare2.replaceAll(SymbolConstant.COMMA, SymbolConstant.SPACING + SymbolConstant.COMMA + SymbolConstant.SPACING)
+                .replaceAll(SymbolConstant.ESC_LEFT_HALF_BRACKET, SymbolConstant.SPACING + SymbolConstant.LEFT_HALF_BRACKET + SymbolConstant.SPACING)
+                .replaceAll(SymbolConstant.ESC_POST_BRACKET, SymbolConstant.SPACING + SymbolConstant.POST_BRACKET + SymbolConstant.SPACING);
 
-        //4.将sql按照空格切分后再比较，避免字段顺序不同导致判定两个sql不同
+        //4.将sql按照空格切分后过滤掉空字符串后再比较，避免字段顺序不同导致判定两个sql不同
         Map<String, Integer> map = new HashMap<>();
-        String[] split1 = compare1.split(SymbolConstant.SPACING);
+        List<String> split1 = Arrays.stream(compare1.split(SymbolConstant.SPACING)).filter(StringUtils::isNotBlank).collect(Collectors.toList());
         for (String s : split1) {
             Integer curCount = map.getOrDefault(s, 0);
             map.put(s, ++curCount);
         }
-        String[] split2 = compare2.split(SymbolConstant.SPACING);
+        List<String> split2 = Arrays.stream(compare2.split(SymbolConstant.SPACING)).filter(StringUtils::isNotBlank).collect(Collectors.toList());
         for (String s : split2) {
             Integer curCount = map.get(s);
             if (curCount == null) {

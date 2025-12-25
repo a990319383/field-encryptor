@@ -1,15 +1,12 @@
 package com.sangsang.domain.dto;
 
 
-import com.sangsang.domain.wrapper.FieldHashMapWrapper;
+import com.sangsang.domain.wrapper.LayerHashMapWrapper;
 import lombok.Getter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Set;
+import java.util.*;
 
 /**
  * 解析sql中出现字段的基类
@@ -31,7 +28,7 @@ public class BaseFieldParseTable {
      * --- value: (注意：这里嵌套子查询时，这里的所有字段不一定属于同一张表)
      * -------出现的字段的 “别名” 和这个字段所属的真实表名
      **/
-    private Map<String, Map<String, Set<FieldInfoDto>>> layerSelectTableFieldMap;
+    private Map<Integer, Map<String, List<FieldInfoDto>>> layerSelectTableFieldMap;
     /**
      * 存储sql中 第layer 层查询表 拥有的全部字段
      * key： layer层数
@@ -40,17 +37,17 @@ public class BaseFieldParseTable {
      * --- value: (注意：这里嵌套子查询时，这里的所有字段不一定属于同一张表)
      * ------查询的表拥有的全部 “字段原名”和所属的真实表名
      */
-    private Map<String, Map<String, Set<FieldInfoDto>>> layerFieldTableMap;
+    private Map<Integer, Map<String, List<FieldInfoDto>>> layerFieldTableMap;
 
 
     protected static final Logger log = LoggerFactory.getLogger(BaseFieldParseTable.class);
 
     public BaseFieldParseTable(int layer,
-                               Map<String, Map<String, Set<FieldInfoDto>>> layerSelectTableFieldMap,
-                               Map<String, Map<String, Set<FieldInfoDto>>> layerFieldTableMap) {
+                               Map<Integer, Map<String, List<FieldInfoDto>>> layerSelectTableFieldMap,
+                               Map<Integer, Map<String, List<FieldInfoDto>>> layerFieldTableMap) {
         this.layer = layer;
-        this.layerSelectTableFieldMap = Optional.ofNullable(layerSelectTableFieldMap).orElse(new HashMap<>());
-        this.layerFieldTableMap = Optional.ofNullable(layerFieldTableMap).orElse(new HashMap<>());
+        this.layerSelectTableFieldMap = Optional.ofNullable(layerSelectTableFieldMap).orElse(new LayerHashMapWrapper());
+        this.layerFieldTableMap = Optional.ofNullable(layerFieldTableMap).orElse(new LayerHashMapWrapper());
     }
 
 }

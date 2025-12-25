@@ -2,27 +2,32 @@
 
 ## 一、技术支持
 
-- 990319383@qq.com
-- bug反馈可通过邮件或者QQ的方式进行联系，QQ的话请备注来意
-- QQ交流群：1072901252     有意见和建议欢迎群里面讨论，对您有帮助的话，点个star是对我最大的肯定
+- 邮箱：990319383@qq.com
+- QQ交流群：1072901252    
+- 意见和建议欢迎群里面讨论，对您有帮助的话，点个star是对我最大的肯定
+
+> 此文档针对3.6.0以后的版本，各版本记录详见文档《版本迭代记录.md》
+>
+> 请使用最新版本，没有特殊情况，bug都会在最新版本修改。git最新版本为master,中央仓库最新版本为3.6.0-alpha
 
 ## 二、简介
 
-> 用于等保，秘评，信创，数据安全等场景。实现业务快速改造，减少重复性工作，使客户专注业务开发
+> 在数字化转型的背景下，开发者常面临复杂的数据合规、异构数据库迁移，多租户等复杂数据隔离挑战。
 >
-> 基于mybatis拦截器 + jsqlparser ，动态改写sql。
+> 【field-encryptor】 旨在打造一个对业务代码零侵入的透明中间层。
 >
-> 此文档针对3.6.0以后的版本
->
-> 请使用最新版本，没有特殊情况，bug都会在最新版本修改。当前最新git版本为3.6.0,中央仓库最新版本为3.6.0-alpha
+> 基于mybatis拦截器，通过动态 SQL 解析引擎，在不改变原有业务逻辑的前提下，实现数据从“存储加密”到“展示脱敏”、从“数据隔离”到“语法兼容”的全生命周期治理。
 
 ## 三、功能清单
 
+除数据脱敏功能外，都是<font color='orange'>**一处配置，全局生效**</font>，告别繁琐的满屏注解
+
 > - 数据库字段自动加解密（自动改写sql实现加密存储，解密查询）
->   - db模式：使用数据库自带的加解密算法
+>   - db模式：使用数据库自带的加解密算法，支持密文模糊搜索
 >   - pojo模式：使用java可以实现的加解密算法
 > - sql语法自动切换
 >   - mysql的语法自动转换为达梦数据库语法
+>   - 可扩展其它数据库
 > - 业务数据自动隔离
 >   - 执行的sql自动拼接上权限隔离的条件，可轻松解决复杂场景的数据隔离
 > - 数据变更时维护默认值
@@ -104,13 +109,16 @@ select  phone,user_name FROM tb_user WHERE phone = ?
 
 - 项目基于jsqlparser4.9解析，其版本不支持的sql语法，此框架无法兼容
 - INSERT INTO 表名 VALUES (所有字段);   表名后面没有跟具体字段的，无法兼容
+  - 备注：3.6.1-alpha 版本后，如果开启了autoFill的场景下，可以兼容此语法
 
 ##### pojo模式不兼容的场景
 
 - mybatis-plus  service层自带的saveBatch()方法不支持自动加密
 - 列运算的结果集和sql的入参响应需要做对应的
-  - 例如： select  concat(phone,"---")  as ph from tb_user;  无法将ph变量做自动的解密映射
+  - 栗如： select  concat(phone,"---")  as ph from tb_user;  无法将ph变量做自动的解密映射
 - 同一个#{}入参，sql中对应不同的字段，想要拥有不同的值
+- sql中直接字段到字段对应，不经过外部传参的，无法兼容
+  - 栗如： insert (select) 此类语法，数据都是在数据库层面，不从java应用层过
 
 ### 2.sql语法自动切换
 
@@ -136,6 +144,8 @@ select  phone,user_name FROM tb_user WHERE phone = ?
 #### 应用场景
 
 > 用于一般的项目开发中，需要不同的登录用户看到不同的数据范围
+>
+> 备注：暂时只实现了查询的自动隔离，删除和修改一般会带唯一标识，当前版本暂未支持，后续版本考虑
 
 #### 方案对比
 
@@ -939,16 +949,28 @@ CREATE TABLE `tb_user` (
   `user_name` varchar(100) DEFAULT NULL COMMENT '用户名',
   `login_name` varchar(100) DEFAULT NULL COMMENT '登录名',
   `login_pwd` varchar(100) DEFAULT NULL COMMENT '登录密码',
-  `phone` varchar(50) DEFAULT NULL COMMENT '电话号码',
+  `phone` varchar(50) DEFAULT NULL COMMENT '电话号码（密文）',
   `role_id` bigint DEFAULT NULL COMMENT '角色id',
   `create_time` datetime DEFAULT NULL,
   `update_time` datetime DEFAULT NULL,
   PRIMARY KEY (`id`)
 )COMMENT='测试表-用户';
+
+CREATE TABLE `tb_user_bak` (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `user_name` varchar(100) DEFAULT NULL COMMENT '用户名',
+  `login_name` varchar(100) DEFAULT NULL COMMENT '登录名',
+  `login_pwd` varchar(100) DEFAULT NULL COMMENT '登录密码',
+  `phone` varchar(50) DEFAULT NULL COMMENT '电话号码（明文）',
+  `role_id` bigint DEFAULT NULL COMMENT '角色id',
+  `create_time` datetime DEFAULT NULL,
+  `update_time` datetime DEFAULT NULL,
+  PRIMARY KEY (`id`)
+)COMMENT='测试表-用户-备份表';
 		
 CREATE TABLE `tb_role` (
   `id` bigint NOT NULL AUTO_INCREMENT,
-  `role_name` varchar(100) DEFAULT NULL COMMENT '角色名字',
+  `role_name` varchar(100) DEFAULT NULL COMMENT '角色名字（密文）',
   `role_desc` varchar(100) DEFAULT NULL COMMENT '角色描述',
   `create_time` datetime DEFAULT NULL,
   `update_time` datetime DEFAULT NULL,
@@ -958,7 +980,7 @@ CREATE TABLE `tb_role` (
 CREATE TABLE `tb_menu` (
   `id` bigint NOT NULL AUTO_INCREMENT,
   `menu_name` varchar(100) DEFAULT NULL COMMENT '菜单名字',
-  `path` varchar(100) DEFAULT NULL COMMENT '路径',
+  `path` varchar(100) DEFAULT NULL COMMENT '路径（密文）',
   `parent_id` bigint DEFAULT NULL COMMENT '父级id,第一级是0',
   `create_time` datetime DEFAULT NULL,
   `update_time` datetime DEFAULT NULL,
@@ -980,6 +1002,8 @@ CREATE TABLE `tb_menu` (
 
 ### 版本迭代记录
 
+> git版本主要迭代记录
+
 | 版本号 |                           主要内容                           |  日期   |
 | :----: | :----------------------------------------------------------: | :-----: |
 |  1.0   |                    支持db模式的自动加解密                    | 2024/5  |
@@ -991,4 +1015,8 @@ CREATE TABLE `tb_menu` (
 | 3.3.0  |             增加数据隔离支持（maven仓库未发布）              | 2025/7  |
 | 3.5.0  |                整体配置方式重构，使用方法变化                | 2025/7  |
 | 3.6.0  |               支持大小写敏感配置，简化框架配置               | 2025/11 |
+
+> 版本迭代记录见同层级文件  
+
+​	**版本迭代记录.md**
 

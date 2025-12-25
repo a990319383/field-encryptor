@@ -1,0 +1,1 @@
+INSERT INTO tb_user (user_name, login_name, login_pwd, phone, role_id, id, create_time, update_time) (SELECT t.user_name, t.login_name, t.login_pwd, TO_BASE64(AES_ENCRYPT(t.phone, '7uq?q8g3@q')) AS phone, t.role_id, t.id, t.create_time, t.update_time FROM tb_user_bak t)

@@ -29,8 +29,8 @@ public class PlaceholderSelectVisitor extends PlaceholderFieldParseTable impleme
 
 
     private PlaceholderSelectVisitor(int layer,
-                                     Map<String, Map<String, Set<FieldInfoDto>>> layerSelectTableFieldMap,
-                                     Map<String, Map<String, Set<FieldInfoDto>>> layerFieldTableMap,
+                                     Map<Integer, Map<String, List<FieldInfoDto>>> layerSelectTableFieldMap,
+                                     Map<Integer, Map<String, List<FieldInfoDto>>> layerFieldTableMap,
                                      Map<String, ColumnTableDto> placeholderColumnTableMap,
                                      List<? extends Expression> upstream) {
         super(layer, layerSelectTableFieldMap, layerFieldTableMap, placeholderColumnTableMap);
@@ -113,6 +113,22 @@ public class PlaceholderSelectVisitor extends PlaceholderFieldParseTable impleme
     }
 
     /**
+     * 返回下一层实例
+     *
+     * @author liutangqi
+     * @date 2025/12/23 10:31
+     * @Param [placeholderFieldParseTable, upstreamExpressionList]
+     **/
+    public static PlaceholderSelectVisitor newInstanceNextLayer(PlaceholderFieldParseTable placeholderFieldParseTable,
+                                                                List<? extends Expression> upstreamExpressionList) {
+        return new PlaceholderSelectVisitor((placeholderFieldParseTable.getLayer() + 1),
+                placeholderFieldParseTable.getLayerSelectTableFieldMap(),
+                placeholderFieldParseTable.getLayerFieldTableMap(),
+                placeholderFieldParseTable.getPlaceholderColumnTableMap(),
+                upstreamExpressionList);
+    }
+
+    /**
      * 场景1：
      * select
      * (select xx from tb)as xxx -- 这种语法
@@ -154,7 +170,7 @@ public class PlaceholderSelectVisitor extends PlaceholderFieldParseTable impleme
         //2.解析from 后面的 #{}占位符
         FromItem fromItem = plainSelect.getFromItem();
         if (fromItem != null) {
-            PlaceholderSelectFromItemVisitor placeholderSelectFromItemVisitor = PlaceholderSelectFromItemVisitor.newInstanceCurLayer(this);
+            PlaceholderSelectFromItemVisitor placeholderSelectFromItemVisitor = PlaceholderSelectFromItemVisitor.newInstanceCurLayer(this, this.upstreamExpressionList);
             fromItem.accept(placeholderSelectFromItemVisitor);
         }
 

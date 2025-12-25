@@ -5,6 +5,7 @@ import cn.hutool.json.JSONArray;
 import cn.hutool.json.JSONObject;
 import com.sangsang.cache.fieldparse.TableCache;
 import com.sangsang.domain.constants.SymbolConstant;
+import com.sangsang.domain.wrapper.FieldHashSetWrapper;
 
 import java.util.*;
 
@@ -31,6 +32,28 @@ public class CollectionUtils {
      */
     public static boolean isNotEmpty(Collection<?> coll) {
         return !isEmpty(coll);
+    }
+
+    /**
+     * 校验集合是否为空
+     *
+     * @param map 入参
+     * @return boolean
+     * @copy org.springframework.util.CollectionUtils
+     */
+    public static boolean isEmpty(Map<?, ?> map) {
+        return (map == null || map.isEmpty());
+    }
+
+    /**
+     * 校验集合是否不为空
+     *
+     * @param map 入参
+     * @return boolean
+     * @copy org.springframework.util.CollectionUtils
+     */
+    public static boolean isNotEmpty(Map<?, ?> map) {
+        return !isEmpty(map);
     }
 
     /**
@@ -103,6 +126,37 @@ public class CollectionUtils {
         return res;
     }
 
+
+    /**
+     * 往Map<K,Set<V>> 中添加元素
+     *
+     * @author liutangqi
+     * @date 2025/12/24 14:58
+     * @Param [map, key, value]
+     **/
+    public static <K> void putList(Map<K, Set<String>> map, K key, String value) {
+        Set<String> list = map.get(key);
+        if (list == null) {
+            list = new FieldHashSetWrapper();
+            map.put(key, list);
+        }
+        list.add(value);
+    }
+
+    /**
+     * 往Map<K,Set<V>> 中添加元素
+     *
+     * @author liutangqi
+     * @date 2025/12/24 14:58
+     * @Param [map, key, value]
+     **/
+    public static <K> void putList(Map<K, Set<String>> map, K key, Collection<String> values) {
+        if (CollectionUtils.isNotEmpty(values)) {
+            for (String value : values) {
+                putList(map, key, value);
+            }
+        }
+    }
 
     /**
      * pojo模式校验处理后的json数据是否相等

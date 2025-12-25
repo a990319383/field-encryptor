@@ -72,6 +72,21 @@ public class DBDecryptSelectVisitor extends BaseFieldParseTable implements Selec
      * @date 2025/3/2 22:22
      * @Param [baseFieldParseTable, encryptorFunction]
      **/
+    public static DBDecryptSelectVisitor newInstanceNextLayer(BaseFieldParseTable baseFieldParseTable,
+                                                              List<FieldEncryptor> upstreamNeedEncryptFieldEncryptor) {
+        return new DBDecryptSelectVisitor(upstreamNeedEncryptFieldEncryptor,
+                (baseFieldParseTable.getLayer() + 1),
+                baseFieldParseTable.getLayerSelectTableFieldMap(),
+                baseFieldParseTable.getLayerFieldTableMap());
+    }
+
+    /**
+     * 获取下一层解析实例
+     *
+     * @author liutangqi
+     * @date 2025/3/2 22:22
+     * @Param [baseFieldParseTable, encryptorFunction]
+     **/
     public static DBDecryptSelectVisitor newInstanceNextLayer(BaseFieldParseTable baseFieldParseTable) {
         return new DBDecryptSelectVisitor(null,
                 (baseFieldParseTable.getLayer() + 1),
@@ -83,8 +98,8 @@ public class DBDecryptSelectVisitor extends BaseFieldParseTable implements Selec
 
     private DBDecryptSelectVisitor(List<FieldEncryptor> upstreamNeedEncryptFieldEncryptor,
                                    int layer,
-                                   Map<String, Map<String, Set<FieldInfoDto>>> layerSelectTableFieldMap,
-                                   Map<String, Map<String, Set<FieldInfoDto>>> layerFieldTableMap) {
+                                   Map<Integer, Map<String, List<FieldInfoDto>>> layerSelectTableFieldMap,
+                                   Map<Integer, Map<String, List<FieldInfoDto>>> layerFieldTableMap) {
         super(layer, layerSelectTableFieldMap, layerFieldTableMap);
         this.upstreamNeedEncryptFieldEncryptor = Optional.ofNullable(upstreamNeedEncryptFieldEncryptor).orElse(new ArrayList<>());
     }
@@ -120,13 +135,13 @@ public class DBDecryptSelectVisitor extends BaseFieldParseTable implements Selec
         //1.解密 from 的表 （解密所有内层的语句）
         FromItem fromItem = plainSelect.getFromItem();
         if (fromItem != null) {
-            DBDecryptFromItemVisitor sDecryptFromItemVisitor = DBDecryptFromItemVisitor.newInstanceCurLayer(this);
+            DBDecryptFromItemVisitor sDecryptFromItemVisitor = DBDecryptFromItemVisitor.newInstanceCurLayer(this, this.upstreamNeedEncryptFieldEncryptor);
             fromItem.accept(sDecryptFromItemVisitor);
         }
 
         //2.将 select *  select 别名.* 转换为select 字段
         List<SelectItem> selectItems = plainSelect.getSelectItems().stream()
-                .map(m -> JsqlparserUtil.perfectAllColumns(m, this.getLayerFieldTableMap().get(String.valueOf(this.getLayer()))))
+                .map(m -> JsqlparserUtil.perfectAllColumns(m, this.getLayer(),this.getLayerFieldTableMap(), this.upstreamNeedEncryptFieldEncryptor))
                 .flatMap(Collection::stream)
                 .collect(Collectors.toList());
 

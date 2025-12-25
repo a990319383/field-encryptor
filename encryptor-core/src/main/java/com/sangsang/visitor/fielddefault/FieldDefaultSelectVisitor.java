@@ -42,8 +42,8 @@ public class FieldDefaultSelectVisitor extends BaseFieldParseTable implements Se
 
     private FieldDefaultSelectVisitor(List<FieldDefault> upstreamFieldDefaultColumns,
                                       int layer,
-                                      Map<String, Map<String, Set<FieldInfoDto>>> layerSelectTableFieldMap,
-                                      Map<String, Map<String, Set<FieldInfoDto>>> layerFieldTableMap) {
+                                      Map<Integer, Map<String, List<FieldInfoDto>>> layerSelectTableFieldMap,
+                                      Map<Integer, Map<String, List<FieldInfoDto>>> layerFieldTableMap) {
         super(layer, layerSelectTableFieldMap, layerFieldTableMap);
         this.upstreamFieldDefaultColumns = upstreamFieldDefaultColumns;
     }

@@ -145,7 +145,7 @@ public class PoJoParamEncrtptorInterceptor implements Interceptor, BeanPostProce
         List<ParameterMapping> parameterMappings = boundSql.getParameterMappings();
 
         //2.将其中需要加密的字段进行加密(注意：这里只返回key value对应关系，不能现在就boundSql.setAdditionalParameter ，否则会导致 parseObj()方法中 hasAdditionalParameter()结果出错 aaa.bbb.ccc 这种方法只判断里面是否有aaa)
-        Map<String, Object> parameterValue = new HashMap<>();
+        Map<Integer, Object> parameterValue = new HashMap<>();
         for (int i = 0; i < parameterMappings.size(); i++) {
             ParameterMapping parameterMapping = parameterMappings.get(i);
             //sql关系中，占位符被统一替换成了这个
@@ -157,16 +157,16 @@ public class PoJoParamEncrtptorInterceptor implements Interceptor, BeanPostProce
             FieldEncryptor fieldEncryptor = parseFieldEncryptor(placeholderKey, pair.getKey());
             if (propertyValue instanceof String && fieldEncryptor != null) {
                 String ciphertext = EncryptorInstanceCache.<String>getInstance(fieldEncryptor.value()).encryption((String) propertyValue);
-                parameterValue.put(String.valueOf(i), ciphertext);
+                parameterValue.put(i, ciphertext);
             } else {
                 //不需要加密的话，则入参还是使用旧值
-                parameterValue.put(String.valueOf(i), propertyValue);
+                parameterValue.put(i, propertyValue);
             }
         }
 
         //3.将处理好的结果集进行设置值
         for (int i = 0; i < parameterMappings.size(); i++) {
-            boundSql.setAdditionalParameter(parameterMappings.get(i).getProperty(), parameterValue.get(String.valueOf(i)));
+            boundSql.setAdditionalParameter(parameterMappings.get(i).getProperty(), parameterValue.get(i));
         }
     }
 

@@ -74,10 +74,27 @@ public interface SymbolConstant {
      * 星号
      */
     String START = "*";
+
     /**
-     * union
+     * 前括号
      */
-    String UNION = "union";
+    String LEFT_HALF_BRACKET = "(";
+
+    /**
+     * 后括号
+     **/
+    String POST_BRACKET = ")";
+
+    /**
+     * 转义前括号
+     */
+    String ESC_LEFT_HALF_BRACKET = "\\(";
+
+    /**
+     * 转义后括号
+     **/
+    String ESC_POST_BRACKET = "\\)";
+
     /**
      * 默认秘钥
      */

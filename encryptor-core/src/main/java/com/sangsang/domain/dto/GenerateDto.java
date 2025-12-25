@@ -23,12 +23,7 @@ public class GenerateDto {
     private String url;
     /**
      * 数据库账号，注意权限
-     * 确保拥有下面两句sql的执行权限
-     * -- 测试能否获取表列表
-     * SELECT TABLE_NAME FROM information_schema.TABLES WHERE TABLE_SCHEMA = 'your_database';
-     * -- 测试能否获取表结构
-     * SELECT COLUMN_NAME, DATA_TYPE FROM information_schema.COLUMNS
-     * WHERE TABLE_SCHEMA = 'your_database' AND TABLE_NAME = 'your_table';
+     * 确保拥有查看表结构的权限
      */
     private String username;
     /**

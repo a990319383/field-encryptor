@@ -1,0 +1,1 @@
+SELECT tu.user_name, tu.login_name, tu.login_pwd, CAST(AES_DECRYPT(FROM_BASE64(tu.phone), '7uq?q8g3@q') AS CHAR) AS phone, tu.role_id, tu.id, tu.create_time, tu.update_time FROM tb_user tu WHERE tu.phone IN (SELECT tmp.* FROM (SELECT TO_BASE64(AES_ENCRYPT(?, '7uq?q8g3@q')) FROM tb_role tr WHERE tr.role_name = TO_BASE64(AES_ENCRYPT(?, '测试秘钥'))) tmp)

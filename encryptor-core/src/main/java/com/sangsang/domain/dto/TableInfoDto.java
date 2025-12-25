@@ -6,7 +6,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.util.Set;
+import java.util.List;
 
 /**
  * @author liutangqi
@@ -25,7 +25,7 @@ public class TableInfoDto {
     /**
      * 该表拥有的全部字段
      */
-    private Set<TableFieldDto> tableFields;
+    private List<TableFieldDto> tableFields;
 
     /**
      * 表名上面标注@DataIsolation

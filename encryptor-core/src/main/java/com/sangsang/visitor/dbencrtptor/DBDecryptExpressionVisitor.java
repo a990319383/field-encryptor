@@ -89,8 +89,8 @@ public class DBDecryptExpressionVisitor extends BaseDEcryptParseTable implements
     private DBDecryptExpressionVisitor(int layer,
                                        EncryptorFunctionEnum encryptorFunctionEnum,
                                        FieldEncryptor upstreamFieldEncryptor,
-                                       Map<String, Map<String, Set<FieldInfoDto>>> layerSelectTableFieldMap,
-                                       Map<String, Map<String, Set<FieldInfoDto>>> layerFieldTableMap) {
+                                       Map<Integer, Map<String, List<FieldInfoDto>>> layerSelectTableFieldMap,
+                                       Map<Integer, Map<String, List<FieldInfoDto>>> layerFieldTableMap) {
         super(layer, encryptorFunctionEnum, upstreamFieldEncryptor, layerSelectTableFieldMap, layerFieldTableMap);
     }
 
@@ -378,8 +378,8 @@ public class DBDecryptExpressionVisitor extends BaseDEcryptParseTable implements
         //2.3 当右边是子查询时 （对应语法2，语法3，语法5，语法7）
         else if (rightExpression instanceof ParenthesedSelect) {
             ParenthesedSelect rightSelect = (ParenthesedSelect) rightExpression;
-            //这种情况右边是一个完全独立的sql，单独解析
-            FieldParseParseTableSelectVisitor fPTableSelectVisitor = FieldParseParseTableSelectVisitor.newInstanceFirstLayer();
+            //这种情况右边是一个完全独立的sql，单独解析 注意：子查询是有权限读取上游表字段信息的，所以这里单独解析的时候将上游的解析结果合并到下游
+            FieldParseParseTableSelectVisitor fPTableSelectVisitor = FieldParseParseTableSelectVisitor.newInstanceIndividualMap(this);
             rightSelect.accept(fPTableSelectVisitor);
             //对右边的sql进行加解密处理
             DBDecryptSelectVisitor dbDecryptSelectVisitor = DBDecryptSelectVisitor.newInstanceCurLayer(fPTableSelectVisitor, needEncryptFieldEncryptorList);

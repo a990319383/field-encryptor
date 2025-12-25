@@ -15,6 +15,7 @@ import com.sangsang.domain.dto.FieldInfoDto;
 import com.sangsang.domain.enums.EncryptorFunctionEnum;
 import com.sangsang.domain.enums.SqlCommandEnum;
 import com.sangsang.domain.wrapper.FieldHashMapWrapper;
+import com.sangsang.domain.wrapper.LayerHashMapWrapper;
 import com.sangsang.visitor.dbencrtptor.DBDecryptExpressionVisitor;
 import com.sangsang.visitor.pojoencrtptor.PlaceholderExpressionVisitor;
 import com.sangsang.visitor.transformation.TransformationExpressionVisitor;
@@ -73,24 +74,32 @@ public class JsqlparserUtil {
      * 补齐 select * 的所有字段
      * 备注：只补齐有实体类的表，并且这个实体类存在需要加密字段
      *
+     * @param selectItem
+     * @param layer                             当前sql层数
+     * @param sqlLayerFieldTableMap             当前sql每层拥有的表字段信息
+     * @param upstreamNeedEncryptFieldEncryptor 当前sql上游需要加密字段的注解
      * @author liutangqi
      * @date 2024/2/19 17:20
-     * @Param [selectItem, layerFieldTableMap 当前层的表拥有的全部字段 ]
      **/
-    public static List<SelectItem> perfectAllColumns(SelectItem selectItem, Map<String, Set<FieldInfoDto>> layerFieldTableMap) {
-        Expression expression = selectItem.getExpression();
+    public static List<SelectItem> perfectAllColumns(SelectItem selectItem, Integer layer, Map<Integer, Map<String, List<FieldInfoDto>>> sqlLayerFieldTableMap, List<FieldEncryptor> upstreamNeedEncryptFieldEncryptor) {
+        //-1.获取sql本层的所有的表字段（不包含上游作用域的字段）
+        Map<String, List<FieldInfoDto>> layerFieldTableMap = ((LayerHashMapWrapper) sqlLayerFieldTableMap).getExclusiveUpstreamScope(layer);
+
+        //0.判断上游字段是否需要密文存储，受上游对应字段影响，某些不需要密文存储的字段也需要进行加密处理
+        boolean upstreamNeedEncrypt = upstreamNeedEncryptFieldEncryptor != null && upstreamNeedEncryptFieldEncryptor.stream().filter(f -> f != null).collect(Collectors.toList()).size() > 0;
 
         //1. select 别名.*  （注意：AllColumns AllTableColumns 有继承关系，这里判断顺序不能改）
+        Expression expression = selectItem.getExpression();
         if (expression instanceof AllTableColumns) {
             String tableName = ((AllTableColumns) expression).getTable().getName();
-            Set<FieldInfoDto> fieldInfoSet = layerFieldTableMap.get(tableName);
+            List<FieldInfoDto> fieldInfoSet = layerFieldTableMap.get(tableName);
             //1.1没有配置此表的字段信息，返回原表达式
             if (CollectionUtils.isEmpty(fieldInfoSet)) {
                 return Arrays.asList(selectItem);
             }
-            //1.2 配置了此表，此表是个虚拟表或此表不需要密文存储，则保持原样
+            //1.2 缓存中有此表的字段信息，此表是一个虚拟表 或 （上游不需要密文存储并且此表也不需要密文存储） 则保持原样
             FieldInfoDto fieldInfoDto = new ArrayList<FieldInfoDto>(fieldInfoSet).get(0);
-            if (!fieldInfoDto.isFromSourceTable() || !TableCache.getFieldEncryptTable().contains(fieldInfoDto.getSourceTableName())) {
+            if (!fieldInfoDto.isFromSourceTable() || (!upstreamNeedEncrypt && !TableCache.getFieldEncryptTable().contains(fieldInfoDto.getSourceTableName()))) {
                 return Arrays.asList(selectItem);
             }
             //1.3配置了此表的字段信息，将配置的所有字段去替换*
@@ -104,14 +113,14 @@ public class JsqlparserUtil {
         //2. select *  未指定别名，将当前层的全部字段作为结果集返回 (如果当前层的表需要密文存储，则使用全部字段替换，否则还是用原来的*，不过这里修改为别名.*)
         if (expression instanceof AllColumns) {
             List<SelectItem> selectItems = new ArrayList<>();
-            for (Map.Entry<String, Set<FieldInfoDto>> fieldInfoEntry : layerFieldTableMap.entrySet()) {
+            for (Map.Entry<String, List<FieldInfoDto>> fieldInfoEntry : layerFieldTableMap.entrySet()) {
                 //2.1 此表字段没有配置拥有哪些字段，则使用 别名.*
                 if (CollectionUtils.isEmpty(fieldInfoEntry.getValue())) {
                     SelectItem<?> item = SelectItem.from(new AllTableColumns(new Table(fieldInfoEntry.getKey())));
                     selectItems.add(item);
                 }
-                //2.2 此表如果配置的有，此表是个虚拟表或这张表不需要密文存储，则也返回别名.*
-                else if (!new ArrayList<FieldInfoDto>(fieldInfoEntry.getValue()).get(0).isFromSourceTable() || !TableCache.getFieldEncryptTable().contains(new ArrayList<FieldInfoDto>(fieldInfoEntry.getValue()).get(0).getSourceTableName())) {
+                //1.2 缓存中有此表的字段信息，此表是一个虚拟表 或 （上游不需要密文存储并且此表也不需要密文存储） 则保持原样
+                else if (!new ArrayList<FieldInfoDto>(fieldInfoEntry.getValue()).get(0).isFromSourceTable() || (!upstreamNeedEncrypt && !TableCache.getFieldEncryptTable().contains(new ArrayList<FieldInfoDto>(fieldInfoEntry.getValue()).get(0).getSourceTableName()))) {
                     SelectItem<?> item = SelectItem.from(new AllTableColumns(new Table(fieldInfoEntry.getKey())));
                     selectItems.add(item);
                 }
@@ -139,7 +148,7 @@ public class JsqlparserUtil {
      * @date 2024/3/6 14:52
      * @Param [column, layer, layerFieldTableMap 每一层的表拥有的全部字段的map]
      **/
-    public static ColumnTableDto parseColumn(Column column, int layer, Map<String, Map<String, Set<FieldInfoDto>>> layerFieldTableMap) {
+    public static ColumnTableDto parseColumn(Column column, int layer, Map<Integer, Map<String, List<FieldInfoDto>>> layerFieldTableMap) {
         //字段名
         String columName = column.getColumnName();
         //字段所属表 （只有select 别名.字段名 时这个才有值，其它的为null）
@@ -157,7 +166,7 @@ public class JsqlparserUtil {
 
         //1.没有指定表名时，从当前层的表的所有字段里面找到这个名字的表( select 字段)
         if (table == null) {
-            layerFieldTableMap.getOrDefault(String.valueOf(layer), new FieldHashMapWrapper<>()).entrySet().forEach(f -> {
+            layerFieldTableMap.getOrDefault(layer, new FieldHashMapWrapper<>()).entrySet().forEach(f -> {
                 List<FieldInfoDto> matchFields = f.getValue().stream().filter(fi -> StringUtils.fieldEquals(fi.getColumnName(), columName)).collect(Collectors.toList());
                 if (CollectionUtils.isNotEmpty(matchFields)) {
                     //当前层的所有字段里面叫这个的，正确sql语法中只会有一个，所以get(0)
@@ -173,7 +182,7 @@ public class JsqlparserUtil {
         //2.有指定表名时，从当前层的这张表的所有字段里面这个字段的信息 （select 别名.字段）
         if (table != null) {
             String columnTableName = table.getName();
-            List<FieldInfoDto> matchFields = Optional.ofNullable(layerFieldTableMap.get(String.valueOf(layer)).get(columnTableName)).orElse(new HashSet<>()).stream().filter(f -> StringUtils.fieldEquals(f.getColumnName(), columName)).collect(Collectors.toList());
+            List<FieldInfoDto> matchFields = Optional.ofNullable(layerFieldTableMap.get(layer).get(columnTableName)).orElse(new ArrayList<>()).stream().filter(f -> StringUtils.fieldEquals(f.getColumnName(), columName)).collect(Collectors.toList());
             if (CollectionUtils.isNotEmpty(matchFields)) {
                 //当前层的所有字段里面叫这个的，正确sql语法中只会有一个，所以get(0)
                 FieldInfoDto matchField = matchFields.get(0);
@@ -198,7 +207,7 @@ public class JsqlparserUtil {
      * @date 2025/5/27 13:08
      * @Param [column, layer, layerFieldTableMap]
      **/
-    public static boolean isTableFiled(Column column, int layer, Map<String, Map<String, Set<FieldInfoDto>>> layerFieldTableMap) {
+    public static boolean isTableFiled(Column column, int layer, Map<Integer, Map<String, List<FieldInfoDto>>> layerFieldTableMap) {
         //字段名
         String columName = column.getColumnName();
         //字段所属表 （只有select 别名.字段名 时这个才有值，其它的为null）
@@ -206,7 +215,7 @@ public class JsqlparserUtil {
 
         //1.没有指定表名时，从当前层的表的所有字段里面找到这个名字的表( select 字段)
         if (table == null) {
-            for (Map.Entry<String, Set<FieldInfoDto>> entry : layerFieldTableMap.getOrDefault(String.valueOf(layer), new FieldHashMapWrapper<>()).entrySet()) {
+            for (Map.Entry<String, List<FieldInfoDto>> entry : layerFieldTableMap.getOrDefault(layer, new FieldHashMapWrapper<>()).entrySet()) {
                 //任意的表有一个字段符合，则返回true，表示是个表字段
                 if (entry.getValue().stream().anyMatch(m -> StringUtils.fieldEquals(m.getColumnName(), columName))) {
                     return true;
@@ -225,7 +234,7 @@ public class JsqlparserUtil {
      * @date 2024/3/11 15:28
      * @Param [column, layer, layerFieldTableMap]
      **/
-    public static boolean needEncrypt(Column column, int layer, Map<String, Map<String, Set<FieldInfoDto>>> layerFieldTableMap) {
+    public static boolean needEncrypt(Column column, int layer, Map<Integer, Map<String, List<FieldInfoDto>>> layerFieldTableMap) {
         //1.匹配所属表信息
         ColumnTableDto columnTableDto = parseColumn(column, layer, layerFieldTableMap);
 
@@ -241,7 +250,7 @@ public class JsqlparserUtil {
      * @date 2025/6/25 16:30
      * @Param [column, layer, layerFieldTableMap]
      **/
-    public static FieldEncryptor needEncryptFieldEncryptor(Expression expression, int layer, Map<String, Map<String, Set<FieldInfoDto>>> layerFieldTableMap) {
+    public static FieldEncryptor needEncryptFieldEncryptor(Expression expression, int layer, Map<Integer, Map<String, List<FieldInfoDto>>> layerFieldTableMap) {
         //0.不是Column直接返回，其它表达式的话上面是不可能标识得有注解的
         if (!(expression instanceof Column)) {
             return null;
@@ -270,13 +279,13 @@ public class JsqlparserUtil {
      * @author liutangqi
      * @date 2024/3/18 14:17
      **/
-    public static void putFieldInfo(Map<String, Map<String, Set<FieldInfoDto>>> layerTableMap, int layer, String tableName, FieldInfoDto dto) {
-        Map<String, Set<FieldInfoDto>> layerFieldMap = Optional.ofNullable(layerTableMap.get(String.valueOf(layer))).orElse(new FieldHashMapWrapper<>());
-        Set<FieldInfoDto> fieldInfoDtos = Optional.ofNullable(layerFieldMap.get(tableName)).orElse(new HashSet<>());
+    public static void putFieldInfo(Map<Integer, Map<String, List<FieldInfoDto>>> layerTableMap, int layer, String tableName, FieldInfoDto dto) {
+        Map<String, List<FieldInfoDto>> layerFieldMap = Optional.ofNullable(layerTableMap.get(layer)).orElse(new FieldHashMapWrapper<>());
+        List<FieldInfoDto> fieldInfoDtos = Optional.ofNullable(layerFieldMap.get(tableName)).orElse(new ArrayList<>());
 
         fieldInfoDtos.add(dto);
         layerFieldMap.put(tableName, fieldInfoDtos);
-        layerTableMap.put(String.valueOf(layer), layerFieldMap);
+        layerTableMap.put(layer, layerFieldMap);
     }
 
     /**
@@ -289,13 +298,13 @@ public class JsqlparserUtil {
      * @author liutangqi
      * @date 2024/3/18 14:17
      **/
-    public static void putFieldInfo(Map<String, Map<String, Set<FieldInfoDto>>> layerTableMap, int layer, String tableName, Set<FieldInfoDto> dtos) {
-        Map<String, Set<FieldInfoDto>> layerFieldMap = Optional.ofNullable(layerTableMap.get(String.valueOf(layer))).orElse(new FieldHashMapWrapper<>());
-        Set<FieldInfoDto> fieldInfoDtos = Optional.ofNullable(layerFieldMap.get(tableName)).orElse(new HashSet<>());
+    public static void putFieldInfo(Map<Integer, Map<String, List<FieldInfoDto>>> layerTableMap, int layer, String tableName, List<FieldInfoDto> dtos) {
+        Map<String, List<FieldInfoDto>> layerFieldMap = Optional.ofNullable(layerTableMap.get(layer)).orElse(new FieldHashMapWrapper<>());
+        List<FieldInfoDto> fieldInfoDtos = Optional.ofNullable(layerFieldMap.get(tableName)).orElse(new ArrayList<>());
 
         fieldInfoDtos.addAll(dtos);
         layerFieldMap.put(tableName, fieldInfoDtos);
-        layerTableMap.put(String.valueOf(layer), layerFieldMap);
+        layerTableMap.put(layer, layerFieldMap);
     }
 
 
@@ -307,15 +316,15 @@ public class JsqlparserUtil {
      * @date 2024/3/20 13:54
      * @Param [oldMap, newMap]
      **/
-    public static Map<String, Set<FieldInfoDto>> parseNewlyIncreased(Map<String, Set<FieldInfoDto>> oldMap, Map<String, Set<FieldInfoDto>> newMap) {
-        Map<String, Set<FieldInfoDto>> result = new FieldHashMapWrapper<>();
-        for (Map.Entry<String, Set<FieldInfoDto>> newMapEntry : newMap.entrySet()) {
+    public static Map<String, List<FieldInfoDto>> parseNewlyIncreased(Map<String, List<FieldInfoDto>> oldMap, Map<String, List<FieldInfoDto>> newMap) {
+        Map<String, List<FieldInfoDto>> result = new FieldHashMapWrapper<>();
+        for (Map.Entry<String, List<FieldInfoDto>> newMapEntry : newMap.entrySet()) {
             //key 旧的没有，直接整个都是新增的
             if (!oldMap.containsKey(newMapEntry.getKey())) {
                 result.put(newMapEntry.getKey(), newMapEntry.getValue());
                 //key有，筛选出Set中新增的
             } else {
-                Set<FieldInfoDto> newlyIncreasedSet = newMapEntry.getValue().stream().filter(f -> !oldMap.get(newMapEntry.getKey()).contains(f)).collect(Collectors.toSet());
+                List<FieldInfoDto> newlyIncreasedSet = newMapEntry.getValue().stream().filter(f -> !oldMap.get(newMapEntry.getKey()).contains(f)).collect(Collectors.toList());
                 if (CollectionUtils.isNotEmpty(newlyIncreasedSet)) {
                     result.put(newMapEntry.getKey(), newlyIncreasedSet);
                 }
@@ -331,9 +340,9 @@ public class JsqlparserUtil {
      * @date 2024/3/20 15:08
      * @Param [layerSelectTableFieldMap, layerFieldTableMap]
      **/
-    public static boolean needEncrypt(Map<String, Map<String, Set<FieldInfoDto>>> layerSelectTableFieldMap, Map<String, Map<String, Set<FieldInfoDto>>> layerFieldTableMap) {
-        Set<FieldInfoDto> selectFieldInfoDtos = layerSelectTableFieldMap.values().stream().flatMap(f -> f.values().stream()).flatMap(Collection::stream).filter(f -> TableCache.getFieldEncryptTable().contains(f.getSourceTableName())).collect(Collectors.toSet());
-        Set<FieldInfoDto> fieldInfoDtos = layerFieldTableMap.values().stream().flatMap(f -> f.values().stream()).flatMap(Collection::stream).filter(f -> TableCache.getFieldEncryptTable().contains(f.getSourceTableName())).collect(Collectors.toSet());
+    public static boolean needEncrypt(Map<Integer, Map<String, List<FieldInfoDto>>> layerSelectTableFieldMap, Map<Integer, Map<String, List<FieldInfoDto>>> layerFieldTableMap) {
+        List<FieldInfoDto> selectFieldInfoDtos = layerSelectTableFieldMap.values().stream().flatMap(f -> f.values().stream()).flatMap(Collection::stream).filter(f -> TableCache.getFieldEncryptTable().contains(f.getSourceTableName())).collect(Collectors.toList());
+        List<FieldInfoDto> fieldInfoDtos = layerFieldTableMap.values().stream().flatMap(f -> f.values().stream()).flatMap(Collection::stream).filter(f -> TableCache.getFieldEncryptTable().contains(f.getSourceTableName())).collect(Collectors.toList());
         return CollectionUtils.isNotEmpty(selectFieldInfoDtos) || CollectionUtils.isNotEmpty(fieldInfoDtos);
     }
 
@@ -356,7 +365,7 @@ public class JsqlparserUtil {
      * @date 2024/7/11 11:24
      * @Param [layer 当前层数, layerFieldTableMap 当前层所有的字段信息,expression 表达式, placeholderColumnTableMap 存放结果集的map]
      **/
-    public static void parseWhereColumTable(int layer, Map<String, Map<String, Set<FieldInfoDto>>> layerFieldTableMap, BinaryExpression expression, Map<String, ColumnTableDto> placeholderColumnTableMap) {
+    public static void parseWhereColumTable(int layer, Map<Integer, Map<String, List<FieldInfoDto>>> layerFieldTableMap, BinaryExpression expression, Map<String, ColumnTableDto> placeholderColumnTableMap) {
         Expression leftExpression = expression.getLeftExpression();
         Expression rightExpression = expression.getRightExpression();
 
@@ -371,7 +380,7 @@ public class JsqlparserUtil {
      * @date 2024/7/11 11:24
      * @Param [layer 当前层数, layerFieldTableMap 当前层所有的字段信息,leftExpression 左表达式,rightExpression右表达式, placeholderColumnTableMap 存放结果集的map]
      **/
-    public static void parseWhereColumTable(int layer, Map<String, Map<String, Set<FieldInfoDto>>> layerFieldTableMap, Expression leftExpression, Expression rightExpression, Map<String, ColumnTableDto> placeholderColumnTableMap) {
+    public static void parseWhereColumTable(int layer, Map<Integer, Map<String, List<FieldInfoDto>>> layerFieldTableMap, Expression leftExpression, Expression rightExpression, Map<String, ColumnTableDto> placeholderColumnTableMap) {
         //左边是列，右边是我们的占位符
         if (leftExpression instanceof Column && rightExpression != null && rightExpression.toString().contains(FieldConstant.PLACEHOLDER)) {
             ColumnTableDto columnTableDto = JsqlparserUtil.parseColumn((Column) leftExpression, layer, layerFieldTableMap);
@@ -393,7 +402,7 @@ public class JsqlparserUtil {
      * @Param [someLayerFieldTableMap: 某一层的字段信息]
      **/
     @Deprecated
-    public static Map<ColumnUniqueDto, FieldDefault> filterFieldDefault(Map<String, Set<FieldInfoDto>> someLayerFieldTableMap, SqlCommandEnum sqlCommandEnum) {
+    public static Map<ColumnUniqueDto, FieldDefault> filterFieldDefault(Map<String, List<FieldInfoDto>> someLayerFieldTableMap, SqlCommandEnum sqlCommandEnum) {
         //1.创建处理结果的容器
         Map<ColumnUniqueDto, FieldDefault> res = new HashMap<>();
 
@@ -401,7 +410,7 @@ public class JsqlparserUtil {
         Map<String, Map<String, FieldDefault>> tableFieldDefaultInfo = TableCache.getTableFieldDefaultInfo();
 
         //3.依次处理每张表信息
-        for (Map.Entry<String, Set<FieldInfoDto>> fieldMapEntry : someLayerFieldTableMap.entrySet()) {
+        for (Map.Entry<String, List<FieldInfoDto>> fieldMapEntry : someLayerFieldTableMap.entrySet()) {
             String tableAliasName = fieldMapEntry.getKey();
             for (FieldInfoDto fieldInfoDto : fieldMapEntry.getValue()) {
                 //获取此字段上面标注的@FieldDefault，存在注解并且当前需要处理 就放结果集里面

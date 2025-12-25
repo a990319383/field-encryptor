@@ -458,6 +458,35 @@ public class SqlTest {
     //on 后面字段对应的算法不一致
     String s42 = "select * from tb_user tb left join tb_role tr on tb.phone = tr.role_name where tb.phone = ? ";
 
+    // in 后面字段存在嵌套子查询
+    String s43 = "select * from tb_user tu where tu.phone in (select tmp.* from(select tr.role_name from tb_role tr)tmp)";
+
+    //join 一张嵌套的表，且on的字段需要密文存储
+    String s44 = "select * from tb_user tu join(select tmp.* from (select * from tb_role)tmp) a on tu.phone = a.role_name";
+
+    //on 的时候存在嵌套 && 其中有字段时密文存储的 && 上游是密文  && 下游字段不是嵌套查询的结果
+    String s45 = " select * from tb_user tu1 where tu1.phone in( select tr.role_name from tb_role tr join (select tmp.* from (select * from tb_user)tmp )a on tr.role_name = a.phone )";
+
+    //on 的时候存在嵌套 && 其中有字段时密文存储的 && 上游是密文 && 下游字段是嵌套查询的结果
+    String s46 = "select * from tb_user tu1 where tu1.phone in( select a.role_name from tb_user tu join( select tmp.* from ( select * from tb_role)tmp where tmp.role_name = ? )a on tu.phone = a.role_name)";
+
+    // in 后面字段是查询的语句，并且查询的是一个常量 （这种语法本质是无意义的，只是完善pojo模式程序结构）
+    String s47 = "select * from tb_user tu where tu.phone in (select ? from tb_role tr where tr.role_name = ?)";
+
+    //in 后面的字段是查询的嵌套查询的语句，并且查询的是一个常量（这种语法本质是无意义的，只是完善pojo模式程序结构
+    String s48 = "select * from tb_user tu where tu.phone in(select tmp.* from ( select ? from tb_role tr where tr.role_name = ?)tmp)";
+
+    //in 子查询，下游子查询中会使用到上游的表字段  in的时候将上游的解析结果合并到下游
+    String s49 = "select * from tb_user tu where tu.phone in (select tr.role_name from tb_role tr where tr.role_name = ? and tr.role_name = tu.phone)";
+
+    //in的一个子查询，子查询中存在嵌套，内层嵌套使用到了in的上游的表字段(注意其中的tu.phone = ?的层级关系)
+    //备注：这种语法性能有极大问题，且除mysql外，较多的数据库语法校验相对严格，是不支持这种写法的
+    //简单测试了几种数据库： 支持这种语法的数据库（mysql 达梦）  不支持这种语法的数据库（clickhouse oracle）
+    String s50 = "select * from tb_user tu where tu.phone in(select tmp.* from ( select ? from tb_role tr where tr.role_name = ? and tu.phone = ?)tmp)";
+
+    //需要访问上层作用域时，上层的作用域是不是第一层
+    String s51 = "SELECT a.* FROM(SELECT * FROM tb_user tu WHERE tu.phone IN (SELECT role_name FROM tb_role tr))a JOIN tb_menu tm ON a.id = tm.id";
+
     // -----------------insert 测试语句---------------------
     String i1 = "insert into tb_user(id, user_name ,phone) \n" +
             "values(1,?,'18243512315'),(2,'南瓜',?)";
@@ -479,8 +508,9 @@ public class SqlTest {
             "phone = values(phone),\n" +
             "update_time = now()";
 
-    // insert 语句没有指定字段  注意：不支持此语法！！！ 无法确定字段顺序
-//    String i4 = "insert into tb_user  values( ?,?,?,?,?,?,?,?)";
+    // insert 语句没有指定字段  最新版本改动： 当开启了自动通过dataSource读取表结构信息后，我们是能读取到字段顺序的，这种情况下这种语法能兼容
+    //备注：业务开发最好不要这样写，一旦表结构变更，字段数不对了，这个sql就报错了
+    String i4 = "insert into tb_user  values( ?,?,?,?,?,?,?,?)";
 
     //insert select ,其中insert语句和select语句中对应的字段，一个密文存储，一个明文存储，也有两个都是密文存储的
     String i5 = "insert into  tb_user(user_name,phone,login_name)\n" +
@@ -490,6 +520,24 @@ public class SqlTest {
 
     //insert 单个值
     String i6 = "insert into tb_user(id, user_name ,phone) values(?,?,?)";
+
+    //insert into 表 缺字段，并且子查询是select *   插入表没密文，select表有密文
+    String i7 = "insert into tb_user_bak(select * from tb_user)";
+
+    //insert into 表 缺字段，并且子查询是select *   插入表有密文，select表没密文
+    String i8 = "insert into tb_user(select * from tb_user_bak)";
+
+    //insert into 表 缺字段，并且子查询是select 别名.*  插入表没密文，select表有密文
+    String i9 = "insert into tb_user_bak(select t.* from tb_user t)";
+
+    //insert into 表 缺字段，并且子查询是select 别名.*  插入表有密文，select表没密文
+    String i10 = "insert into tb_user(select t.* from tb_user_bak t)";
+
+    // insert into 表 缺字段，并且子查询是select a.* from (select ) ，这里a是一个虚拟表，将*补齐的方式不同
+    String i11 = "insert into tb_user_bak(select a.* from  (select * from tb_user)a)";
+
+    // insert into 表 缺字段，并且子查询是select a.* from (select ) ，这里a是一个虚拟表，将*补齐的方式不同 并且insert 和select的都是需要密文存储的
+    String i12 = "insert into tb_user(select a.* from  (select * from tb_user)a)";
 
     // --------------delete 测试语句 ---------------
 
@@ -567,7 +615,7 @@ public class SqlTest {
         CacheTestHelper.testInit(fieldProperties);
 
         //需要测试的sql
-        String sql = s41;
+        String sql = s51;
         System.out.println("----------------------------------------------------------------------------");
         System.out.println(sql);
         System.out.println("----------------------------------------------------------------------------");
@@ -599,7 +647,7 @@ public class SqlTest {
         CacheTestHelper.testInit(fieldProperties);
 
         //需要测试的sql
-        String sql = s11;
+        String sql = s44;
         System.out.println("----------------------------------------------------------------------------");
         System.out.println(sql);
         System.out.println("----------------------------------------------------------------------------");
@@ -620,8 +668,8 @@ public class SqlTest {
 
     //需要测试的sql
     List<String> sqls = Arrays.asList(s1, s2, s3, s4, s5, s6, s7, s8, s9, s10, s11, s12, s13, s14, s15, s16, s17, s18, s19,
-            s20, s21, s22, s23, s24, s25, s26, s27, s28, s29, s30, s31, s33, s34, s35, s36, s37, s38, s39, s40, s41, s42,
-            i1, i2, i3, i5, i6,//i4,
+            s20, s21, s22, s23, s24, s25, s26, s27, s28, s29, s30, s31, s33, s34, s35, s36, s37, s38, s39, s40, s41, s42, s43, s44, s45, s46, s47, s48, s49, s50, s51,
+            i1, i2, i3, i4, i5, i6, i7, i8, i9, i10, i11, i12,
             d1, d2,
             u1, u2, u3, u4, u5
     );

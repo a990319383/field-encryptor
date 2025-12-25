@@ -60,7 +60,7 @@ public class TransformationExpressionVisitor extends BaseFieldParseTable impleme
         return new TransformationExpressionVisitor(baseField.getLayer(), baseField.getLayerSelectTableFieldMap(), baseField.getLayerFieldTableMap());
     }
 
-    private TransformationExpressionVisitor(int layer, Map<String, Map<String, Set<FieldInfoDto>>> layerSelectTableFieldMap, Map<String, Map<String, Set<FieldInfoDto>>> layerFieldTableMap) {
+    private TransformationExpressionVisitor(int layer, Map<Integer, Map<String, List<FieldInfoDto>>> layerSelectTableFieldMap, Map<Integer, Map<String, List<FieldInfoDto>>> layerFieldTableMap) {
         super(layer, layerSelectTableFieldMap, layerFieldTableMap);
     }
 

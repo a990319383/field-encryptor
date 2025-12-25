@@ -15,6 +15,7 @@ import com.sangsang.domain.dto.TableFieldDto;
 import com.sangsang.domain.dto.TableInfoDto;
 import com.sangsang.domain.wrapper.FieldHashMapWrapper;
 import com.sangsang.domain.wrapper.FieldHashSetWrapper;
+import com.sangsang.domain.wrapper.FieldLinkedListWarpper;
 import com.sangsang.util.*;
 import lombok.extern.slf4j.Slf4j;
 
@@ -78,9 +79,9 @@ public class TableCache extends DefaultBeanPostProcessor {
 
     /**
      * key: 表名
-     * value: 该表所有的字段
+     * value: 该表所有的字段  （注意：这里List<String>的实际类型是 FieldLinkedListWarpper）
      */
-    private static final Map<String, Set<String>> TABLE_FIELD_MAP = new FieldHashMapWrapper<>();
+    private static final Map<String, List<String>> TABLE_FIELD_MAP = new FieldHashMapWrapper<>();
 
     /**
      * 初始化当前表结构信息
@@ -198,7 +199,7 @@ public class TableCache extends DefaultBeanPostProcessor {
             allFields = allFields.stream().filter(f -> f.getAnnotation(TableField.class) == null || f.getAnnotation(TableField.class).exist()).filter(f -> !Modifier.isStatic(f.getModifiers())).collect(Collectors.toList());
 
             //4.解析字段对应数据库字段名和标注的加解密注解
-            Set<TableFieldDto> tableFieldDtos = allFields.stream().map(field -> {
+            List<TableFieldDto> tableFieldDtos = allFields.stream().map(field -> {
                 //4.1 解析获取数据库字段名
                 String filedName = Optional.ofNullable(field.getAnnotation(TableField.class)).filter(f -> StringUtils.isNotBlank(f.value())).map(m -> m.value()).orElse(StrUtil.toUnderlineCase(field.getName()));
                 //4.2获取此字段上拥有的@FieldEncryptor 注解
@@ -207,7 +208,7 @@ public class TableCache extends DefaultBeanPostProcessor {
                 FieldDefault fieldDefault = field.getAnnotation(FieldDefault.class);
                 //4.4构建字段对象
                 return TableFieldDto.builder().fieldName(filedName).fieldEncryptor(fieldEncryptor).fieldDefault(fieldDefault).build();
-            }).collect(Collectors.toSet());
+            }).collect(Collectors.toCollection(LinkedList::new));
 
             //5.获取表名
             TableName tableName = (TableName) entityClass.getAnnotation(TableName.class);
@@ -245,19 +246,23 @@ public class TableCache extends DefaultBeanPostProcessor {
         //TABLE_ENTITY_CACHE
         tableInfoDtos.stream().forEach(f -> {
             Map<String, FieldEncryptor> fieldMap = new FieldHashMapWrapper<>();
-            f.getTableFields().stream().forEach(field -> fieldMap.put(field.getFieldName(), field.getFieldEncryptor()));
-            TABLE_ENTITY_CACHE.put(f.getTableName(), fieldMap);
+            f.getTableFields().stream().filter(field -> field.getFieldEncryptor() != null).forEach(field -> fieldMap.put(field.getFieldName(), field.getFieldEncryptor()));
+            if (CollectionUtils.isNotEmpty(fieldMap)) {
+                TABLE_ENTITY_CACHE.put(f.getTableName(), fieldMap);
+            }
         });
 
         //TABLE_DEFAULT_CACHE
         tableInfoDtos.stream().forEach(f -> {
             Map<String, FieldDefault> fieldMap = new FieldHashMapWrapper<>();
-            f.getTableFields().stream().forEach(field -> fieldMap.put(field.getFieldName(), field.getFieldDefault()));
-            TABLE_DEFAULT_CACHE.put(f.getTableName(), fieldMap);
+            f.getTableFields().stream().filter(field -> field.getFieldDefault() != null).forEach(field -> fieldMap.put(field.getFieldName(), field.getFieldDefault()));
+            if (CollectionUtils.isNotEmpty(fieldMap)) {
+                TABLE_DEFAULT_CACHE.put(f.getTableName(), fieldMap);
+            }
         });
 
         //TABLE_ISOLATION_ANNO_MAP
-        tableInfoDtos.stream().forEach(f -> TABLE_ISOLATION_ANNO_MAP.put(f.getTableName(), f.getDataIsolation()));
+        tableInfoDtos.stream().filter(f -> f.getDataIsolation() != null).forEach(f -> TABLE_ISOLATION_ANNO_MAP.put(f.getTableName(), f.getDataIsolation()));
 
         //FIELD_ENCRYPT_TABLE
         tableInfoDtos.stream().filter(f -> f.getTableFields().stream().filter(field -> field.getFieldEncryptor() != null).count() > 0).map(TableInfoDto::getTableName).forEach(f -> FIELD_ENCRYPT_TABLE.add(f));
@@ -273,7 +278,7 @@ public class TableCache extends DefaultBeanPostProcessor {
                 .forEach(f -> TABLE_FIELD_MAP.put(f.getTableName(), f.getTableFields()
                         .stream()
                         .map(TableFieldDto::getFieldName)
-                        .collect(FieldHashSetWrapper::new, Set::add, Set::addAll)
+                        .collect(Collectors.toCollection(FieldLinkedListWarpper::new))
                 ));
     }
 
@@ -354,7 +359,7 @@ public class TableCache extends DefaultBeanPostProcessor {
      * @date 2024/2/20 10:48
      * @Param []
      **/
-    public static Map<String, Set<String>> getTableFieldMap() {
+    public static Map<String, List<String>> getTableFieldMap() {
         return TABLE_FIELD_MAP;
     }
 
@@ -378,7 +383,7 @@ public class TableCache extends DefaultBeanPostProcessor {
      * @date 2025/8/25 14:56
      * @Param [tableFieldMap]
      **/
-    public static void refreshTableField(Map<String, Set<String>> tableFieldMap) {
+    public static void refreshTableField(Map<String, List<String>> tableFieldMap) {
         //1.先清空旧的
         TABLE_FIELD_MAP.clear();
         //2.使用新的替换旧的

@@ -7,8 +7,8 @@ import net.sf.jsqlparser.expression.Expression;
 import net.sf.jsqlparser.statement.select.SelectItem;
 import net.sf.jsqlparser.statement.select.SelectItemVisitor;
 
+import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 /**
  * 维护当前层所有的查询字段
@@ -34,7 +34,7 @@ public class FieldParseParseSelectItemVisitor extends BaseFieldParseTable implem
         );
     }
 
-    private FieldParseParseSelectItemVisitor(int layer, Map<String, Map<String, Set<FieldInfoDto>>> layerSelectTableFieldMap, Map<String, Map<String, Set<FieldInfoDto>>> layerFieldTableMap) {
+    private FieldParseParseSelectItemVisitor(int layer, Map<Integer, Map<String, List<FieldInfoDto>>> layerSelectTableFieldMap, Map<Integer, Map<String, List<FieldInfoDto>>> layerFieldTableMap) {
         super(layer, layerSelectTableFieldMap, layerFieldTableMap);
     }
 

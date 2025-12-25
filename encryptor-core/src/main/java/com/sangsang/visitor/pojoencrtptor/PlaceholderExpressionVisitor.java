@@ -316,8 +316,8 @@ public class PlaceholderExpressionVisitor extends PlaceholderFieldParseTable imp
         //2.3 当右边是子查询时 （对应语法2，语法3，语法5 ）
         else if (rightExpression instanceof ParenthesedSelect) {
             ParenthesedSelect rightSelect = (ParenthesedSelect) rightExpression;
-            //这种情况右边是一个完全独立的sql，单独解析
-            FieldParseParseTableSelectVisitor fPTableSelectVisitor = FieldParseParseTableSelectVisitor.newInstanceFirstLayer();
+            //这种情况右边是一个完全独立的sql，单独解析   注意：子查询是有权限读取上游表字段信息的，所以这里单独解析的时候将上游的解析结果合并到下游
+            FieldParseParseTableSelectVisitor fPTableSelectVisitor = FieldParseParseTableSelectVisitor.newInstanceIndividualMap(this);
             rightSelect.accept(fPTableSelectVisitor);
             //用这个解析的结果集解析where后面的占位符
             PlaceholderSelectVisitor placeholderSelectVisitor = PlaceholderSelectVisitor.newInstanceCurLayer(fPTableSelectVisitor,

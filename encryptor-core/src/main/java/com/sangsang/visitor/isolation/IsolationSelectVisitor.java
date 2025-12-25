@@ -18,7 +18,6 @@ import net.sf.jsqlparser.expression.operators.conditional.AndExpression;
 import net.sf.jsqlparser.statement.select.*;
 
 import java.util.*;
-import java.util.stream.Collectors;
 
 /**
  * @author liutangqi
@@ -48,7 +47,7 @@ public class IsolationSelectVisitor extends BaseFieldParseTable implements Selec
         return new IsolationSelectVisitor(baseFieldParseTable.getLayer() + 1, baseFieldParseTable.getLayerSelectTableFieldMap(), baseFieldParseTable.getLayerFieldTableMap());
     }
 
-    private IsolationSelectVisitor(int layer, Map<String, Map<String, Set<FieldInfoDto>>> layerSelectTableFieldMap, Map<String, Map<String, Set<FieldInfoDto>>> layerFieldTableMap) {
+    private IsolationSelectVisitor(int layer, Map<Integer, Map<String, List<FieldInfoDto>>> layerSelectTableFieldMap, Map<Integer, Map<String, List<FieldInfoDto>>> layerFieldTableMap) {
         super(layer, layerSelectTableFieldMap, layerFieldTableMap);
     }
 
@@ -103,10 +102,10 @@ public class IsolationSelectVisitor extends BaseFieldParseTable implements Selec
         //4.1.存储当前拼接的权限过滤条件(这里list存储的是不同的表的隔离字段)
         List<Expression> isolationExpressions = new ArrayList<>();
         //4.2.获取当前层字段信息
-        Map<String, Set<FieldInfoDto>> fieldTableMap = this.getLayerFieldTableMap().get(String.valueOf(this.getLayer()));
+        Map<String, List<FieldInfoDto>> fieldTableMap = this.getLayerFieldTableMap().get(this.getLayer());
 
         //4.3.判断其中是否存在数据隔离的表
-        for (Map.Entry<String, Set<FieldInfoDto>> fieldTableEntry : fieldTableMap.entrySet()) {
+        for (Map.Entry<String, List<FieldInfoDto>> fieldTableEntry : fieldTableMap.entrySet()) {
             //4.3.1 随便获取一个字段，得到这个字段所属的真实表名（因为这些字段都是属于同一张真实表，所以随便获取一个即可），如果这个表所属的表不是来源真实表则直接跳过
             FieldInfoDto anyFieldInfo = fieldTableEntry.getValue().stream().findAny().orElse(null);
             if (anyFieldInfo == null || !anyFieldInfo.isFromSourceTable() || StringUtils.isBlank(anyFieldInfo.getSourceTableName())) {

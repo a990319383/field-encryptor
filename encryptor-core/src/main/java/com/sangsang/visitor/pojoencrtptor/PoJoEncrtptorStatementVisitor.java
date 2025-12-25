@@ -6,7 +6,9 @@ import com.sangsang.domain.dto.ColumnTableDto;
 import com.sangsang.domain.dto.FieldEncryptorInfoDto;
 import com.sangsang.domain.dto.FieldInfoDto;
 import com.sangsang.domain.wrapper.FieldHashMapWrapper;
+import com.sangsang.domain.wrapper.LayerHashMapWrapper;
 import com.sangsang.util.CollectionUtils;
+import com.sangsang.util.ExpressionsUtil;
 import com.sangsang.util.JsqlparserUtil;
 import com.sangsang.visitor.fieldparse.FieldParseParseTableFromItemVisitor;
 import com.sangsang.visitor.fieldparse.FieldParseParseTableSelectVisitor;
@@ -187,24 +189,29 @@ public class PoJoEncrtptorStatementVisitor implements StatementVisitor {
         //2.解析当前insert字段所属的表结构信息
         //2.1 获取当前insert语句中的所有字段
         List<Column> columns = insert.getColumns();
-        if (CollectionUtils.isEmpty(columns)) {
-            log.warn("【field-encryptor】insert 语句未指定表字段顺序，不支持自动加解密，请规范语法 原sql:{}", insert.toString());
+        //2.2 当遇到了insert into 表 values(xxx)这种语法的时候，如果没有开启自动补全表结构的话，我们是无法得知字段顺序，是无法处理这种表结构的，输出警告日志，便于客户快速定位
+        if (CollectionUtils.isEmpty(columns) && !TableCache.getCurConfig().isAutoFill()) {
+            log.warn("【field-encryptor】insert 语句未指定表字段顺序，且当前未开启自动读取表结构，无法获取表字段顺序。此情况可能导致数据错误！！！请规范语法或开启 field.autoFill=true  原sql:{}", insert.toString());
             return;
         }
-        //2.2将insert的所有字段格式进行转换
-        Set<FieldInfoDto> fieldInfoDtos = columns.stream()
+        //2.3 如果是insert into 表 values(xxx)这种语法 并且开启了自动补全，我们将表字段进行补全
+        if (CollectionUtils.isEmpty(columns) && TableCache.getCurConfig().isAutoFill()) {
+            List<String> fieldLinkedList = TableCache.getTableFieldMap().get(table.getName());
+            columns = fieldLinkedList.stream().map(m -> ExpressionsUtil.buildColumn(m, table.getName())).collect(Collectors.toList());
+            insert.setColumns(new ExpressionList(columns));
+        }
+        //2.4 将insert的所有字段格式进行转换
+        List<FieldInfoDto> fieldInfoDtos = columns.stream()
                 .map(m -> new FieldInfoDto(m.getColumnName(), m.getColumnName(), table.getName(), true))
-                .collect(Collectors.toSet());
-        //2.3 将转换后的字段信息维护成 layerFieldTableMap 的数据格式
-        Map<String, Map<String, Set<FieldInfoDto>>> layerFieldTableMap = new HashMap<>();
-        Map<String, Set<FieldInfoDto>> fieldTableMap = new FieldHashMapWrapper<>();
+                .collect(Collectors.toList());
+        //2.5 将转换后的字段信息维护成 layerFieldTableMap 的数据格式
+        Map<Integer, Map<String, List<FieldInfoDto>>> layerFieldTableMap = new LayerHashMapWrapper();
+        Map<String, List<FieldInfoDto>> fieldTableMap = new FieldHashMapWrapper<>();
         fieldTableMap.put(table.getName(), fieldInfoDtos);
-        layerFieldTableMap.put(String.valueOf(NumberConstant.ONE), fieldTableMap);
-
+        layerFieldTableMap.put(NumberConstant.ONE, fieldTableMap);
 
         //3.存放占位符信息的Map初始化
         this.placeholderColumnTableMap = new HashMap<>();
-
 
         //4.处理select
         Select select = insert.getSelect();
@@ -315,8 +322,8 @@ public class PoJoEncrtptorStatementVisitor implements StatementVisitor {
         select.accept(fieldParseTableSelectVisitor);
 
         //1.2.获取sql 查询的所有字段
-        Map<String, Map<String, Set<FieldInfoDto>>> layerSelectTableFieldMap = fieldParseTableSelectVisitor.getLayerSelectTableFieldMap();
-        List<FieldInfoDto> selectFiles = layerSelectTableFieldMap.getOrDefault(String.valueOf(NumberConstant.ONE), new HashMap<>())
+        Map<Integer, Map<String, List<FieldInfoDto>>> layerSelectTableFieldMap = fieldParseTableSelectVisitor.getLayerSelectTableFieldMap();
+        List<FieldInfoDto> selectFiles = layerSelectTableFieldMap.getOrDefault(NumberConstant.ONE, new FieldHashMapWrapper<>())
                 .values()
                 .stream()
                 .flatMap(Collection::stream)

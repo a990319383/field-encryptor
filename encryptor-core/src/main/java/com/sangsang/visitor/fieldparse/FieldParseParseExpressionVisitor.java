@@ -50,7 +50,7 @@ public class FieldParseParseExpressionVisitor extends BaseFieldParseTable implem
         );
     }
 
-    private FieldParseParseExpressionVisitor(Alias alias, int layer, Map<String, Map<String, Set<FieldInfoDto>>> layerSelectTableFieldMap, Map<String, Map<String, Set<FieldInfoDto>>> layerFieldTableMap) {
+    private FieldParseParseExpressionVisitor(Alias alias, int layer, Map<Integer, Map<String, List<FieldInfoDto>>> layerSelectTableFieldMap, Map<Integer, Map<String, List<FieldInfoDto>>> layerFieldTableMap) {
         super(layer, layerSelectTableFieldMap, layerFieldTableMap);
         this.alias = alias;
     }
@@ -528,10 +528,10 @@ public class FieldParseParseExpressionVisitor extends BaseFieldParseTable implem
     @Override
     public void visit(AllColumns allColumns) {
         //本层的全部字段
-        Map<String, Set<FieldInfoDto>> fieldMap = Optional.ofNullable(this.getLayerFieldTableMap().get(String.valueOf(this.getLayer()))).orElse(new FieldHashMapWrapper<>());
+        Map<String, List<FieldInfoDto>> fieldMap = Optional.ofNullable(this.getLayerFieldTableMap().get(this.getLayer())).orElse(new FieldHashMapWrapper<>());
 
         //将本层全部字段放到 select的map中
-        for (Map.Entry<String, Set<FieldInfoDto>> fieldInfoEntry : fieldMap.entrySet()) {
+        for (Map.Entry<String, List<FieldInfoDto>> fieldInfoEntry : fieldMap.entrySet()) {
             JsqlparserUtil.putFieldInfo(this.getLayerSelectTableFieldMap(), this.getLayer(), fieldInfoEntry.getKey(), fieldInfoEntry.getValue());
         }
 
@@ -548,19 +548,19 @@ public class FieldParseParseExpressionVisitor extends BaseFieldParseTable implem
     @Override
     public void visit(AllTableColumns allTableColumns) {
         //获取本层涉及到的表的全部字段
-        Map<String, Map<String, Set<FieldInfoDto>>> layerFieldTableMap = this.getLayerFieldTableMap();
-        Map<String, Set<FieldInfoDto>> fieldTableMap = Optional.ofNullable(layerFieldTableMap.get(String.valueOf(this.getLayer()))).orElse(new FieldHashMapWrapper<>());
+        Map<Integer, Map<String, List<FieldInfoDto>>> layerFieldTableMap = this.getLayerFieldTableMap();
+        Map<String, List<FieldInfoDto>> fieldTableMap = Optional.ofNullable(layerFieldTableMap.get(this.getLayer())).orElse(new FieldHashMapWrapper<>());
 
         //获取其中叫这个别名的全部字段
         String tableName = allTableColumns.getTable().getName();
-        Map<String, Set<FieldInfoDto>> fieldMap = fieldTableMap
+        Map<String, List<FieldInfoDto>> fieldMap = fieldTableMap
                 .entrySet()
                 .stream()
                 .filter(f -> StringUtils.fieldEquals(f.getKey(), tableName))
                 .collect(FieldHashMapWrapper::new, (map, entry) -> map.put(entry.getKey(), entry.getValue()), (map1, map2) -> map1.putAll(map2));
 
         //将本层全部字段放到 select的map中
-        for (Map.Entry<String, Set<FieldInfoDto>> fieldInfoEntry : fieldMap.entrySet()) {
+        for (Map.Entry<String, List<FieldInfoDto>> fieldInfoEntry : fieldMap.entrySet()) {
             JsqlparserUtil.putFieldInfo(this.getLayerSelectTableFieldMap(), this.getLayer(), fieldInfoEntry.getKey(), fieldInfoEntry.getValue());
         }
     }
@@ -599,12 +599,12 @@ public class FieldParseParseExpressionVisitor extends BaseFieldParseTable implem
         subSelect.getPlainSelect().accept(sFieldSelectItemVisitor);
 
         //2.找出上面新解析出的结果，只取这一层的，其它层的结果不需要关心（因为这个结果需要单独处理别名 这种语法下select （select ） 内层select的别名是没有意义的，是以外层的select语句为准的,select 的内层关联的表字段也是没有意义的）
-        Map<String, Set<FieldInfoDto>> newSelectTableFieldMap = JsqlparserUtil.parseNewlyIncreased(this.getLayerSelectTableFieldMap().getOrDefault(String.valueOf(this.getLayer()), new HashMap<>()), sFieldSelectItemVisitor.getLayerSelectTableFieldMap().getOrDefault(String.valueOf(this.getLayer()), new HashMap<>()));
+        Map<String, List<FieldInfoDto>> newSelectTableFieldMap = JsqlparserUtil.parseNewlyIncreased(this.getLayerSelectTableFieldMap().getOrDefault(this.getLayer(), new FieldHashMapWrapper<>()), sFieldSelectItemVisitor.getLayerSelectTableFieldMap().getOrDefault(this.getLayer(), new FieldHashMapWrapper<>()));
 
         //3.结果合并 (注意：新增加的结果的别名需要修改成外层select的别名)
-        for (Map.Entry<String, Set<FieldInfoDto>> fieldInfoEntry : newSelectTableFieldMap.entrySet()) {
+        for (Map.Entry<String, List<FieldInfoDto>> fieldInfoEntry : newSelectTableFieldMap.entrySet()) {
             //4.1将这个字段的别名重新设置（这种语法下select （select ） 内层select的别名是没有意义的，是以外层的select语句为准的）
-            Set<FieldInfoDto> fieldInfoDtos = fieldInfoEntry.getValue().stream().map(m -> FieldInfoDto.builder().sourceTableName(m.getSourceTableName()).sourceColumn(m.getSourceColumn()).fromSourceTable(m.isFromSourceTable()).columnName(Optional.ofNullable(this.alias).map(Alias::getName).orElse(subSelect.toString())).build()).collect(Collectors.toSet());
+            List<FieldInfoDto> fieldInfoDtos = fieldInfoEntry.getValue().stream().map(m -> FieldInfoDto.builder().sourceTableName(m.getSourceTableName()).sourceColumn(m.getSourceColumn()).fromSourceTable(m.isFromSourceTable()).columnName(Optional.ofNullable(this.alias).map(Alias::getName).orElse(subSelect.toString())).build()).collect(Collectors.toList());
             //4.2 结果合并
             JsqlparserUtil.putFieldInfo(this.getLayerSelectTableFieldMap(), this.getLayer(), fieldInfoEntry.getKey(), fieldInfoDtos);
         }
