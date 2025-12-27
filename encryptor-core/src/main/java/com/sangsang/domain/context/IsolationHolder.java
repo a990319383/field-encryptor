@@ -1,6 +1,7 @@
 package com.sangsang.domain.context;
 
 import com.sangsang.domain.annos.isolation.ForbidIsolation;
+import com.sangsang.util.CollectionUtils;
 
 import java.util.ArrayDeque;
 
@@ -24,6 +25,10 @@ public class IsolationHolder {
      * @Param [forbidIsolation]
      **/
     public static void setForbidIsolation(ForbidIsolation forbidIsolation) {
+        if (forbidIsolation == null) {
+            return;
+        }
+
         ArrayDeque<ForbidIsolation> forbidIsolations = ISOLATION_HOLDER.get();
         if (forbidIsolations == null) {
             forbidIsolations = new ArrayDeque<>();
@@ -42,7 +47,7 @@ public class IsolationHolder {
      **/
     public static void removeForbidIsolation() {
         ArrayDeque<ForbidIsolation> forbidIsolations = ISOLATION_HOLDER.get();
-        if (forbidIsolations != null) {
+        if (CollectionUtils.isNotEmpty(forbidIsolations)) {
             //头部移除
             forbidIsolations.removeFirst();
             //如果移除完毕了，就整个清除了
@@ -61,7 +66,7 @@ public class IsolationHolder {
      **/
     public static ForbidIsolation getForbidIsolation() {
         ArrayDeque<ForbidIsolation> forbidIsolations = ISOLATION_HOLDER.get();
-        if (forbidIsolations == null) {
+        if (CollectionUtils.isEmpty(forbidIsolations)) {
             return null;
         }
         //当前层存在禁止数据隔离标识则表示禁止，这里随便返回第一个即可

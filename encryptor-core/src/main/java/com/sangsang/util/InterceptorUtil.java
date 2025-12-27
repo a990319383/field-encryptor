@@ -3,20 +3,17 @@ package com.sangsang.util;
 import com.sangsang.domain.annos.FieldInterceptorOrder;
 import com.sangsang.domain.constants.InterceptorOrderConstant;
 import com.sangsang.domain.constants.SymbolConstant;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.ibatis.executor.statement.StatementHandler;
 import org.apache.ibatis.mapping.MappedStatement;
 import org.apache.ibatis.plugin.Interceptor;
 import org.apache.ibatis.plugin.InterceptorChain;
 import org.apache.ibatis.plugin.Plugin;
-import org.apache.ibatis.reflection.DefaultReflectorFactory;
 import org.apache.ibatis.reflection.MetaObject;
 import org.apache.ibatis.reflection.SystemMetaObject;
 import org.apache.ibatis.session.Configuration;
 
 import java.lang.annotation.Annotation;
-import java.lang.reflect.Field;
-import java.lang.reflect.InvocationHandler;
-import java.lang.reflect.Proxy;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -28,6 +25,7 @@ import java.util.stream.Stream;
  * @author liutangqi
  * @date 2025/5/26 16:41
  */
+@Slf4j
 public class InterceptorUtil {
 
     /**
@@ -47,16 +45,45 @@ public class InterceptorUtil {
         List<Interceptor> otherInterceptor = interceptors.stream().filter(f -> !f.getClass().isAnnotationPresent(FieldInterceptorOrder.class)).collect(Collectors.toList());
 
         //3.将自己注册的拦截器根据@FieldInterceptorOrder 进行排序
-        selftInterceptor.sort((o1, o2) ->
-                Optional.ofNullable(o1.getClass().getAnnotation(FieldInterceptorOrder.class)).map(FieldInterceptorOrder::value).orElse(InterceptorOrderConstant.NORMAL)
-                        - Optional.ofNullable(o2.getClass().getAnnotation(FieldInterceptorOrder.class)).map(FieldInterceptorOrder::value).orElse(InterceptorOrderConstant.NORMAL)
-        );
+        selftInterceptor.sort((o1, o2) -> Optional.ofNullable(o1.getClass().getAnnotation(FieldInterceptorOrder.class)).map(FieldInterceptorOrder::value).orElse(InterceptorOrderConstant.NORMAL) - Optional.ofNullable(o2.getClass().getAnnotation(FieldInterceptorOrder.class)).map(FieldInterceptorOrder::value).orElse(InterceptorOrderConstant.NORMAL));
 
         //4.将排序后的拦截器重新赋值给拦截器链
         interceptors.clear();
         interceptors.addAll(selftInterceptor);
         interceptors.addAll(otherInterceptor);
     }
+
+
+    /**
+     * 对mybtais的SystemMetaObject.forObject 进行一次包装
+     * 使用前新代理溯源一次，避免代理对象无法获取到想要取的字段属性
+     *
+     * @author Gemini
+     * @date 2025/12/26 14:24
+     * @Param [obj]
+     **/
+    public static MetaObject forObject(Object obj) {
+        // 使用 MyBatis 内置的 MetaObject来反射获取属性
+        Object proxy = obj;
+        MetaObject metaObject = SystemMetaObject.forObject(proxy);
+
+        // 只要是 JDK 代理对象，通常都会包含一个 InvocationHandler (属性名为 h)
+        // 而 MyBatis 的 Plugin 又是存在 h 里面的 target 属性中
+        while (metaObject.hasGetter("h")) {
+            Object h = metaObject.getValue("h");
+            // 进一步判断这个 handler 是不是 MyBatis 的 Plugin
+            if (h instanceof Plugin) {
+                // Plugin 对象内部持有真正的 target
+                proxy = SystemMetaObject.forObject(h).getValue("target");
+                metaObject = SystemMetaObject.forObject(proxy);
+            } else {
+                // 如果是其他类型的代理且没有 target 属性，则无法继续脱壳
+                break;
+            }
+        }
+        return metaObject;
+    }
+
 
     /**
      * 判断当前sql的mapper上面是否标注了注解T
@@ -75,11 +102,7 @@ public class InterceptorUtil {
         String methodName = nameSpace.substring(lastDotIndex + 1);
 
         //反射判断是否存在此注解
-        return Stream.of(Class.forName(classFullyName).getDeclaredMethods())
-                .filter(f -> f.getName().equals(methodName))
-                .findFirst()
-                .map(m -> m.getAnnotation(t))
-                .orElse(null);
+        return Stream.of(Class.forName(classFullyName).getDeclaredMethods()).filter(f -> f.getName().equals(methodName)).findFirst().map(m -> m.getAnnotation(t)).orElse(null);
     }
 
 
@@ -90,38 +113,12 @@ public class InterceptorUtil {
      * @date 2025/5/21 10:41
      * @Param [statementHandler]
      **/
-    public static String getNameSpace(StatementHandler statementHandler) throws Exception {
-        //处理代理的情况
-        StatementHandler sh = unwrapProxy(statementHandler);
-
-        //开始获取namespace
-        MetaObject metaObject = MetaObject.forObject(sh, SystemMetaObject.DEFAULT_OBJECT_FACTORY, SystemMetaObject.DEFAULT_OBJECT_WRAPPER_FACTORY, new DefaultReflectorFactory());
+    public static String getNameSpace(StatementHandler statementHandler) {
+        //反射获取
+        MetaObject metaObject = InterceptorUtil.forObject(statementHandler);
         MappedStatement mappedStatement = (MappedStatement) metaObject.getValue("delegate.mappedStatement");
         String id = mappedStatement.getId();
         return id;
     }
 
-
-    /**
-     * 动态代理溯源（JDK 动态代理或 CGLIB）
-     */
-    private static StatementHandler unwrapProxy(StatementHandler proxy) throws Exception {
-        Object current = proxy;
-        // 循环溯源，直到找到非代理对象
-        while (current instanceof Proxy) {
-            // JDK 动态代理：通过 InvocationHandler 获取目标对象
-            InvocationHandler handler = Proxy.getInvocationHandler(current);
-            // MyBatis 的 Plugin 代理
-            if (handler instanceof Plugin) {
-                Field targetField = handler.getClass().getDeclaredField("target");
-                targetField.setAccessible(true);
-                current = targetField.get(handler);
-            }
-            // 非 MyBatis 标准代理，无法溯源
-            else {
-                break;
-            }
-        }
-        return (StatementHandler) current;
-    }
 }

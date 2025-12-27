@@ -22,13 +22,6 @@ import org.apache.ibatis.executor.statement.StatementHandler;
 import org.apache.ibatis.mapping.BoundSql;
 import org.apache.ibatis.mapping.ParameterMapping;
 import org.apache.ibatis.plugin.*;
-import org.apache.ibatis.reflection.DefaultReflectorFactory;
-import org.apache.ibatis.reflection.MetaObject;
-import org.apache.ibatis.reflection.ReflectorFactory;
-import org.apache.ibatis.reflection.factory.DefaultObjectFactory;
-import org.apache.ibatis.reflection.factory.ObjectFactory;
-import org.apache.ibatis.reflection.wrapper.DefaultObjectWrapperFactory;
-import org.apache.ibatis.reflection.wrapper.ObjectWrapperFactory;
 import org.apache.ibatis.session.SqlSessionFactory;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.config.BeanPostProcessor;
@@ -47,11 +40,6 @@ import java.util.*;
 @Intercepts({@Signature(type = StatementHandler.class, method = "prepare", args = {Connection.class, Integer.class})})
 @Slf4j
 public class PoJoParamEncrtptorInterceptor implements Interceptor, BeanPostProcessor {
-
-    private static final ReflectorFactory reflectorFactory = new DefaultReflectorFactory();
-    private static final ObjectFactory objectFactory = new DefaultObjectFactory();
-    private static final ObjectWrapperFactory objectWrapperFactory = new DefaultObjectWrapperFactory();
-
 
     /**
      * 将入参的字段和占位符？ 对应起来  （boundSql.getParameterMappings()获取的参数和占位符的顺序是一致的，这个结果集里面也有对应的占位符的key，这样就可以全部关联起来了）
@@ -209,7 +197,7 @@ public class PoJoParamEncrtptorInterceptor implements Interceptor, BeanPostProce
         //上一层对象
         Object pre = obj;
         for (String prop : propertyArr) {
-            pre = MetaObject.forObject(pre, objectFactory, objectWrapperFactory, reflectorFactory).getValue(prop);
+            pre = InterceptorUtil.forObject(pre).getValue(prop);
         }
         return pre;
     }

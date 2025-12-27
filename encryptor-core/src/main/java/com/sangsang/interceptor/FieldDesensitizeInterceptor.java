@@ -14,13 +14,10 @@ import com.sangsang.visitor.pojoencrtptor.PoJoEncrtptorStatementVisitor;
 import lombok.extern.slf4j.Slf4j;
 import net.sf.jsqlparser.JSQLParserException;
 import net.sf.jsqlparser.statement.Statement;
-import org.apache.ibatis.cache.CacheKey;
-import org.apache.ibatis.executor.Executor;
-import org.apache.ibatis.mapping.BoundSql;
+import org.apache.ibatis.executor.resultset.ResultSetHandler;
 import org.apache.ibatis.mapping.MappedStatement;
 import org.apache.ibatis.plugin.*;
-import org.apache.ibatis.session.ResultHandler;
-import org.apache.ibatis.session.RowBounds;
+import org.apache.ibatis.reflection.MetaObject;
 import org.apache.ibatis.session.SqlSessionFactory;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.config.BeanPostProcessor;
@@ -35,17 +32,14 @@ import java.util.*;
  * @date 2025/4/8 9:51
  */
 @FieldInterceptorOrder(InterceptorOrderConstant.DESENSITIZE)
-@Intercepts({
-        @Signature(type = Executor.class, method = "query", args = {MappedStatement.class, Object.class, RowBounds.class, ResultHandler.class, CacheKey.class, BoundSql.class}),
-        @Signature(type = Executor.class, method = "query", args = {MappedStatement.class, Object.class, RowBounds.class, ResultHandler.class})
-})
+@Intercepts({@Signature(type = ResultSetHandler.class, method = "handleResultSets", args = {java.sql.Statement.class})})
 @Slf4j
 public class FieldDesensitizeInterceptor implements Interceptor, BeanPostProcessor {
 
     @Override
     public Object intercept(Invocation invocation) throws Throwable {
         //1.获取核心类(@Signature 后面的args顺序和下面获取的一致)
-        MappedStatement statement = (MappedStatement) invocation.getArgs()[0];
+        MappedStatement statement = parseMappedStatement(invocation);
 
         //2.解析mapper上面的@FieldDesensitize注解
         MapperDesensitize mapperFieldDesensitize = parseMapperAnno(statement);
@@ -57,6 +51,23 @@ public class FieldDesensitizeInterceptor implements Interceptor, BeanPostProcess
         return disposeResult(result, mapperFieldDesensitize);
     }
 
+
+    /**
+     * 通过反射获取到MappedStatement
+     *
+     * @author liutangqi
+     * @date 2025/12/26 13:44
+     * @Param [invocation]
+     **/
+    private MappedStatement parseMappedStatement(Invocation invocation) {
+        // 1.获取 ResultSetHandler 目标对象
+        ResultSetHandler resultSetHandler = (ResultSetHandler) invocation.getTarget();
+
+        //2.反射获取私有属性 mappedStatement
+        MetaObject metaObject = InterceptorUtil.forObject(resultSetHandler);
+        return (MappedStatement) metaObject.getValue("mappedStatement");
+
+    }
 
     /**
      * 获取mapper上面的注解

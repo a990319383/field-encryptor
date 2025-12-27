@@ -111,12 +111,20 @@ select  phone,user_name FROM tb_user WHERE phone = ?
 - INSERT INTO 表名 VALUES (所有字段);   表名后面没有跟具体字段的，无法兼容
   - 备注：3.6.1-alpha 版本后，如果开启了autoFill的场景下，可以兼容此语法
 
+##### db模式不兼容的场景
+
+- insert into 表1(xxx,xxx) values(select * from 表2) 其中表1有使用框架功能，表2没有使用
+  - 为了尽量减少缓存数据量大小，提高启动速度，表2没使用本框架功能，缓存是没有存表字段信息的，所以无法处理，兼容这种语法会牺牲空间存储和启动速度，所以暂不考虑
+
 ##### pojo模式不兼容的场景
 
 - mybatis-plus  service层自带的saveBatch()方法不支持自动加密
+- ${}的值无法进行加解密处理
 - 列运算的结果集和sql的入参响应需要做对应的
   - 栗如： select  concat(phone,"---")  as ph from tb_user;  无法将ph变量做自动的解密映射
 - 同一个#{}入参，sql中对应不同的字段，想要拥有不同的值
+  - 栗如： select * from tb_user where phone = #{param} and userName = #{param}
+  - phone和user_name加密情况不一致，这里#{param}在mapper层其实是一个属性值，没有办法做出两种不同的处理
 - sql中直接字段到字段对应，不经过外部传参的，无法兼容
   - 栗如： insert (select) 此类语法，数据都是在数据库层面，不从java应用层过
 
@@ -203,6 +211,11 @@ APP端：
 实际执行sql:
   insert into 订单表(部门字段，字段1，字段2...) values（登录用户部门，值1，值2...）
 ```
+
+#### 不兼容场景
+
+- insert into 表1(xxx,xxx) values(select * from 表2)，其中表1有使用到框架功能，表2没有使用到
+  - 为了尽量减少缓存数据量大小，提高启动速度，表2没使用本框架功能，缓存是没有存表字段信息的，所以无法处理，兼容这种语法会牺牲空间存储和启动速度，所以暂不考虑
 
 ### 5.数据库字段查询脱敏
 

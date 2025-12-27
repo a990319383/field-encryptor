@@ -9,9 +9,9 @@ import com.sangsang.domain.annos.encryptor.FieldEncryptor;
 import com.sangsang.domain.annos.encryptor.PoJoResultEncryptor;
 import com.sangsang.domain.constants.FieldConstant;
 import com.sangsang.domain.constants.InterceptorOrderConstant;
-import com.sangsang.domain.constants.SymbolConstant;
 import com.sangsang.domain.dto.ColumnTableDto;
 import com.sangsang.domain.dto.FieldEncryptorInfoDto;
+import com.sangsang.domain.strategy.encryptor.FieldEncryptorStrategy;
 import com.sangsang.util.InterceptorUtil;
 import com.sangsang.util.JsqlparserUtil;
 import com.sangsang.util.ReflectUtils;
@@ -20,13 +20,10 @@ import com.sangsang.visitor.pojoencrtptor.PoJoEncrtptorStatementVisitor;
 import lombok.extern.slf4j.Slf4j;
 import net.sf.jsqlparser.JSQLParserException;
 import net.sf.jsqlparser.statement.Statement;
-import org.apache.ibatis.cache.CacheKey;
-import org.apache.ibatis.executor.Executor;
+import org.apache.ibatis.executor.resultset.ResultSetHandler;
 import org.apache.ibatis.mapping.BoundSql;
-import org.apache.ibatis.mapping.MappedStatement;
 import org.apache.ibatis.plugin.*;
-import org.apache.ibatis.session.ResultHandler;
-import org.apache.ibatis.session.RowBounds;
+import org.apache.ibatis.reflection.MetaObject;
 import org.apache.ibatis.session.SqlSessionFactory;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.config.BeanPostProcessor;
@@ -43,19 +40,13 @@ import java.util.*;
  * @date 2024/7/9 14:06
  */
 @FieldInterceptorOrder(InterceptorOrderConstant.ENCRYPTOR)
-@Intercepts({
-        @Signature(type = Executor.class, method = "query", args = {MappedStatement.class, Object.class, RowBounds.class, ResultHandler.class, CacheKey.class, BoundSql.class}),
-        @Signature(type = Executor.class, method = "query", args = {MappedStatement.class, Object.class, RowBounds.class, ResultHandler.class})
-})
+@Intercepts({@Signature(type = ResultSetHandler.class, method = "handleResultSets", args = {java.sql.Statement.class})})
 @Slf4j
 public class PoJoResultEncrtptorInterceptor implements Interceptor, BeanPostProcessor {
     @Override
     public Object intercept(Invocation invocation) throws Throwable {
-        //1.获取核心类(@Signature 后面的args顺序和下面获取的一致)
-        MappedStatement statement = (MappedStatement) invocation.getArgs()[0];
-        Object parameter = invocation.getArgs()[1];
-        BoundSql boundSql = statement.getBoundSql(parameter);
-        String originalSql = boundSql.getSql();
+        //1.通过反射获取 获取完整的 SQL 语句
+        String originalSql = parseBoundSql(invocation);
 
         //2.当前sql如果肯定不需要加解密，则不解析sql，直接返回
         if (StringUtils.notExist(originalSql, TableCache.getFieldEncryptTable())) {
@@ -72,6 +63,27 @@ public class PoJoResultEncrtptorInterceptor implements Interceptor, BeanPostProc
         return disposeResult(result, pair);
     }
 
+
+    /**
+     * 通过反射获取到 sql
+     *
+     * @author liutangqi
+     * @date 2025/12/26 13:24
+     * @Param [invocation]
+     **/
+    private String parseBoundSql(Invocation invocation) {
+        //1. 获取目标对象 (ResultSetHandler)
+        ResultSetHandler resultSetHandler = (ResultSetHandler) invocation.getTarget();
+
+        //2. 使用 MyBatis 的 MetaObject 方便地访问私有属性
+        MetaObject metaObject = InterceptorUtil.forObject(resultSetHandler);
+
+        //3. 从 DefaultResultSetHandler 中提取 boundSql
+        BoundSql boundSql = (BoundSql) metaObject.getValue("boundSql");
+
+        //4.返回对应sql
+        return boundSql.getSql();
+    }
 
     /**
      * 解析sql,获取入参和响应对应的表字段关系
@@ -165,11 +177,13 @@ public class PoJoResultEncrtptorInterceptor implements Interceptor, BeanPostProc
             List<Field> allFields = ReflectUtils.getNotStaticFinalFields(res.getClass());
             for (Field field : allFields) {
                 //优先取响应实体类字段上面的@PoJoResultEncryptor 的信息 ，取不到再根据实体类上面标注的信息取
-                PoJoResultEncryptor poJoResultEncryptor = field.getAnnotation(PoJoResultEncryptor.class);
-                FieldEncryptor fieldEncryptor = getFieldEncryptorByFieldName(field.getName(), fieldInfos);
-                if (poJoResultEncryptor != null || fieldEncryptor != null) {
+                Class<? extends FieldEncryptorStrategy> poJoResultEncryptorCls = Optional.ofNullable(field.getAnnotation(PoJoResultEncryptor.class)).map(PoJoResultEncryptor::value).orElse(null);
+                Class<? extends FieldEncryptorStrategy> fieldEncryptorCls = Optional.ofNullable(getFieldEncryptorByFieldName(field.getName(), fieldInfos)).map(FieldEncryptor::value).orElse(null);
+                Class<? extends FieldEncryptorStrategy> encryptorStrategyCls = poJoResultEncryptorCls != null ? poJoResultEncryptorCls : fieldEncryptorCls;
+                if (encryptorStrategyCls != null) {
                     field.setAccessible(true);
-                    field.set(res, EncryptorInstanceCache.<String>getInstance(fieldEncryptor.value()).decryption((String) field.get(res)));
+                    String fieldValue = Optional.ofNullable(field.get(res)).map(Object::toString).orElse(null);
+                    field.set(res, EncryptorInstanceCache.<String>getInstance(encryptorStrategyCls).decryption(fieldValue));
                 }
             }
         }
