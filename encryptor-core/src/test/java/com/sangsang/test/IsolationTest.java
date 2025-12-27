@@ -1,12 +1,8 @@
 package com.sangsang.test;
 
-import cn.hutool.json.JSONUtil;
-import com.sangsang.cache.fieldparse.TableCache;
 import com.sangsang.config.properties.FieldProperties;
-import com.sangsang.domain.wrapper.FieldHashMapWrapper;
 import com.sangsang.util.*;
 import com.sangsang.visitor.isolation.IsolationStatementVisitor;
-import net.sf.jsqlparser.JSQLParserException;
 import net.sf.jsqlparser.statement.Statement;
 import org.junit.jupiter.api.Test;
 
@@ -61,6 +57,31 @@ public class IsolationTest {
     //单表多策略，且单表不同策略之间关系是or
     String s8 = "select * from sys_user where loginName like 'xxx' or mobile = '18432154844'";
 
+
+    //普通的update语句
+    String u1 = "update tb_user set  usert_name = ? where id = ?";
+
+    //多表update，且两个表都需要进行数据隔离
+    String u2 = "update tb_user tu join sys_user su on tu.id = su.id set su.menu_name = su.name , tu.phone = su.password , tu.phone = su.name , tu.phone = ? where tu.phone like ?";
+
+    //多表update,不带where条件
+    String u3 = "update tb_user tu join sys_user su on tu.id = su.id set su.menu_name = su.name , tu.phone = su.password , tu.phone = su.name , tu.phone = ?";
+
+    //普通删除
+    String d1 = "delete from sys_user where id = ?";
+
+    //不带条件的删除
+    String d2 = "delete from sys_user";
+
+    //删除语句中存在子查询
+    String d3 = "delete from tb_user where id in (select id from sys_user where id = ?)";
+
+    //insert select
+    String i1 = "insert into tb_user(user_name,phone) (select loginName ,mobile from sys_user )";
+
+    //普通的insert 语句
+    String i2 = "insert into tb_user(user_name,phone) values(?,?)";
+
     /**
      * mysql转换为达梦的语法转换器测试
      *
@@ -76,7 +97,7 @@ public class IsolationTest {
         CacheTestHelper.testInit(fieldProperties);
 
         //需要的sql
-        String sql = s8;
+        String sql = d3;
 
         //开始进行数据隔离
         Statement statement = JsqlparserUtil.parse(sql);
@@ -99,7 +120,10 @@ public class IsolationTest {
     //----------------------------------------校验当前程序是否正确分割线---------------------------------------------------------
     //需要测试的sql
     List<String> sqls = Arrays.asList(
-            s1, s2, s3, s4, s5, s6, s7, s8
+            s1, s2, s3, s4, s5, s6, s7, s8,
+            u1, u2, u3,
+            d1, d2, d3,
+            i1, i2
     );
 
 

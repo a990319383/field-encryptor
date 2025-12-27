@@ -1,0 +1,1 @@
+UPDATE tb_user SET usert_name = ? WHERE id = ? AND tb_user.role_id = 1111111

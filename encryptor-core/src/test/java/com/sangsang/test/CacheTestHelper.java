@@ -64,6 +64,8 @@ public class CacheTestHelper {
 
         //2.数据隔离配置
         IsolationProperties isolationProperties = new IsolationProperties();
+        //开启对DML语句的支持，方便测试
+        isolationProperties.setSupportDML(true);
         fieldProperties.setIsolation(isolationProperties);
 
         //3.数据默认值配置

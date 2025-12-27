@@ -1,0 +1,1 @@
+UPDATE tb_user tu JOIN sys_user su ON tu.id = su.id SET su.menu_name = su.name, tu.phone = su.password, tu.phone = su.name, tu.phone = ? WHERE tu.role_id = 1111111 AND (su.id = 333 OR su.role_id = 1111111)

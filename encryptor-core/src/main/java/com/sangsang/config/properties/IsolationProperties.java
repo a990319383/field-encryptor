@@ -29,4 +29,11 @@ public class IsolationProperties {
      */
     private Integer inRelationSubsectionSize = 500;
 
+    /**
+     * 是否开启DML数据隔离功能
+     * 执行插入，修改，删除语句时，是否进行数据隔离条件的拼接
+     * 默认是否，因为实际业务中一般这些操作都会带上唯一键或者业务唯一标识，所以默认关闭，避免增加不必要的耗时
+     */
+    private boolean supportDML = false;
+
 }
