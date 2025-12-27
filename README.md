@@ -108,6 +108,7 @@ select  phone,user_name FROM tb_user WHERE phone = ?
 ##### db,pojo模式均不兼容的场景
 
 - 项目基于jsqlparser4.9解析，其版本不支持的sql语法，此框架无法兼容
+- mybatis-plus  service层自带的saveBatch()方法不支持自动加密
 - INSERT INTO 表名 VALUES (所有字段);   表名后面没有跟具体字段的，无法兼容
   - 备注：3.6.1-alpha 版本后，如果开启了autoFill的场景下，可以兼容此语法
 
@@ -118,7 +119,6 @@ select  phone,user_name FROM tb_user WHERE phone = ?
 
 ##### pojo模式不兼容的场景
 
-- mybatis-plus  service层自带的saveBatch()方法不支持自动加密
 - ${}的值无法进行加解密处理
 - 列运算的结果集和sql的入参响应需要做对应的
   - 栗如： select  concat(phone,"---")  as ph from tb_user;  无法将ph变量做自动的解密映射
