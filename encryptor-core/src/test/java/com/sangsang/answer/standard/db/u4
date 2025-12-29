@@ -1,1 +1,1 @@
-UPDATE sys_user SET last_login_date = ?, update_by = ?, update_date = ? WHERE id = ?
+UPDATE tb_user SET phone = TO_BASE64(AES_ENCRYPT(?, '7uq?q8g3@q')), user_name = ?, login_pwd = ? WHERE id = ?

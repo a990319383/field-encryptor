@@ -580,11 +580,11 @@ public class SqlTest {
             "\tphone = ?\n" +
             "\twhere phone = ?";
 
-    String u4 = "UPDATE sys_user\n" +
+    String u4 = "UPDATE tb_user\n" +
             "        SET\n" +
-            "        last_login_date = ?,\n" +
-            "        update_by = ?,\n" +
-            "        update_date = ?\n" +
+            "        phone = ?,\n" +
+            "        user_name = ?,\n" +
+            "        login_pwd = ?\n" +
             "        WHERE\n" +
             "        id = ?";
 
@@ -647,7 +647,7 @@ public class SqlTest {
         CacheTestHelper.testInit(fieldProperties);
 
         //需要测试的sql
-        String sql = s44;
+        String sql = u4;
         System.out.println("----------------------------------------------------------------------------");
         System.out.println(sql);
         System.out.println("----------------------------------------------------------------------------");
