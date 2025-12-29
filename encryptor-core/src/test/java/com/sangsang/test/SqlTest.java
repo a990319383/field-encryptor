@@ -615,7 +615,7 @@ public class SqlTest {
         CacheTestHelper.testInit(fieldProperties);
 
         //需要测试的sql
-        String sql = s51;
+        String sql = u4;
         System.out.println("----------------------------------------------------------------------------");
         System.out.println(sql);
         System.out.println("----------------------------------------------------------------------------");

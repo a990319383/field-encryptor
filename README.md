@@ -5,6 +5,7 @@
 - 邮箱：990319383@qq.com
 - QQ交流群：1072901252    
 - 意见和建议欢迎群里面讨论，对您有帮助的话，点个star是对我最大的肯定
+  - 点star加群免费领取mysql sm4国密算法扩展包，我不割韭菜，就是馋你手里的star了
 
 > 此文档针对3.6.0以后的版本，各版本记录详见文档《版本迭代记录.md》
 >
@@ -1006,6 +1007,16 @@ CREATE TABLE `tb_menu` (
   `update_time` datetime DEFAULT NULL,
   PRIMARY KEY (`id`)
 )COMMENT='测试表-菜单';
+
+CREATE TABLE `sys_user` (
+  `id` bigint(20) NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+  `role_id` bigint(20) NOT NULL DEFAULT '0' COMMENT '角色ID',
+  `login_name` varchar(50) NOT NULL COMMENT '登录名',
+  `password` varchar(255) NOT NULL COMMENT '密码',
+  `name` varchar(50) NOT NULL COMMENT '用户名',
+  `mobile` varchar(20) DEFAULT NULL COMMENT '手机号',
+  PRIMARY KEY (`id`)
+) COMMENT='测试表-sys_user用户表2'
 ```
 
 

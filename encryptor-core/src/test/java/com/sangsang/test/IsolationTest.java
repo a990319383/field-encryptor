@@ -55,7 +55,7 @@ public class IsolationTest {
             "\t\t)a";
 
     //单表多策略，且单表不同策略之间关系是or
-    String s8 = "select * from sys_user where loginName like 'xxx' or mobile = '18432154844'";
+    String s8 = "select * from sys_user where login_name like 'xxx' or mobile = '18432154844'";
 
 
     //普通的update语句
